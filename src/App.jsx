@@ -123,6 +123,14 @@ function App() {
   }, [currentUser]);
 
   const loadData = async () => {
+    const savedEmployees = localStorage.getItem('employees');
+    const savedShifts = localStorage.getItem('shifts');
+    
+    if (savedEmployees && savedShifts) {
+      setEmployees(JSON.parse(savedEmployees));
+      setShifts(JSON.parse(savedShifts));
+    }
+    
     try {
       const [empsRes, shiftsRes] = await Promise.all([
         fetch('/api/employees'),
@@ -136,12 +144,7 @@ function App() {
       localStorage.setItem('shifts', JSON.stringify(shiftsData));
     } catch (error) {
       console.error('Error loading data from API:', error);
-      const savedEmployees = localStorage.getItem('employees');
-      const savedShifts = localStorage.getItem('shifts');
-      if (savedEmployees && savedShifts) {
-        setEmployees(JSON.parse(savedEmployees));
-        setShifts(JSON.parse(savedShifts));
-      } else {
+      if (!savedEmployees || !savedShifts) {
         const defaultEmployees = [
           { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
           { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
