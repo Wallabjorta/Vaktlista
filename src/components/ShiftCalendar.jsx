@@ -93,7 +93,9 @@ function ShiftCalendar({
           </tr>
         </thead>
         <tbody>
-          {employees.map((employee) => (
+          {employees
+            .filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))
+            .map((employee) => (
             <tr key={employee.id} className="border-b last:border-b-0">
               <td className="p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[150px]">
                 <div className="flex items-center gap-2">
