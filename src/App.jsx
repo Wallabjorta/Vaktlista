@@ -358,7 +358,8 @@ function App() {
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => setSelectedDepartment(null)}
-          className={`px-4 py-2 rounded border ${!selectedDepartment ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+          className="px-4 py-2 rounded border"
+          style={!selectedDepartment ? { backgroundColor: '#3B82F6', color: 'white', borderColor: '#3B82F6' } : { backgroundColor: '#f3f4f6' }}
         >
           Oversikt (Alle)
         </button>
@@ -367,7 +368,7 @@ function App() {
             key={dept.id}
             onClick={() => setSelectedDepartment(dept.id)}
             className="px-4 py-2 rounded border"
-            style={selectedDepartment === dept.id ? { backgroundColor: dept.color, color: 'white', borderColor: dept.color } : { backgroundColor: '#f3f4f6' }}
+            style={selectedDepartment === dept.id ? { backgroundColor: dept.color, color: 'white', borderColor: dept.color } : { backgroundColor: dept.color, color: 'white', borderColor: dept.color, opacity: 0.7 }}
           >
             {dept.name}
           </button>
