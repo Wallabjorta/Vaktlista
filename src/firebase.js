@@ -6,15 +6,15 @@ import { getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc, upda
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ============ FIREBASE CONFIGURATION ============
-// BYT UT DESSA VÄRDEN MED DINA EGNA FIREBASE-UPPGIFTER
-// Du hittar dem i Firebase Console > Project Settings > General > Your apps > SDK setup and configuration
+// Your Firebase configuration for vaktlista-d0efd
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCW0p942dGWKCVvQCwb2_y3PpAQSXN1ArU",
+  authDomain: "vaktlista-d0efd.firebaseapp.com",
+  projectId: "vaktlista-d0efd",
+  storageBucket: "vaktlista-d0efd.firebasestorage.app",
+  messagingSenderId: "627526854242",
+  appId: "1:627526854242:web:b7d5d4e7c66a1a708e933b",
+  measurementId: "G-S5EEYJ05GP"
 };
 
 // ============ INITIALIZE FIREBASE ============
