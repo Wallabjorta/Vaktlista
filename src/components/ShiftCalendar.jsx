@@ -52,8 +52,8 @@ function ShiftCalendar({
   const vacationColor = '#FED7AA';
   const sundayColor = '#FECACA';
 
-  const getShiftForDateAndEmployee = (dateStr, employeeId) => {
-    return shifts.find(shift =>
+  const getShiftsForDateAndEmployee = (dateStr, employeeId) => {
+    return shifts.filter(shift =>
       shift.date === dateStr &&
       shift.employeeId === employeeId &&
       (!selectedDepartment || shift.departmentId === selectedDepartment)
@@ -108,7 +108,7 @@ function ShiftCalendar({
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
-                const shift = getShiftForDateAndEmployee(dateStr, employee.id);
+                const shiftsForDay = getShiftsForDateAndEmployee(dateStr, employee.id);
                 const holiday = isHoliday(dateStr);
                 const vacation = isVacation(dateStr);
                 const sunday = isSunday(date);
@@ -124,17 +124,22 @@ function ShiftCalendar({
                     className="p-1 border-r border-b h-16 min-w-[100px] relative"
                     style={bgStyle}
                   >
-                    {shift ? (
-                      <div
-                        className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80"
-                        style={{ backgroundColor: getDeptColor(shift.departmentId) }}
-                        onClick={() => currentUser && onDeleteShift(shift.id)}
-                        title={`Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
-                      >
-                        {shift.startTime} - {shift.endTime}
-                        {currentUser?.isAdmin && (
-                          <button className="ml-1 text-xs">x</button>
-                        )}
+                    {shiftsForDay.length > 0 ? (
+                      <div className="flex flex-col gap-1">
+                        {shiftsForDay.map((shift, shiftIndex) => (
+                          <div
+                            key={shiftIndex}
+                            className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80"
+                            style={{ backgroundColor: getDeptColor(shift.departmentId) }}
+                            onClick={() => currentUser && onDeleteShift(shift.id)}
+                            title={`Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
+                          >
+                            {shift.startTime} - {shift.endTime}
+                            {currentUser?.isAdmin && (
+                              <button className="ml-1 text-xs">x</button>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       currentUser && (
