@@ -122,11 +122,18 @@ function ShiftCalendar({
                 const holiday = isHoliday(dateStr);
                 const vacation = isVacation(dateStr);
                 const sunday = isSunday(date);
+                const isToday = date.toDateString() === new Date().toDateString();
 
                 let bgStyle = { backgroundColor: 'white' };
-                if (holiday) bgStyle = { backgroundColor: holidayColor };
-                else if (sunday) bgStyle = { backgroundColor: sundayColor };
-                else if (vacation) bgStyle = { backgroundColor: vacationColor };
+                if (isToday) {
+                  bgStyle = { backgroundColor: '#f3f4f6' };
+                } else if (holiday) {
+                  bgStyle = { backgroundColor: holidayColor };
+                } else if (sunday) {
+                  bgStyle = { backgroundColor: sundayColor };
+                } else if (vacation) {
+                  bgStyle = { backgroundColor: vacationColor };
+                }
 
                 return (
                   <td
