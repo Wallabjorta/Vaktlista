@@ -15,7 +15,8 @@ const DEPARTMENTS = [
   { id: "dept-1", name: "Vest", color: "#3B82F6" },
   { id: "dept-2", name: "Øst", color: "#10B981" },
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
-  { id: "dept-4", name: "Butikk", color: "#EF4444" }
+  { id: "dept-4", name: "Butikk", color: "#EF4444" },
+  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" }
 ];
 
 // Skoleferier for Norge
