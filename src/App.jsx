@@ -132,15 +132,27 @@ function App() {
       const shiftsData = await shiftsRes.json();
       setEmployees(empsData);
       setShifts(shiftsData);
+      localStorage.setItem('employees', JSON.stringify(empsData));
+      localStorage.setItem('shifts', JSON.stringify(shiftsData));
     } catch (error) {
-      console.error('Error loading data:', error);
-      setEmployees([
-        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
-        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
-        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
-        { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
-      ]);
-      setShifts([]);
+      console.error('Error loading data from API:', error);
+      const savedEmployees = localStorage.getItem('employees');
+      const savedShifts = localStorage.getItem('shifts');
+      if (savedEmployees && savedShifts) {
+        setEmployees(JSON.parse(savedEmployees));
+        setShifts(JSON.parse(savedShifts));
+      } else {
+        const defaultEmployees = [
+          { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
+          { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
+          { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
+          { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
+        ];
+        setEmployees(defaultEmployees);
+        setShifts([]);
+        localStorage.setItem('employees', JSON.stringify(defaultEmployees));
+        localStorage.setItem('shifts', JSON.stringify([]));
+      }
     }
   };
 
@@ -152,8 +164,10 @@ function App() {
         body: JSON.stringify({ employees, shifts })
       });
     } catch (error) {
-      console.error('Error saving employees:', error);
+      console.error('Error saving employees to API:', error);
     }
+    localStorage.setItem('employees', JSON.stringify(employees));
+    localStorage.setItem('shifts', JSON.stringify(shifts));
   };
 
   const handleLogin = (email, password) => {
@@ -225,7 +239,9 @@ function App() {
       }
 
       const savedShift = await response.json();
-      setShifts([...shifts, savedShift]);
+      const updatedShifts = [...shifts, savedShift];
+      setShifts(updatedShifts);
+      localStorage.setItem('shifts', JSON.stringify(updatedShifts));
       setShowAddShiftModal(false);
       setNewShift({
         employeeId: "",
@@ -245,7 +261,9 @@ function App() {
     if (!confirm('Slett vakt?')) return;
     try {
       await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
-      setShifts(shifts.filter(shift => shift.id !== shiftId));
+      const updatedShifts = shifts.filter(shift => shift.id !== shiftId);
+      setShifts(updatedShifts);
+      localStorage.setItem('shifts', JSON.stringify(updatedShifts));
     } catch (error) {
       console.error('Error deleting shift:', error);
       alert('Feil ved sletting av vakt');
@@ -258,6 +276,7 @@ function App() {
         emp.id === updatedEmployee.id ? updatedEmployee : emp
       );
       setEmployees(updatedEmployees);
+      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
       await saveEmployees();
       setShowEditEmployeeModal(false);
       alert('Ansatt oppdatert!');
@@ -271,6 +290,7 @@ function App() {
     try {
       const updatedEmployees = [...employees, newEmployee];
       setEmployees(updatedEmployees);
+      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
       await saveEmployees();
       setShowAddEmployeeModal(false);
       alert('Ny ansatt lagt til!');
@@ -301,6 +321,7 @@ function App() {
 
       const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
       setEmployees(updatedEmployees);
+      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
       await saveEmployees();
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
