@@ -116,12 +116,6 @@ function App() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadData();
-    }
-  }, [currentUser]);
-
   const loadData = async () => {
     const savedEmployees = localStorage.getItem('employees');
     const savedShifts = localStorage.getItem('shifts');
