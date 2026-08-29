@@ -7,6 +7,7 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
+import useWorkLawValidation from './hooks/useWorkLawValidation';
 
 // Data
 const DEPARTMENTS = [
@@ -99,6 +100,9 @@ function App() {
 
   // Hent norske helligdager dynamisk
   const { holidays } = useNorwegianHolidays([2024, 2025, 2026, 2027]);
+  
+  // Validering av norske arbeidslover
+  const { validate } = useWorkLawValidation(shifts, holidays);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -188,6 +192,13 @@ function App() {
     }
     if (newShift.startTime >= newShift.endTime) {
       alert('Sluttid må være etter starttid!');
+      return;
+    }
+
+    // Valider norsk arbeidslov
+    const validation = validate(newShift.employeeId, newShift.date);
+    if (!validation.isValid) {
+      alert(`Kan ikke legge til vakt: ${validation.errors.join(', ')}`);
       return;
     }
 
@@ -445,6 +456,12 @@ function App() {
           vacations={VACATIONS}
           currentUser={currentUser}
           onAddShift={(employeeId, date, deptId) => {
+            // Valider norsk arbeidslov før vi åpner modal
+            const validation = validate(employeeId, date);
+            if (!validation.isValid) {
+              alert(`Kan ikke legge til vakt: ${validation.errors.join(', ')}`);
+              return;
+            }
             setNewShift({
               employeeId: employeeId,
               departmentId: deptId || selectedDepartment || "",
