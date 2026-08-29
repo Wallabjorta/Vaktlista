@@ -448,8 +448,8 @@ function App() {
 
       {currentUser && (
         <ShiftCalendar
-          employees={employees}
-          shifts={shifts.filter(shift => !selectedDepartment || shift.departmentId === selectedDepartment)}
+          employees={employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
+          shifts={shifts}
           selectedDepartment={selectedDepartment}
           currentDate={currentDate}
           departments={DEPARTMENTS}
