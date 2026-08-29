@@ -129,46 +129,22 @@ function App() {
     if (savedEmployees && savedShifts) {
       setEmployees(JSON.parse(savedEmployees));
       setShifts(JSON.parse(savedShifts));
+      return;
     }
     
-    try {
-      const [empsRes, shiftsRes] = await Promise.all([
-        fetch('/api/employees'),
-        fetch('/api/shifts')
-      ]);
-      const empsData = await empsRes.json();
-      const shiftsData = await shiftsRes.json();
-      setEmployees(empsData);
-      setShifts(shiftsData);
-      localStorage.setItem('employees', JSON.stringify(empsData));
-      localStorage.setItem('shifts', JSON.stringify(shiftsData));
-    } catch (error) {
-      console.error('Error loading data from API:', error);
-      if (!savedEmployees || !savedShifts) {
-        const defaultEmployees = [
-          { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
-          { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
-          { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
-          { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
-        ];
-        setEmployees(defaultEmployees);
-        setShifts([]);
-        localStorage.setItem('employees', JSON.stringify(defaultEmployees));
-        localStorage.setItem('shifts', JSON.stringify([]));
-      }
-    }
+    const defaultEmployees = [
+      { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
+      { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
+      { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
+      { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
+    ];
+    setEmployees(defaultEmployees);
+    setShifts([]);
+    localStorage.setItem('employees', JSON.stringify(defaultEmployees));
+    localStorage.setItem('shifts', JSON.stringify([]));
   };
 
   const saveEmployees = async () => {
-    try {
-      await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employees, shifts })
-      });
-    } catch (error) {
-      console.error('Error saving employees to API:', error);
-    }
     localStorage.setItem('employees', JSON.stringify(employees));
     localStorage.setItem('shifts', JSON.stringify(shifts));
   };
@@ -230,19 +206,7 @@ function App() {
     };
 
     try {
-      const response = await fetch('/api/shifts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(shiftToSave)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Ukjent feil');
-      }
-
-      const savedShift = await response.json();
-      const updatedShifts = [...shifts, savedShift];
+      const updatedShifts = [...shifts, shiftToSave];
       setShifts(updatedShifts);
       localStorage.setItem('shifts', JSON.stringify(updatedShifts));
       setShowAddShiftModal(false);
@@ -256,14 +220,13 @@ function App() {
       });
     } catch (error) {
       console.error('Error saving shift:', error);
-      alert(`Feil ved lagring av vakt: ${error.message}`);
+      alert('Feil ved lagring av vakt');
     }
   };
 
   const handleDeleteShift = async (shiftId) => {
     if (!confirm('Slett vakt?')) return;
     try {
-      await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
       const updatedShifts = shifts.filter(shift => shift.id !== shiftId);
       setShifts(updatedShifts);
       localStorage.setItem('shifts', JSON.stringify(updatedShifts));
