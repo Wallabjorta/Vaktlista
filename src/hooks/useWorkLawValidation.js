@@ -67,7 +67,9 @@ const checkMax2SpecialDaysInRow = (employeeId, dateStr, allShifts, holidays) => 
     }
   }
   
-  return maxConsecutive <= 2;
+  // Varning vid 3 eller fler på rad (tillåt men varna)
+  // Returner true om det är OK (< 3), false om det är 3 eller fler
+  return maxConsecutive < 3;
 };
 
 // Regel 3: Sjekk minst 1 fridag per uke
