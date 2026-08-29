@@ -22,13 +22,12 @@ function ShiftCalendar({
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     startDate.setDate(startDate.getDate() - daysToSubtract);
 
-    // Vis 1 vecka framåt som standard, 32 veckor om historikk är aktiverad
-    const weeksToShow = showHistory ? 32 : 1;
-    
-    // Om inte historikk visas, starta från nästa vecka
+    // Visa alla veckor framåt (32 veckor total)
+    // Om showHistory=false, starta från aktuell vecka (dölj förra vecka)
+    // Om showHistory=true, starta från förra vecka
     const startWeek = showHistory ? 0 : 1;
 
-    for (let week = startWeek; week < startWeek + weeksToShow; week++) {
+    for (let week = startWeek; week < 32; week++) {
       for (let day = 0; day < 7; day++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + week * 7 + day);
