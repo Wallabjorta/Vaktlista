@@ -51,19 +51,25 @@ const checkMax2SpecialDaysInRow = (employeeId, dateStr, allShifts, holidays) => 
     .filter(shift => shift.employeeId === employeeId)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   
-  // Finn alle påfølgende spesialdager
+  // Finn alle påfølgende spesialdager med skift
   let maxConsecutive = 0;
-  let currentStreak = 0;
+  let currentStreak = 1; // Start with 1 for the current shift
   
-  for (let i = 0; i < employeeShifts.length; i++) {
-    const shiftDateStr = employeeShifts[i].date;
-    const isSpecial = isSpecialDay(shiftDateStr, holidays);
+  for (let i = 1; i < employeeShifts.length; i++) {
+    const prevShiftDate = new Date(employeeShifts[i-1].date + 'T00:00:00');
+    const currentShiftDate = new Date(employeeShifts[i].date + 'T00:00:00');
     
-    if (isSpecial) {
+    // Sjekk om dagene er påfølgende (1 dag mellom)
+    const daysDiff = (currentShiftDate - prevShiftDate) / (1000 * 60 * 60 * 24);
+    
+    const prevIsSpecial = isSpecialDay(employeeShifts[i-1].date, holidays);
+    const currentIsSpecial = isSpecialDay(employeeShifts[i].date, holidays);
+    
+    if (daysDiff === 1 && prevIsSpecial && currentIsSpecial) {
       currentStreak++;
       maxConsecutive = Math.max(maxConsecutive, currentStreak);
     } else {
-      currentStreak = 0;
+      currentStreak = 1;
     }
   }
   
