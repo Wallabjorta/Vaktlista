@@ -1,0 +1,173 @@
+[
+  {
+    "employeeId": "1",
+    "departmentId": "dept-2",
+    "date": "2026-08-27",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787808022171",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-1",
+    "date": "2026-08-27",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787808045001",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-1",
+    "date": "2026-08-28",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787810777721",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-1",
+    "date": "2026-08-29",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787810782353",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-1",
+    "date": "2026-08-30",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787810784969",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-1",
+    "date": "2026-08-26",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787814069423",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-25",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787821997215",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-26",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787821998582",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-27",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787821999590",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-28",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822000622",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-29",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822002159",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-30",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822003374",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-08-31",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822004863",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-09-01",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822006350",
+    "breaks": []
+  },
+  {
+    "employeeId": "1787821907439",
+    "departmentId": "dept-1",
+    "date": "2026-09-02",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787822008070",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-3",
+    "date": "2026-08-27",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787838911372",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-3",
+    "date": "2026-08-31",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787838920796",
+    "breaks": []
+  },
+  {
+    "employeeId": "1",
+    "departmentId": "dept-2",
+    "date": "2026-11-03",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787897167999",
+    "breaks": []
+  },
+  {
+    "employeeId": "2",
+    "departmentId": "dept-1",
+    "date": "2026-08-26",
+    "startTime": "08:00",
+    "endTime": "16:00",
+    "id": "1787948465432",
+    "breaks": []
+  }
+]
