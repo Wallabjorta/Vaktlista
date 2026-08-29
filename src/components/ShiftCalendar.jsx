@@ -55,8 +55,7 @@ function ShiftCalendar({
   const getShiftsForDateAndEmployee = (dateStr, employeeId) => {
     return shifts.filter(shift =>
       shift.date === dateStr &&
-      shift.employeeId === employeeId &&
-      (!selectedDepartment || shift.departmentId === selectedDepartment)
+      shift.employeeId === employeeId
     );
   };
 
