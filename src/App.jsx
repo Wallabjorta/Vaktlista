@@ -195,11 +195,11 @@ function App() {
       return;
     }
 
-    // Valider norsk arbeidslov
+    // Varning för norsk arbeidslov (men tillåt ändå)
     const validation = validate(newShift.employeeId, newShift.date);
     if (!validation.isValid) {
-      alert(`Kan ikke legge til vakt: ${validation.errors.join(', ')}`);
-      return;
+      alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
+      // Fortsätt med att lägga till vakten
     }
 
     const shiftToSave = {
@@ -456,11 +456,10 @@ function App() {
           vacations={VACATIONS}
           currentUser={currentUser}
           onAddShift={(employeeId, date, deptId) => {
-            // Valider norsk arbeidslov før vi åpner modal
+            // Varning för norsk arbeidslov (men tillåt ändå)
             const validation = validate(employeeId, date);
             if (!validation.isValid) {
-              alert(`Kan ikke legge til vakt: ${validation.errors.join(', ')}`);
-              return;
+              alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
             }
             setNewShift({
               employeeId: employeeId,
