@@ -83,6 +83,7 @@ function App() {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
@@ -356,7 +357,7 @@ function App() {
         </div>
       </header>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
           onClick={() => setSelectedDepartment(null)}
           className="px-4 py-2 rounded border"
@@ -374,6 +375,12 @@ function App() {
             {dept.name}
           </button>
         ))}
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200"
+        >
+          {showHistory ? 'Skjul historikk' : 'Vis historikk'}
+        </button>
       </div>
 
       <div className="mb-6 p-4 bg-white border rounded-lg shadow-sm">
@@ -457,6 +464,7 @@ function App() {
           holidays={holidays}
           vacations={VACATIONS}
           currentUser={currentUser}
+          showHistory={showHistory}
           onAddShift={(employeeId, date, deptId) => {
             // Varning för norsk arbeidslov (men tillåt ändå)
             const validation = validate(employeeId, date);

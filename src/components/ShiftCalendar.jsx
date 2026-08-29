@@ -10,7 +10,8 @@ function ShiftCalendar({
   vacations,
   currentUser,
   onAddShift,
-  onDeleteShift
+  onDeleteShift,
+  showHistory = true
 }) {
   const getDates = () => {
     const dates = [];
@@ -21,7 +22,13 @@ function ShiftCalendar({
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     startDate.setDate(startDate.getDate() - daysToSubtract);
 
-    for (let week = 0; week < 32; week++) {
+    // Vis 1 vecka framåt som standard, 32 veckor om historikk är aktiverad
+    const weeksToShow = showHistory ? 32 : 1;
+    
+    // Om inte historikk visas, starta från nästa vecka
+    const startWeek = showHistory ? 0 : 1;
+
+    for (let week = startWeek; week < startWeek + weeksToShow; week++) {
       for (let day = 0; day < 7; day++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + week * 7 + day);
@@ -79,16 +86,22 @@ function ShiftCalendar({
           <tr className="border-b">
             {/* Tom cell for ansatt-kolonnen */}
             <th className="p-2 border-r bg-gray-50 min-w-[150px]"></th>
-            {dates.map((date, index) => (
-              <th key={index} className="p-2 text-center bg-gray-50 border-r last:border-r-0">
-                <div className="text-sm font-medium text-gray-700">
-                  {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Uke {getWeekNumber(date)}
-                </div>
-              </th>
-            ))}
+            {dates.map((date, index) => {
+              const isToday = date.toDateString() === new Date().toDateString();
+              return (
+                <th 
+                  key={index} 
+                  className={`p-2 text-center border-r last:border-r-0 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                >
+                  <div className="text-sm font-medium text-gray-700">
+                    {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Uke {getWeekNumber(date)}
+                  </div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
