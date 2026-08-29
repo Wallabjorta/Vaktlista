@@ -120,22 +120,30 @@ function App() {
     const savedEmployees = localStorage.getItem('employees');
     const savedShifts = localStorage.getItem('shifts');
     
-    if (savedEmployees && savedShifts) {
+    if (savedEmployees) {
       setEmployees(JSON.parse(savedEmployees));
-      setShifts(JSON.parse(savedShifts));
-      return;
     }
     
-    const defaultEmployees = [
-      { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
-      { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
-      { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
-      { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
-    ];
-    setEmployees(defaultEmployees);
-    setShifts([]);
-    localStorage.setItem('employees', JSON.stringify(defaultEmployees));
-    localStorage.setItem('shifts', JSON.stringify([]));
+    if (savedShifts) {
+      setShifts(JSON.parse(savedShifts));
+    }
+    
+    if (!savedEmployees || !savedShifts) {
+      const defaultEmployees = [
+        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
+        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
+        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
+        { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
+      ];
+      if (!savedEmployees) {
+        setEmployees(defaultEmployees);
+        localStorage.setItem('employees', JSON.stringify(defaultEmployees));
+      }
+      if (!savedShifts) {
+        setShifts([]);
+        localStorage.setItem('shifts', JSON.stringify([]));
+      }
+    }
   };
 
   const saveEmployees = async () => {
@@ -230,66 +238,48 @@ function App() {
     }
   };
 
-  const handleSaveEmployee = async (updatedEmployee) => {
-    try {
-      const updatedEmployees = employees.map(emp =>
-        emp.id === updatedEmployee.id ? updatedEmployee : emp
-      );
-      setEmployees(updatedEmployees);
-      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-      await saveEmployees();
-      setShowEditEmployeeModal(false);
-      alert('Ansatt oppdatert!');
-    } catch (error) {
-      console.error('Error saving employee:', error);
-      alert('Feil ved lagring av ansatt');
-    }
+  const handleSaveEmployee = (updatedEmployee) => {
+    const updatedEmployees = employees.map(emp =>
+      emp.id === updatedEmployee.id ? updatedEmployee : emp
+    );
+    setEmployees(updatedEmployees);
+    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+    setShowEditEmployeeModal(false);
+    alert('Ansatt oppdatert!');
   };
 
-  const handleAddEmployee = async (newEmployee) => {
-    try {
-      const updatedEmployees = [...employees, newEmployee];
-      setEmployees(updatedEmployees);
-      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-      await saveEmployees();
-      setShowAddEmployeeModal(false);
-      alert('Ny ansatt lagt til!');
-    } catch (error) {
-      console.error('Error adding employee:', error);
-      alert('Feil ved lagring av ny ansatt');
-    }
+  const handleAddEmployee = (newEmployee) => {
+    const updatedEmployees = [...employees, newEmployee];
+    setEmployees(updatedEmployees);
+    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+    setShowAddEmployeeModal(false);
+    alert('Ny ansatt lagt til!');
   };
 
-  const handleDeleteEmployee = async () => {
+  const handleDeleteEmployee = () => {
     if (!employeeToDelete) return;
 
-    try {
-      const hasShifts = shifts.some(shift => shift.employeeId === employeeToDelete.id);
-      if (hasShifts) {
-        alert('Kan ikke slette ansatt som har vakter! Slett vaktene først.');
-        setShowDeleteConfirmModal(false);
-        setEmployeeToDelete(null);
-        return;
-      }
-
-      if (currentUser?.id === employeeToDelete.id) {
-        alert('Kan ikke slette den innloggede brukeren! Logg ut først.');
-        setShowDeleteConfirmModal(false);
-        setEmployeeToDelete(null);
-        return;
-      }
-
-      const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-      setEmployees(updatedEmployees);
-      localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-      await saveEmployees();
+    const hasShifts = shifts.some(shift => shift.employeeId === employeeToDelete.id);
+    if (hasShifts) {
+      alert('Kan ikke slette ansatt som har vakter! Slett vaktene først.');
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
-      alert('Ansatt slettet!');
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      alert('Feil ved sletting av ansatt');
+      return;
     }
+
+    if (currentUser?.id === employeeToDelete.id) {
+      alert('Kan ikke slette den innloggede brukeren! Logg ut først.');
+      setShowDeleteConfirmModal(false);
+      setEmployeeToDelete(null);
+      return;
+    }
+
+    const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
+    setEmployees(updatedEmployees);
+    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+    setShowDeleteConfirmModal(false);
+    setEmployeeToDelete(null);
+    alert('Ansatt slettet!');
   };
 
   const handleShowEmployeeDetails = (employee) => {
