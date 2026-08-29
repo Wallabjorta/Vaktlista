@@ -137,6 +137,15 @@ function ShiftCalendar({
                             )}
                           </div>
                         ))}
+                        {currentUser && (
+                          <button
+                            onClick={() => onAddShift(employee.id, dateStr, selectedDepartment)}
+                            className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
+                            title="Legg til vakt"
+                          >
+                            + Ny
+                          </button>
+                        )}
                       </div>
                     ) : (
                       currentUser && (
