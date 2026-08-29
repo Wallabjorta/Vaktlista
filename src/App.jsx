@@ -97,7 +97,8 @@ function App() {
     departmentId: "",
     date: new Date().toISOString().split('T')[0],
     startTime: "08:00",
-    endTime: "16:00"
+    endTime: "16:00",
+    comment: ""
   });
 
   // Hent norske helligdager dynamisk
@@ -230,7 +231,8 @@ function App() {
         departmentId: selectedDepartment || "",
         date: new Date().toISOString().split('T')[0],
         startTime: "08:00",
-        endTime: "16:00"
+        endTime: "16:00",
+        comment: ""
       });
     } catch (error) {
       console.error('Error saving shift:', error);

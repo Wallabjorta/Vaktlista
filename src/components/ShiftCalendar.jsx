@@ -145,14 +145,21 @@ function ShiftCalendar({
                         {shiftsForDay.map((shift, shiftIndex) => (
                           <div
                             key={shiftIndex}
-                            className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80"
+                            className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80 group relative"
                             style={{ backgroundColor: getDeptColor(shift.departmentId) }}
                             onClick={() => currentUser && onDeleteShift(shift.id)}
-                            title={`Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
+                            title={shift.comment ? `${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId}): ${shift.comment}` : `Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
                           >
-                            {shift.startTime} - {shift.endTime}
-                            {currentUser?.isAdmin && (
-                              <button className="ml-1 text-xs">x</button>
+                            <div className="truncate">
+                              {shift.startTime} - {shift.endTime}
+                              {currentUser?.isAdmin && (
+                                <button className="ml-1 text-xs">x</button>
+                              )}
+                            </div>
+                            {shift.comment && (
+                              <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                                {shift.comment}
+                              </div>
                             )}
                           </div>
                         ))}

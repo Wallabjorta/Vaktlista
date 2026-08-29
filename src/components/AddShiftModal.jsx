@@ -73,6 +73,17 @@ function AddShiftModal({ employees, departments, newShift, onChange, onSave, onC
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-1">Kommentar / Arbeidsoppgave</label>
+            <textarea
+              value={newShift.comment || ''}
+              onChange={(e) => onChange('comment', e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Skriv en kommentar om arbeidsoppgaven..."
+              rows={2}
+            />
+          </div>
+
           <div className="flex gap-2 pt-4 border-t">
             <button
               onClick={onSave}
