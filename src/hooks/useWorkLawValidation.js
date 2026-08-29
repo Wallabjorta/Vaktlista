@@ -43,46 +43,31 @@ const checkMax5DaysPerWeek = (employeeId, dateStr, allShifts, holidays) => {
 
 // Regel 2: Sjekk max 2 søndager/helligdager på rad
 const checkMax2SpecialDaysInRow = (employeeId, dateStr, allShifts, holidays) => {
-  const date = new Date(dateStr + 'T00:00:00');
+  // Inkluder det nye skiftet i listen
+  const allShiftsWithNew = [...allShifts, { employeeId, date: dateStr }];
   
   // Finn alle skift for denne ansatte, sortert på dato
-  const employeeShifts = allShifts
+  const employeeShifts = allShiftsWithNew
     .filter(shift => shift.employeeId === employeeId)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
   
-  // Sjekk de siste 2 dagene før dette skiftet
-  const consecutiveSpecialDays = [];
+  // Finn alle påfølgende spesialdager
+  let maxConsecutive = 0;
+  let currentStreak = 0;
   
-  // Gå tilbake i tid for å finne påfølgende spesielle dager
-  let currentDate = new Date(date);
-  let count = 0;
-  
-  // Sjekk dagen før
-  for (let i = 1; i <= 2; i++) {
-    const prevDate = new Date(currentDate);
-    prevDate.setDate(currentDate.getDate() - i);
-    const prevDateStr = prevDate.toISOString().split('T')[0];
+  for (let i = 0; i < employeeShifts.length; i++) {
+    const shiftDateStr = employeeShifts[i].date;
+    const isSpecial = isSpecialDay(shiftDateStr, holidays);
     
-    // Sjekk om forrige dag var en spesialdag med skift
-    const hasShift = employeeShifts.some(shift => shift.date === prevDateStr);
-    const isSpecial = isSpecialDay(prevDateStr, holidays);
-    
-    if (hasShift && isSpecial) {
-      count++;
+    if (isSpecial) {
+      currentStreak++;
+      maxConsecutive = Math.max(maxConsecutive, currentStreak);
     } else {
-      break;
+      currentStreak = 0;
     }
   }
   
-  // Sjekk om dette er en spesialdag
-  const isCurrentSpecial = isSpecialDay(dateStr, holidays);
-  
-  // Hvis dette er en spesialdag, tell med
-  if (isCurrentSpecial) {
-    count++;
-  }
-  
-  return count <= 2;
+  return maxConsecutive <= 2;
 };
 
 // Regel 3: Sjekk minst 1 fridag per uke
