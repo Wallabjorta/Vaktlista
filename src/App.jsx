@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ShiftCalendar from './components/ShiftCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
@@ -9,15 +9,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
-
-// Data
-const DEPARTMENTS = [
-  { id: "dept-1", name: "Vest", color: "#3B82F6" },
-  { id: "dept-2", name: "Øst", color: "#10B981" },
-  { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
-  { id: "dept-4", name: "Butikk", color: "#EF4444" },
-  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" }
-];
+import useFirebaseData from './hooks/useFirebaseData';
 
 // Skoleferier for Norge
 const VACATIONS = {
@@ -78,9 +70,30 @@ const VACATIONS = {
   "2027-08-15": "Sommerferie"
 };
 
+// Department definitions
+const DEPARTMENTS = [
+  { id: "dept-1", name: "Vest", color: "#3B82F6" },
+  { id: "dept-2", name: "Øst", color: "#10B981" },
+  { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
+  { id: "dept-4", name: "Butikk", color: "#EF4444" },
+  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" }
+];
+
 function App() {
-  const [employees, setEmployees] = useState([]);
-  const [shifts, setShifts] = useState([]);
+  // Firebase data hook
+  const {
+    employees,
+    shifts,
+    loading,
+    error,
+    addEmployee: addEmployeeFirebase,
+    updateEmployee: updateEmployeeFirebase,
+    deleteEmployee: deleteEmployeeFirebase,
+    addShift: addShiftFirebase,
+    deleteShift: deleteShiftFirebase,
+    migrateData
+  } = useFirebaseData();
+
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
@@ -108,50 +121,54 @@ function App() {
   // Validering av norske arbeidslover
   const { validate } = useWorkLawValidation(shifts, holidays);
 
+  // Load user from localStorage on initial render
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       setCurrentUser(JSON.parse(savedUser));
     }
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    const savedEmployees = localStorage.getItem('employees');
-    const savedShifts = localStorage.getItem('shifts');
     
-    if (savedEmployees) {
-      setEmployees(JSON.parse(savedEmployees));
-    } else {
+    // Check if we need to migrate data from localStorage to Firebase
+    const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
+    if (hasLocalData && employees.length === 0 && shifts.length === 0 && !loading) {
+      // Auto-migrate if Firebase is empty but localStorage has data
+      migrateData().then(result => {
+        console.log('Migration result:', result);
+      });
+    }
+  }, [employees.length, shifts.length, loading, migrateData]);
+
+  // Fallback: Load default employees if Firebase returns empty
+  useEffect(() => {
+    if (!loading && employees.length === 0) {
       const defaultEmployees = [
         { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
         { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
         { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
         { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
       ];
-      setEmployees(defaultEmployees);
-      localStorage.setItem('employees', JSON.stringify(defaultEmployees));
+      
+      // Add default employees to Firebase
+      defaultEmployees.forEach(async (emp) => {
+        try {
+          await addEmployeeFirebase(emp);
+        } catch (e) {
+          console.log('Default employee already exists or error:', e.message);
+        }
+      });
     }
-    
-    if (savedShifts) {
-      setShifts(JSON.parse(savedShifts));
-    } else {
-      setShifts([]);
-      localStorage.setItem('shifts', JSON.stringify([]));
-    }
-  };
+  }, [loading, employees.length, addEmployeeFirebase]);
 
-  const saveEmployees = async () => {
-    localStorage.setItem('employees', JSON.stringify(employees));
-    localStorage.setItem('shifts', JSON.stringify(shifts));
-  };
-
-  const handleLogin = (email, password) => {
-    const user = employees.find(emp => emp.id === email);
+  const handleLogin = useCallback((email, password) => {
+    // Find user in employees list
+    const user = employees.find(emp => emp.id === email || emp.email === email);
     if (!user) {
       alert('Ogiltig ansatt! Vennligst velg en ansatt fra listen.');
       return false;
     }
+    
+    // For demo purposes, use simple password check
+    // In production, you should use Firebase Authentication
     if (user.isAdmin && password !== 'admin123') {
       alert('Feil passord for admin!');
       return false;
@@ -160,18 +177,19 @@ function App() {
       alert('Admin må oppgi passord!');
       return false;
     }
+    
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
     setShowLoginModal(false);
     return true;
-  };
+  }, [employees]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
-  };
+  }, []);
 
-  const handleAddShift = async () => {
+  const handleAddShift = useCallback(async () => {
     if (!newShift.employeeId) {
       alert('Velg en ansatt!');
       return;
@@ -189,11 +207,10 @@ function App() {
       return;
     }
 
-    // Varning för norsk arbeidslov (men tillåt ändå)
+    // Varning for norsk arbeidslov (men tillåt åndå)
     const validation = validate(newShift.employeeId, newShift.date);
     if (!validation.isValid) {
       alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
-      // Fortsätt med att lägga till vakten
     }
 
     const shiftToSave = {
@@ -203,9 +220,7 @@ function App() {
     };
 
     try {
-      const updatedShifts = [...shifts, shiftToSave];
-      setShifts(updatedShifts);
-      localStorage.setItem('shifts', JSON.stringify(updatedShifts));
+      await addShiftFirebase(shiftToSave);
       setShowAddShiftModal(false);
       setNewShift({
         employeeId: "",
@@ -217,41 +232,43 @@ function App() {
       });
     } catch (error) {
       console.error('Error saving shift:', error);
-      alert('Feil ved lagring av vakt');
+      alert('Feil ved lagring av vakt: ' + error.message);
     }
-  };
+  }, [newShift, selectedDepartment, addShiftFirebase, validate]);
 
-  const handleDeleteShift = async (shiftId) => {
+  const handleDeleteShift = useCallback(async (shiftId) => {
     if (!confirm('Slett vakt?')) return;
     try {
-      const updatedShifts = shifts.filter(shift => shift.id !== shiftId);
-      setShifts(updatedShifts);
-      localStorage.setItem('shifts', JSON.stringify(updatedShifts));
+      await deleteShiftFirebase(shiftId);
     } catch (error) {
       console.error('Error deleting shift:', error);
-      alert('Feil ved sletting av vakt');
+      alert('Feil ved sletting av vakt: ' + error.message);
     }
-  };
+  }, [deleteShiftFirebase]);
 
-  const handleSaveEmployee = (updatedEmployee) => {
-    const updatedEmployees = employees.map(emp =>
-      emp.id === updatedEmployee.id ? updatedEmployee : emp
-    );
-    setEmployees(updatedEmployees);
-    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-    setShowEditEmployeeModal(false);
-    alert('Ansatt oppdatert!');
-  };
+  const handleSaveEmployee = useCallback(async (updatedEmployee) => {
+    try {
+      await updateEmployeeFirebase(updatedEmployee.id, updatedEmployee);
+      setShowEditEmployeeModal(false);
+      alert('Ansatt oppdatert!');
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      alert('Feil ved oppdatering av ansatt: ' + error.message);
+    }
+  }, [updateEmployeeFirebase]);
 
-  const handleAddEmployee = (newEmployee) => {
-    const updatedEmployees = [...employees, newEmployee];
-    setEmployees(updatedEmployees);
-    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-    setShowAddEmployeeModal(false);
-    alert('Ny ansatt lagt til!');
-  };
+  const handleAddEmployee = useCallback(async (newEmployee) => {
+    try {
+      await addEmployeeFirebase(newEmployee);
+      setShowAddEmployeeModal(false);
+      alert('Ny ansatt lagt til!');
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      alert('Feil ved oppretting av ansatt: ' + error.message);
+    }
+  }, [addEmployeeFirebase]);
 
-  const handleDeleteEmployee = () => {
+  const handleDeleteEmployee = useCallback(async () => {
     if (!employeeToDelete) return;
 
     const hasShifts = shifts.some(shift => shift.employeeId === employeeToDelete.id);
@@ -269,23 +286,26 @@ function App() {
       return;
     }
 
-    const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-    setEmployees(updatedEmployees);
-    localStorage.setItem('employees', JSON.stringify(updatedEmployees));
-    setShowDeleteConfirmModal(false);
-    setEmployeeToDelete(null);
-    alert('Ansatt slettet!');
-  };
+    try {
+      await deleteEmployeeFirebase(employeeToDelete.id);
+      setShowDeleteConfirmModal(false);
+      setEmployeeToDelete(null);
+      alert('Ansatt slettet!');
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert('Feil ved sletting av ansatt: ' + error.message);
+    }
+  }, [employeeToDelete, shifts, currentUser, deleteEmployeeFirebase]);
 
-  const handleShowEmployeeDetails = (employee) => {
+  const handleShowEmployeeDetails = useCallback((employee) => {
     setSelectedEmployee(employee);
     setShowEmployeeDetailsModal(true);
-  };
+  }, []);
 
-  const handleRequestDeleteEmployee = (employee) => {
+  const handleRequestDeleteEmployee = useCallback((employee) => {
     setEmployeeToDelete(employee);
     setShowDeleteConfirmModal(true);
-  };
+  }, []);
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -319,9 +339,9 @@ function App() {
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">← Forrige</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">⬅ Forrige</button>
             <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700">I dag</button>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste →</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste ➡</button>
           </div>
         </div>
       </header>
@@ -415,7 +435,7 @@ function App() {
                   className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Slett ansatt"
                 >
-                  ✕
+                  ❌
                 </button>
               )}
             </div>
@@ -435,7 +455,7 @@ function App() {
           currentUser={currentUser}
           showHistory={showHistory}
           onAddShift={(employeeId, date, deptId) => {
-            // Varning för norsk arbeidslov (men tillåt ändå)
+            // Varning for norsk arbeidslov (men tillåt åndå)
             const validation = validate(employeeId, date);
             if (!validation.isValid) {
               alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
