@@ -124,8 +124,8 @@ function App() {
   const loadData = async () => {
     try {
       const [empsRes, shiftsRes] = await Promise.all([
-        fetch('http://localhost:29115/api/employees'),
-        fetch('http://localhost:29115/api/shifts')
+        fetch('/api/employees'),
+        fetch('/api/shifts')
       ]);
       const empsData = await empsRes.json();
       const shiftsData = await shiftsRes.json();
@@ -145,7 +145,7 @@ function App() {
 
   const saveEmployees = async () => {
     try {
-      await fetch('http://localhost:29115/api/sync', {
+      await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employees, shifts })
@@ -212,7 +212,7 @@ function App() {
     };
 
     try {
-      const response = await fetch('http://localhost:29115/api/shifts', {
+      const response = await fetch('/api/shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(shiftToSave)
@@ -243,7 +243,7 @@ function App() {
   const handleDeleteShift = async (shiftId) => {
     if (!confirm('Slett vakt?')) return;
     try {
-      await fetch(`http://localhost:29115/api/shifts/${shiftId}`, { method: 'DELETE' });
+      await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
       setShifts(shifts.filter(shift => shift.id !== shiftId));
     } catch (error) {
       console.error('Error deleting shift:', error);
@@ -416,7 +416,7 @@ function App() {
                     + Ny ansatt
                   </button>
                   <button
-                    onClick={() => window.open('http://localhost:29115/api/export/ical', '_blank')}
+                    onClick={() => window.open('/api/export/ical', '_blank')}
                     className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700"
                   >
                     📅 Eksporter til iCal

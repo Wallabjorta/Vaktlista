@@ -9,7 +9,7 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   };
 
   // Generer personlig iCal-URL
-  const icalUrl = `http://localhost:29115/api/export/ical/${employee?.id}`;
+  const icalUrl = `/api/export/ical/${employee?.id}`;
 
   // Kopier lenke til utklippstavle
   const copyToClipboard = () => {
