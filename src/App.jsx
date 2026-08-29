@@ -6,6 +6,7 @@ import EditEmployeeModal from './components/EditEmployeeModal';
 import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
+import AdminStats from './components/AdminStats';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 
@@ -473,6 +474,17 @@ function App() {
           }}
           onDeleteShift={handleDeleteShift}
         />
+      )}
+
+      {currentUser?.isAdmin && (
+        <div className="mt-6">
+          <AdminStats
+            employees={employees}
+            shifts={shifts}
+            holidays={holidays}
+            departments={DEPARTMENTS}
+          />
+        </div>
       )}
 
       {showLoginModal && (
