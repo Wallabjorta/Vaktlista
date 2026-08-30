@@ -128,7 +128,10 @@ export const deleteEmployee = async (id) => {
 export const getShifts = async () => {
   try {
     const snapshot = await getDocs(shiftsCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => {
+      const { id, ...rest } = doc.data();
+      return { id: doc.id, ...rest };
+    });
   } catch (error) {
     console.error("Error getting shifts:", error);
     return [];
