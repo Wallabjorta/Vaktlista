@@ -76,7 +76,8 @@ const DEPARTMENTS = [
   { id: "dept-2", name: "Øst", color: "#10B981" },
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
   { id: "dept-4", name: "Butikk", color: "#EF4444" },
-  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" }
+  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
+  { id: "dept-6", name: "Fri", color: "#FF0000" }
 ];
 
 function App() {
