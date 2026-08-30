@@ -7,7 +7,8 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
-import DepartmentModal from './components/DepartmentModal';
+import DepartmentModal
+import EmployeeDepartmentsModal from './components/DepartmentModal';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
@@ -101,6 +102,15 @@ function App() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+      {showEmployeeDepartmentsModal && selectedEmployee && (
+        <EmployeeDepartmentsModal
+          employee={selectedEmployee}
+          departments={departments}
+          onSave={handleSaveEmployee}
+          onClose={() => setShowEmployeeDepartmentsModal(false)}
+        />
+      )}
+  const [showEmployeeDepartmentsModal, setShowEmployeeDepartmentsModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [newShift, setNewShift] = useState({
@@ -467,6 +477,17 @@ function App() {
                   className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Slett ansatt"
                 >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEmployee(emp);
+                    setShowEmployeeDepartmentsModal(true);
+                  }}
+                  className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                  title="Rediger avdelinger"
+                >
+                  ⚙️
+                </button>
                   ❌
                 </button>
               )}
@@ -578,6 +599,15 @@ function App() {
       )}
 
       {showDepartmentModal && (
+      {showEmployeeDepartmentsModal && selectedEmployee && (
+        <EmployeeDepartmentsModal
+          employee={selectedEmployee}
+          departments={departments}
+          onSave={handleSaveEmployee}
+          onClose={() => setShowEmployeeDepartmentsModal(false)}
+        />
+      )}
+  const [showEmployeeDepartmentsModal, setShowEmployeeDepartmentsModal] = useState(false);
         <DepartmentModal
           departments={departments}
           onSave={handleSaveDepartment}
