@@ -140,10 +140,10 @@ function App() {
   useEffect(() => {
     if (!loading && employees.length === 0) {
       const defaultEmployees = [
-        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "ola@vaktlista.no", phone: "", isAdmin: false },
-        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "kari@vaktlista.no", phone: "", isAdmin: false },
-        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "per@vaktlista.no", phone: "", isAdmin: false },
-        { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "admin@vaktlista.no", phone: "", isAdmin: true }
+        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "ola@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
+        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "kari@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
+        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "per@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
+        { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "admin@vaktlista.no", phone: "", isAdmin: true, password: "admin123" }
       ];
       
       // Add default employees to Firebase
@@ -165,14 +165,14 @@ function App() {
       return false;
     }
     
-    // For demo purposes, use simple password check
-    // In production, you should use Firebase Authentication
-    if (user.isAdmin && password !== 'admin123') {
-      alert('Feil passord for admin!');
+    // Check password - all users now have individual passwords
+    if (!password) {
+      alert('Passord er påkrevd!');
       return false;
     }
-    if (user.isAdmin && !password) {
-      alert('Admin må oppgi passord!');
+    
+    if (user.password !== password) {
+      alert('Feil passord!');
       return false;
     }
     

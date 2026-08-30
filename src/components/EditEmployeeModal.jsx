@@ -7,7 +7,8 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
     deptIds: employee?.deptIds || [],
     email: employee?.email || '',
     phone: employee?.phone || '',
-    isAdmin: employee?.isAdmin || false
+    isAdmin: employee?.isAdmin || false,
+    password: employee?.password || ''
   });
 
   // Update state when employee changes
@@ -19,7 +20,8 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
         deptIds: employee.deptIds || [],
         email: employee.email || '',
         phone: employee.phone || '',
-        isAdmin: employee.isAdmin || false
+        isAdmin: employee.isAdmin || false,
+        password: employee.password || ''
       });
     }
   }, [employee]);
@@ -118,6 +120,18 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                 checked={editedEmployee.isAdmin}
                 onChange={(e) => setEditedEmployee(prev => ({ ...prev, isAdmin: e.target.checked }))}
                 className="w-4 h-4"
+              />
+            </div>
+
+            {/* Passord */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Passord</label>
+              <input
+                type="password"
+                value={editedEmployee.password}
+                onChange={(e) => setEditedEmployee(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full p-2 border rounded"
+                placeholder="Passord"
               />
             </div>
 
