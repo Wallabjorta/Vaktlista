@@ -145,17 +145,15 @@ function ShiftCalendar({
                         {shiftsForDay.map((shift, shiftIndex) => (
                           <div
                             key={shiftIndex}
-                            className="p-1 rounded text-xs text-white font-medium truncate group relative"
+                            className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80 group relative"
                             style={{ backgroundColor: getDeptColor(shift.departmentId) }}
-                            title={shift.comment ? `${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId}): ${shift.comment}` : `${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
+                            onClick={() => currentUser?.isAdmin && onDeleteShift(shift.id)}
+                            title={shift.comment ? `${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId}): ${shift.comment}` : `Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
                           >
                             <div className="truncate">
                               {shift.startTime} - {shift.endTime}
                               {currentUser?.isAdmin && (
-                                <button 
-                                  onClick={(e) => {e.stopPropagation(); onDeleteShift(shift.id);}}
-                                  className="ml-1 text-xs hover:opacity-70"
-                                >x</button>
+                                <button className="ml-1 text-xs">x</button>
                               )}
                             </div>
                             {shift.comment && (
