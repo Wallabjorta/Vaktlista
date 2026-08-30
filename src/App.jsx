@@ -474,9 +474,20 @@ function App() {
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedEmployee(emp);
-                      setShowEmployeeDepartmentsModal(true);
+                      setShowEditEmployeeModal(true);
                     }}
                     className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Rediger ansatt"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmployee(emp);
+                      setShowEmployeeDepartmentsModal(true);
+                    }}
+                    className="text-purple-500 hover:text-purple-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
                     title="Rediger avdelinger"
                   >
                     ⚙️
