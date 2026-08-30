@@ -80,7 +80,7 @@ export const addEmployee = async (employee) => {
 };
 
 /**
- * Update an employee
+ * Update an employee (creates if doesn't exist)
  * @param {string} id - Employee ID
  * @param {Object} updates - Fields to update
  * @returns {Promise<boolean>} Success status
@@ -88,7 +88,7 @@ export const addEmployee = async (employee) => {
 export const updateEmployee = async (id, updates) => {
   try {
     const docRef = doc(db, "employees", id);
-    await updateDoc(docRef, updates);
+    await setDoc(docRef, updates, { merge: true });
     return true;
   } catch (error) {
     console.error("Error updating employee:", error);
