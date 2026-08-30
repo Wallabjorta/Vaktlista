@@ -79,26 +79,27 @@ function ShiftCalendar({
   };
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto">
-      <table className="w-full border-collapse">
+    <div className="bg-white border rounded-lg shadow-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse min-w-[800px]">
         <thead>
           <tr className="border-b">
             {/* Tom cell for ansatt-kolonnen */}
-            <th className="p-2 border-r bg-gray-50 min-w-[150px]"></th>
+            <th className="p-2 border-r bg-gray-50 min-w-[120px] md:min-w-[150px]"></th>
             {dates.map((date, index) => {
               const isToday = date.toDateString() === new Date().toDateString();
               return (
-                <th 
-                  key={index} 
-                  className={`p-2 text-center border-r last:border-r-0 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                >
-                  <div className="text-sm font-medium text-gray-700">
-                    {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Uke {getWeekNumber(date)}
-                  </div>
-                </th>
+                <th
+                    key={index}
+                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                  >
+                    <div className="font-medium text-gray-700">
+                      {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="hidden md:block text-xs text-gray-500">
+                      Uke {getWeekNumber(date)}
+                    </div>
+                  </th>
               );
             })}
           </tr>
@@ -106,9 +107,9 @@ function ShiftCalendar({
         <tbody>
           {employees.map((employee) => (
             <tr key={employee.id} className="border-b last:border-b-0">
-              <td className="p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[150px]">
+              <td className="p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]">
                 <div className="flex items-center gap-2">
-                  <span>{employee.name}</span>
+                  <span className="truncate max-w-full">{employee.name}</span>
                   {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
                 </div>
               </td>
@@ -137,7 +138,7 @@ function ShiftCalendar({
                 return (
                   <td
                     key={dateIndex}
-                    className="p-1 border-r border-b h-16 min-w-[100px] relative"
+                    className="p-1 border-r border-b h-12 md:h-16 min-w-[80px] md:min-w-[100px] relative"
                     style={bgStyle}
                   >
                     {shiftsForDay.length > 0 ? (
@@ -145,7 +146,7 @@ function ShiftCalendar({
                         {shiftsForDay.map((shift, shiftIndex) => (
                           <div
                             key={shiftIndex}
-                            className="p-1 rounded text-xs text-white font-medium truncate cursor-pointer hover:opacity-80 group relative"
+                            className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate cursor-pointer hover:opacity-80 group relative"
                             style={{ backgroundColor: getDeptColor(shift.departmentId) }}
                             onClick={() => currentUser?.isAdmin && onDeleteShift(shift.id)}
                             title={shift.comment ? `${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId}): ${shift.comment}` : `Slett vakt: ${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})`}
@@ -201,6 +202,7 @@ function ShiftCalendar({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

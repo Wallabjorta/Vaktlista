@@ -445,16 +445,16 @@ function App() {
             </div>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 md:gap-2">
           {employees.map(emp => (
             <div
               key={emp.id}
-              className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border cursor-pointer hover:bg-gray-100 group"
+              className="flex items-center gap-2 bg-gray-50 px-2 md:px-3 py-1 rounded-full border cursor-pointer hover:bg-gray-100 group"
               onClick={() => currentUser?.isAdmin && handleShowEmployeeDetails(emp)}
               title={currentUser?.isAdmin ? "Klikk for å se detaljer" : ""}
             >
               <span>{emp.name}</span>
-              {emp.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">Admin</span>}
+              {emp.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 md:px-1.5 py-0.5 rounded">Admin</span>}
               {emp.deptIds?.map(deptId => (
                 <span key={deptId} className="w-2 h-2 rounded-full ml-1" style={{ backgroundColor: departments.find(d => d.id === deptId)?.color }} title={departments.find(d => d.id === deptId)?.name}></span>
               ))}
