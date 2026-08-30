@@ -138,22 +138,19 @@ function App() {
     }
   }, [employees.length, shifts.length, loading, migrateData]);
 
-  // Fallback: Load default employees if Firebase returns empty
+  // Fallback: Load default admin only if Firebase returns empty
   useEffect(() => {
     if (!loading && employees.length === 0) {
-      const defaultEmployees = [
-        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "", phone: "", isAdmin: false },
-        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "", phone: "", isAdmin: false },
-        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "", phone: "", isAdmin: false },
-        { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "", phone: "", isAdmin: true }
+      const defaultAdmin = [
+        { id: "admin-1", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "admin@vaktlista.no", phone: "", isAdmin: true }
       ];
       
-      // Add default employees to Firebase
-      defaultEmployees.forEach(async (emp) => {
+      // Add default admin to Firebase
+      defaultAdmin.forEach(async (emp) => {
         try {
           await addEmployeeFirebase(emp);
         } catch (e) {
-          console.log('Default employee already exists or error:', e.message);
+          console.log('Default admin already exists or error:', e.message);
         }
       });
     }

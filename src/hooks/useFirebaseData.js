@@ -39,9 +39,8 @@ export default function useFirebaseData() {
     try {
       // Check if we should migrate from localStorage
       const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
-      const hasFirebaseData = false; // We'll check this
       
-      // For now, always try to load from Firebase first
+      // Always try to load from Firebase first
       const [emps, shfts] = await Promise.all([
         getEmployees(),
         getShifts()
