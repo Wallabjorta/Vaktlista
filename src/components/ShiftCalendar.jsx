@@ -82,7 +82,7 @@ function ShiftCalendar({
     <div className="bg-white border rounded-lg shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse min-w-[800px]">
-        <thead>
+        <thead className="sticky top-0 bg-white z-20">
           <tr className="border-b">
             {/* Tom cell for ansatt-kolonnen */}
             <th className="p-2 border-r bg-gray-50 min-w-[120px] md:min-w-[150px]"></th>
@@ -91,7 +91,7 @@ function ShiftCalendar({
               return (
                 <th
                     key={index}
-                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'} sticky top-0`}
                   >
                     <div className="font-medium text-gray-700">
                       {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
