@@ -81,6 +81,7 @@ function App() {
     error,
     addEmployee: addEmployeeFirebase,
     updateEmployee: updateEmployeeFirebase,
+    deleteEmployee: deleteEmployeeFirebase,
     addShift: addShiftFirebase,
     deleteShift: deleteShiftFirebase,
     addDepartment: addDepartmentFirebase,
