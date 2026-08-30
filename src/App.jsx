@@ -469,27 +469,29 @@ function App() {
                 <span key={deptId} className="w-2 h-2 rounded-full ml-1" style={{ backgroundColor: departments.find(d => d.id === deptId)?.color }} title={departments.find(d => d.id === deptId)?.name}></span>
               ))}
               {currentUser?.isAdmin && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEmployee(emp);
-                    setShowEmployeeDepartmentsModal(true);
-                  }}
-                  className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Rediger avdelinger"
-                >
-                  ⚙️
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRequestDeleteEmployee(emp);
-                  }}
-                  className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                  title="Slett ansatt"
-                >
-                  ❌
-                </button>
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmployee(emp);
+                      setShowEmployeeDepartmentsModal(true);
+                    }}
+                    className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Rediger avdelinger"
+                  >
+                    ⚙️
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRequestDeleteEmployee(emp);
+                    }}
+                    className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                    title="Slett ansatt"
+                  >
+                    ❌
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -599,20 +601,20 @@ function App() {
       )}
 
       {showDepartmentModal && (
+        <DepartmentModal
+          departments={departments}
+          onSave={handleSaveDepartment}
+          onDelete={handleDeleteDepartment}
+          onClose={() => setShowDepartmentModal(false)}
+        />
+      )}
+
       {showEmployeeDepartmentsModal && selectedEmployee && (
         <EmployeeDepartmentsModal
           employee={selectedEmployee}
           departments={departments}
           onSave={handleSaveEmployee}
           onClose={() => setShowEmployeeDepartmentsModal(false)}
-        />
-      )}
-  const [showEmployeeDepartmentsModal, setShowEmployeeDepartmentsModal] = useState(false);
-        <DepartmentModal
-          departments={departments}
-          onSave={handleSaveDepartment}
-          onDelete={handleDeleteDepartment}
-          onClose={() => setShowDepartmentModal(false)}
         />
       )}
     </div>
