@@ -213,7 +213,6 @@ function App() {
 
     const shiftToSave = {
       ...newShift,
-      id: Date.now().toString(),
       breaks: []
     };
 

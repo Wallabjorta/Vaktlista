@@ -269,9 +269,8 @@ export const deleteDepartment = async (id) => {
  */
 export const addShift = async (shift) => {
   try {
-    const docRef = doc(shiftsCollection);
-    await setDoc(docRef, shift);
-    return { id: docRef.id, ...shift };
+    const docRef = await addDoc(shiftsCollection, shift);
+    return { ...shift, id: docRef.id };
   } catch (error) {
     console.error("Error adding shift:", error);
     throw error;
