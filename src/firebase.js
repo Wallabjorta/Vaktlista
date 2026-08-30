@@ -103,8 +103,15 @@ export const updateEmployee = async (id, updates) => {
  */
 export const deleteEmployee = async (id) => {
   try {
+    console.log("Deleting employee with ID:", id);
     const docRef = doc(db, "employees", id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      console.error("Employee document does not exist:", id);
+      throw new Error(`Employee with ID ${id} does not exist in Firestore`);
+    }
     await deleteDoc(docRef);
+    console.log("Successfully deleted employee:", id);
     return true;
   } catch (error) {
     console.error("Error deleting employee:", error);
@@ -295,8 +302,15 @@ export const updateShift = async (id, updates) => {
  */
 export const deleteShift = async (id) => {
   try {
+    console.log("Deleting shift with ID:", id);
     const docRef = doc(db, "shifts", id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      console.error("Shift document does not exist:", id);
+      throw new Error(`Shift with ID ${id} does not exist in Firestore`);
+    }
     await deleteDoc(docRef);
+    console.log("Successfully deleted shift:", id);
     return true;
   } catch (error) {
     console.error("Error deleting shift:", error);
