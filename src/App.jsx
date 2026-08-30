@@ -472,22 +472,22 @@ function App() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleRequestDeleteEmployee(emp);
-                  }}
-                  className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Slett ansatt"
-                >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
                     setSelectedEmployee(emp);
                     setShowEmployeeDepartmentsModal(true);
                   }}
-                  className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                  className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Rediger avdelinger"
                 >
                   ⚙️
                 </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRequestDeleteEmployee(emp);
+                  }}
+                  className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                  title="Slett ansatt"
+                >
                   ❌
                 </button>
               )}
