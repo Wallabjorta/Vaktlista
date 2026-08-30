@@ -40,7 +40,10 @@ const notificationsCollection = collection(db, "notifications");
 export const getEmployees = async () => {
   try {
     const snapshot = await getDocs(employeesCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => {
+      const { id, ...rest } = doc.data();
+      return { id: doc.id, ...rest };
+    });
   } catch (error) {
     console.error("Error getting employees:", error);
     return [];
@@ -70,9 +73,8 @@ export const getEmployeeById = async (id) => {
  */
 export const addEmployee = async (employee) => {
   try {
-    const docRef = doc(employeesCollection);
-    await setDoc(docRef, employee);
-    return { id: docRef.id, ...employee };
+    const docRef = await addDoc(employeesCollection, employee);
+    return { ...employee, id: docRef.id };
   } catch (error) {
     console.error("Error adding employee:", error);
     throw error;

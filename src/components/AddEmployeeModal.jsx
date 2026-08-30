@@ -23,10 +23,9 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
       return;
     }
 
-    // Generate ID
+    // Generate ID - let Firebase handle it
     const employeeToSave = {
-      ...newEmployee,
-      id: Date.now().toString()
+      ...newEmployee
     };
 
     onSave(employeeToSave);
