@@ -7,8 +7,8 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
-import DepartmentModal
-import EmployeeDepartmentsModal from './components/DepartmentModal';
+import DepartmentModal from './components/DepartmentModal';
+import EmployeeDepartmentsModal from './components/EmployeeDepartmentsModal';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
