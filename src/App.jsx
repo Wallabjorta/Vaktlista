@@ -7,6 +7,7 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
+import DepartmentModal from './components/DepartmentModal';
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
@@ -70,21 +71,12 @@ const VACATIONS = {
   "2027-08-15": "Sommerferie"
 };
 
-// Department definitions
-const DEPARTMENTS = [
-  { id: "dept-1", name: "Vest", color: "#3B82F6" },
-  { id: "dept-2", name: "Øst", color: "#10B981" },
-  { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
-  { id: "dept-4", name: "Butikk", color: "#EF4444" },
-  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
-  { id: "dept-6", name: "Fri", color: "#FF0000" }
-];
-
 function App() {
-  // Firebase data hook
+  // Firebase data hook - now includes departments
   const {
     employees,
     shifts,
+    departments,
     loading,
     error,
     addEmployee: addEmployeeFirebase,
@@ -92,6 +84,9 @@ function App() {
     deleteEmployee: deleteEmployeeFirebase,
     addShift: addShiftFirebase,
     deleteShift: deleteShiftFirebase,
+    addDepartment: addDepartmentFirebase,
+    updateDepartment: updateDepartmentFirebase,
+    deleteDepartment: deleteDepartmentFirebase,
     migrateData
   } = useFirebaseData();
 
@@ -105,6 +100,7 @@ function App() {
   const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] = useState(false);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [newShift, setNewShift] = useState({
@@ -308,6 +304,35 @@ function App() {
     setShowDeleteConfirmModal(true);
   }, []);
 
+  // Department handlers
+  const handleSaveDepartment = useCallback(async (department) => {
+    try {
+      if (department.id) {
+        // Update existing department
+        await updateDepartmentFirebase(department.id, department);
+        alert('Avdeling oppdatert!');
+      } else {
+        // Add new department
+        await addDepartmentFirebase(department);
+        alert('Ny avdeling lagt til!');
+      }
+      setShowDepartmentModal(false);
+    } catch (error) {
+      console.error('Error saving department:', error);
+      alert('Feil ved lagring av avdeling: ' + error.message);
+    }
+  }, [addDepartmentFirebase, updateDepartmentFirebase]);
+
+  const handleDeleteDepartment = useCallback(async (departmentId) => {
+    try {
+      await deleteDepartmentFirebase(departmentId);
+      alert('Avdeling slettet!');
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      alert('Feil ved sletting av avdeling: ' + error.message);
+    }
+  }, [deleteDepartmentFirebase]);
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="mb-4 flex justify-between items-center">
@@ -335,7 +360,7 @@ function App() {
         <div className="flex justify-between items-center flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {selectedDepartment ? `Vaktlista - ${DEPARTMENTS.find(d => d.id === selectedDepartment)?.name}` : 'Vaktlista - Alle avdelinger'}
+              {selectedDepartment ? `Vaktlista - ${departments.find(d => d.id === selectedDepartment)?.name}` : 'Vaktlista - Alle avdelinger'}
             </h1>
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
@@ -355,7 +380,7 @@ function App() {
         >
           Oversikt (Alle)
         </button>
-        {DEPARTMENTS.map(dept => (
+        {departments.map(dept => (
           <button
             key={dept.id}
             onClick={() => setSelectedDepartment(dept.id)}
@@ -376,7 +401,7 @@ function App() {
       <div className="mb-6 p-4 bg-white border rounded-lg shadow-sm">
         <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
           <h2 className="text-lg font-semibold">
-            {selectedDepartment ? `Ansatte (${DEPARTMENTS.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
+            {selectedDepartment ? `Ansatte (${departments.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
           </h2>
           {currentUser && (
             <div className="flex gap-2">
@@ -409,6 +434,12 @@ function App() {
                   >
                     📅 Eksporter til iCal
                   </button>
+                  <button
+                    onClick={() => setShowDepartmentModal(true)}
+                    className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
+                  >
+                    ⚙️ Avdelinger
+                  </button>
                 </>
               )}
             </div>
@@ -425,7 +456,7 @@ function App() {
               <span>{emp.name}</span>
               {emp.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">Admin</span>}
               {emp.deptIds?.map(deptId => (
-                <span key={deptId} className="w-2 h-2 rounded-full ml-1" style={{ backgroundColor: DEPARTMENTS.find(d => d.id === deptId)?.color }} title={DEPARTMENTS.find(d => d.id === deptId)?.name}></span>
+                <span key={deptId} className="w-2 h-2 rounded-full ml-1" style={{ backgroundColor: departments.find(d => d.id === deptId)?.color }} title={departments.find(d => d.id === deptId)?.name}></span>
               ))}
               {currentUser?.isAdmin && (
                 <button
@@ -450,7 +481,7 @@ function App() {
           shifts={shifts}
           selectedDepartment={selectedDepartment}
           currentDate={currentDate}
-          departments={DEPARTMENTS}
+          departments={departments}
           holidays={holidays}
           vacations={VACATIONS}
           currentUser={currentUser}
@@ -480,7 +511,7 @@ function App() {
             employees={employees}
             shifts={shifts}
             holidays={holidays}
-            departments={DEPARTMENTS}
+            departments={departments}
           />
         </div>
       )}
@@ -496,7 +527,7 @@ function App() {
       {showAddShiftModal && (
         <AddShiftModal
           employees={employees}
-          departments={DEPARTMENTS}
+          departments={departments}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
           onSave={handleAddShift}
@@ -507,7 +538,7 @@ function App() {
       {showEmployeeDetailsModal && selectedEmployee && (
         <EmployeeDetailsModal
           employee={selectedEmployee}
-          departments={DEPARTMENTS}
+          departments={departments}
           onClose={() => setShowEmployeeDetailsModal(false)}
           onEdit={(emp) => {
             setSelectedEmployee(emp);
@@ -520,7 +551,7 @@ function App() {
       {showEditEmployeeModal && selectedEmployee && (
         <EditEmployeeModal
           employee={selectedEmployee}
-          departments={DEPARTMENTS}
+          departments={departments}
           onSave={handleSaveEmployee}
           onClose={() => setShowEditEmployeeModal(false)}
         />
@@ -528,7 +559,7 @@ function App() {
 
       {showAddEmployeeModal && (
         <AddEmployeeModal
-          departments={DEPARTMENTS}
+          departments={departments}
           onSave={handleAddEmployee}
           onClose={() => setShowAddEmployeeModal(false)}
         />
@@ -543,6 +574,15 @@ function App() {
             setShowDeleteConfirmModal(false);
             setEmployeeToDelete(null);
           }}
+        />
+      )}
+
+      {showDepartmentModal && (
+        <DepartmentModal
+          departments={departments}
+          onSave={handleSaveDepartment}
+          onDelete={handleDeleteDepartment}
+          onClose={() => setShowDepartmentModal(false)}
         />
       )}
     </div>

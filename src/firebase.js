@@ -25,6 +25,7 @@ const auth = getAuth(app);
 // ============ COLLECTION REFERENCES ============
 const employeesCollection = collection(db, "employees");
 const shiftsCollection = collection(db, "shifts");
+const departmentsCollection = collection(db, "departments");
 const usersCollection = collection(db, "users");
 const notificationsCollection = collection(db, "notifications");
 
@@ -159,6 +160,101 @@ export const getShiftsByDepartment = async (departmentId) => {
   }
 };
 
+// ===== DEPARTMENTS =====
+
+/**
+ * Get all departments
+ * @returns {Promise<Array>} Array of department objects
+ */
+export const getDepartments = async () => {
+  try {
+    const snapshot = await getDocs(departmentsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error getting departments:", error);
+    return [];
+  }
+};
+
+/**
+ * Get a single department by ID
+ * @param {string} id - Department ID
+ * @returns {Promise<Object|null>} Department object or null
+ */
+export const getDepartmentById = async (id) => {
+  try {
+    const docRef = doc(db, "departments", id);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  } catch (error) {
+    console.error("Error getting department:", error);
+    return null;
+  }
+};
+
+/**
+ * Add a new department
+ * @param {Object} department - Department data (name, color)
+ * @returns {Promise<Object>} The created department with ID
+ */
+export const addDepartment = async (department) => {
+  try {
+    const docRef = doc(departmentsCollection);
+    await setDoc(docRef, department);
+    return { id: docRef.id, ...department };
+  } catch (error) {
+    console.error("Error adding department:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update a department
+ * @param {string} id - Department ID
+ * @param {Object} updates - Fields to update
+ * @returns {Promise<boolean>} Success status
+ */
+export const updateDepartment = async (id, updates) => {
+  try {
+    const docRef = doc(db, "departments", id);
+    await updateDoc(docRef, updates);
+    return true;
+  } catch (error) {
+    console.error("Error updating department:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a department
+ * @param {string} id - Department ID
+ * @returns {Promise<boolean>} Success status
+ */
+export const deleteDepartment = async (id) => {
+  try {
+    // Check if any employees are using this department
+    const employeesSnapshot = await getDocs(query(employeesCollection, where("deptIds", "array-contains", id)));
+    if (!employeesSnapshot.empty) {
+      throw new Error("Cannot delete department: employees are assigned to it");
+    }
+    
+    // Check if any shifts are using this department
+    const shiftsSnapshot = await getDocs(query(shiftsCollection, where("departmentId", "==", id)));
+    if (!shiftsSnapshot.empty) {
+      throw new Error("Cannot delete department: shifts are assigned to it");
+    }
+    
+    const docRef = doc(db, "departments", id);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting department:", error);
+    throw error;
+  }
+};
+
+// ===== SHIFTS =====
+
 /**
  * Add a new shift
  * @param {Object} shift - Shift data
@@ -279,6 +375,18 @@ export const subscribeToShifts = (callback) => {
   return onSnapshot(shiftsCollection, (snapshot) => {
     const shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(shifts);
+  });
+};
+
+/**
+ * Subscribe to realtime updates for departments
+ * @param {Function} callback - Callback function with array of departments
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToDepartments = (callback) => {
+  return onSnapshot(departmentsCollection, (snapshot) => {
+    const departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(departments);
   });
 };
 

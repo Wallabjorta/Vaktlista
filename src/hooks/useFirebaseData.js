@@ -1,22 +1,28 @@
 // Custom hook for managing Firebase data in React components
-// Usage: const { employees, shifts, loading, error, addEmployee, addShift, ... } = useFirebaseData();
+// Usage: const { employees, shifts, departments, loading, error, addEmployee, addShift, addDepartment, ... } = useFirebaseData();
 
 import { useState, useEffect, useCallback } from 'react';
 import {
   getEmployees,
   getShifts,
+  getDepartments,
   addEmployee,
   updateEmployee,
   deleteEmployee,
   addShift,
   updateShift,
   deleteShift,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment,
   subscribeToEmployees,
   subscribeToShifts,
+  subscribeToDepartments,
   migrateFromLocalStorage
 } from '../firebase';
 
-const DEPARTMENTS = [
+// Default departments for initial setup
+const DEFAULT_DEPARTMENTS = [
   { id: "dept-1", name: "Vest", color: "#3B82F6" },
   { id: "dept-2", name: "Øst", color: "#10B981" },
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
@@ -28,6 +34,7 @@ const DEPARTMENTS = [
 export default function useFirebaseData() {
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [migrated, setMigrated] = useState(false);
@@ -42,13 +49,29 @@ export default function useFirebaseData() {
       const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
       
       // Always try to load from Firebase first
-      const [emps, shfts] = await Promise.all([
+      const [emps, shfts, depts] = await Promise.all([
         getEmployees(),
-        getShifts()
+        getShifts(),
+        getDepartments()
       ]);
       
       setEmployees(emps);
       setShifts(shfts);
+      setDepartments(depts);
+      
+      // If no departments in Firebase, add defaults
+      if (!depts || depts.length === 0) {
+        for (const dept of DEFAULT_DEPARTMENTS) {
+          try {
+            await addDepartment(dept);
+          } catch (e) {
+            console.log('Default department already exists:', e.message);
+          }
+        }
+        // Reload departments
+        const updatedDepts = await getDepartments();
+        setDepartments(updatedDepts);
+      }
       
       // If no Firebase data but localStorage has data, offer migration
       if ((!emps || emps.length === 0) && hasLocalData && !migrated) {
@@ -88,6 +111,11 @@ export default function useFirebaseData() {
       localStorage.setItem('shifts', JSON.stringify(shfts));
     });
     
+    const unsubscribeDepartments = subscribeToDepartments((depts) => {
+      setDepartments(depts);
+      localStorage.setItem('departments', JSON.stringify(depts));
+    });
+    
     // Initial load
     loadData();
     
@@ -95,6 +123,7 @@ export default function useFirebaseData() {
     return () => {
       unsubscribeEmployees();
       unsubscribeShifts();
+      unsubscribeDepartments();
     };
   }, [loadData]);
 
@@ -184,19 +213,51 @@ export default function useFirebaseData() {
     }
   }, []);
 
+  // Department CRUD operations
+  const addDepartmentFunc = useCallback(async (department) => {
+    try {
+      const newDept = await addDepartment(department);
+      return newDept;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const updateDepartmentFunc = useCallback(async (id, updates) => {
+    try {
+      await updateDepartment(id, updates);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const deleteDepartmentFunc = useCallback(async (id) => {
+    try {
+      await deleteDepartment(id);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
   // Save to localStorage as fallback
   const saveToLocalStorage = useCallback(() => {
     localStorage.setItem('employees', JSON.stringify(employees));
     localStorage.setItem('shifts', JSON.stringify(shifts));
-  }, [employees, shifts]);
+    localStorage.setItem('departments', JSON.stringify(departments));
+  }, [employees, shifts, departments]);
 
   return {
     employees,
     shifts,
+    departments,
     loading,
     error,
     migrated,
-    departments: DEPARTMENTS,
     
     // Data loading
     loadData,
@@ -212,5 +273,10 @@ export default function useFirebaseData() {
     addShift: addShiftFunc,
     updateShift: updateShiftFunc,
     deleteShift: deleteShiftFunc,
+    
+    // Department operations
+    addDepartment: addDepartmentFunc,
+    updateDepartment: updateDepartmentFunc,
+    deleteDepartment: deleteDepartmentFunc,
   };
 }
