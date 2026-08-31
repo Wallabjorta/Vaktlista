@@ -273,9 +273,7 @@ function App() {
       return;
     }
 
-    if (datesToCreate.length < selectedDates.length) {
-      alert(`\u26a0\ufe0f Advarsel: ${selectedDates.length - datesToCreate.length} dager har allerede vakter og vil bli hoppet over.`);
-    }
+    
 
     // Opprett vakter for alle valgte dager
     const shiftsToSave = datesToCreate.map(dateStr => ({

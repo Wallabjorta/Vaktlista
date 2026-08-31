@@ -28,7 +28,7 @@ const DEFAULT_DEPARTMENTS = [
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
   { id: "dept-4", name: "Butikk", color: "#EF4444" },
   { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
-  { id: "dept-6", name: "Fri", color: "#FF0000" }
+  { id: "dept-6", name: "Fri", color: "#6B7280" }
 ];
 
 export default function useFirebaseData() {
