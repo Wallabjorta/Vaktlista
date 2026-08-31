@@ -26,9 +26,6 @@ function ShiftCalendar({
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     startDate.setDate(startDate.getDate() - daysToSubtract);
 
-    // startDate er nu mandag i aktuell vecka
-    // Om showHistory=false: starta fr\u00e5n aktuell vecka (vecka 0)
-    // Om showHistory=true: starta fr\u00e5n f\u00f6rra vecka (vecka -1)
     const startWeek = showHistory ? -1 : 0;
 
     for (let week = startWeek; week < 32; week++) {
@@ -77,13 +74,11 @@ function ShiftCalendar({
     return vacations[dateStr] !== undefined;
   };
 
-  // S\u00f8ndag = getDay() === 0 (standard JavaScript)
   const isSunday = (date) => {
     return date.getDay() === 0;
   };
 
   const isDateSelected = (dateStr, employeeId) => {
-    // Hvis vi har valgt en ansatt for bulk, bare sjekk datoer for den ansatte
     if (selectedEmployeeForBulk) {
       return selectedDates.includes(dateStr) && employeeId === selectedEmployeeForBulk;
     }
@@ -94,7 +89,6 @@ function ShiftCalendar({
     return shifts.some(shift => shift.date === dateStr && shift.employeeId === employeeId);
   };
 
-  // Ref for \u00e5 h\u00e5ndtere Shift+klikk og Ctrl+klikk
   const lastClickedRef = useRef(null);
 
   const handleDateClick = useCallback((dateStr, employeeId, event) => {
@@ -102,7 +96,6 @@ function ShiftCalendar({
 
     const targetEmployee = selectedEmployeeForBulk || employeeId;
 
-    // Hvis brukeren pr\u00f8ver \u00e5 velge en annen ansatt enn den som allerede er valgt for bulk
     if (selectedEmployeeForBulk && selectedEmployeeForBulk !== employeeId) {
       return;
     }
@@ -261,7 +254,8 @@ function ShiftCalendar({
                       ) : (
                         <>
                           {currentUser && (
-                            <button
+                            <div
+                              className="w-full h-full relative"
                               onClick={(e) => {
                                 if (isBulkMode && !isForSelectedEmployee) {
                                   if (confirm(`Vil du bytte til ${employee.name}?`)) {
@@ -272,16 +266,23 @@ function ShiftCalendar({
                                   handleDateClick(dateStr, employee.id, e);
                                 }
                               }}
-                              className={`text-xs p-1 w-full text-left rounded ${isSelected && isForSelectedEmployee ? 'font-medium' : ''}`}
-                              style={isSelected && isForSelectedEmployee ? { backgroundColor: '#DBEAFE' } : {}}
-                              title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Velg dato for vakt"}
+                              title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
                             >
                               {isSelected && isForSelectedEmployee ? (
                                 <span className="text-blue-700">\u2713 Valgt</span>
                               ) : (
-                                <span className="text-blue-600 hover:text-blue-800">+ Legg til</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddShift(employee.id, dateStr, selectedDepartment);
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
+                                  title="Legg til vakt for denne dagen"
+                                >
+                                  + Legg til
+                                </button>
                               )}
-                            </button>
+                            </div>
                           )}
                         </>
                       )}
