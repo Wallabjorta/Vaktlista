@@ -259,9 +259,9 @@ function ShiftCalendar({
                           </div>
                           {currentUser && (
                             <button
-                              onClick={() => onAddShift(employee.id, dateStr, selectedDepartment)}
+                              onClick={() => onAddShift(employee.id, dateStr, selectedDepartment, true)}
                               className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                              title="Legg til vakt"
+                              title="Legg til vakt for denne dagen"
                             >
                               + Legg til
                             </button>

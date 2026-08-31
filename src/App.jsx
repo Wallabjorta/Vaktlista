@@ -642,9 +642,27 @@ function App() {
           selectedEmployeeForBulk={selectedEmployeeForBulk}
           onDateSelection={handleDateSelection}
           onClearSelection={handleClearSelection}
-          onAddShift={(employeeId, date, deptId) => {
+          onAddShift={(employeeId, date, deptId, forceSingle = false) => {
+            // Hvis forceSingle er true, bruk alltid enkelt-modus (fra +Legg til lenken)
+            if (forceSingle) {
+              const validation = validate(employeeId, date);
+              if (!validation.isValid) {
+                alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
+              }
+              // Nullstill eventuelle valgte dager
+              setSelectedDates([]);
+              setSelectedEmployeeForBulk(null);
+              setNewShift({
+                employeeId: employeeId,
+                departmentId: deptId || selectedDepartment || "",
+                date: date,
+                startTime: "08:00",
+                endTime: "16:00"
+              });
+              setShowAddShiftModal(true);
+            }
             // Hvis vi har valgt dager for bulk, bruk bulk-modus
-            if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+            else if (selectedDates.length > 0 && selectedEmployeeForBulk) {
               // \u00c5pne modal for bulk vakt-opprettelse
               setNewShift(prev => ({
                 ...prev,
