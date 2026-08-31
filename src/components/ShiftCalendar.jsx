@@ -227,9 +227,9 @@ function ShiftCalendar({
                                 onClick={() => currentUser?.isAdmin && onDeleteShift(shift.id)}
                                 title={`${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})${shift.comment ? `: ${shift.comment}` : ''}`}
                               >
-                                <div className="truncate">
+                                <div className="truncate text-center">
                                   {departments.find(d => d.id === shift.departmentId)?.name === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
-                                  {currentUser?.isAdmin && (
+                                  {currentUser?.isAdmin && departments.find(d => d.id === shift.departmentId)?.name !== 'Fri' && (
                                     <button className="ml-1 text-xs">x</button>
                                   )}
                                 </div>
