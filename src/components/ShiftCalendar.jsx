@@ -269,7 +269,7 @@ function ShiftCalendar({
                               title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
                             >
                               {isSelected && isForSelectedEmployee ? (
-                                <span className="text-blue-700">\u2713 Valgt</span>
+                                <span className="text-blue-700">✓ Valgt</span>
                               ) : (
                                 <button
                                   onClick={(e) => {
