@@ -709,6 +709,7 @@ function App() {
         <EmployeeDetailsModal
           employee={selectedEmployee}
           departments={departments}
+          currentUser={currentUser}
           onClose={() => setShowEmployeeDetailsModal(false)}
           onEdit={(emp) => {
             setSelectedEmployee(emp);

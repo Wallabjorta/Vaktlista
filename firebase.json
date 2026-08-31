@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -8,9 +8,27 @@
     ],
     "rewrites": [
       {
+        "source": "/api/export/ical",
+        "function": {
+          "region": ["europe-west1"],
+          "functionName": "ical"
+        }
+      },
+      {
+        "source": "/api/export/ical/:employeeId",
+        "function": {
+          "region": ["europe-west1"],
+          "functionName": "icalEmployee"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "runtime": "nodejs20",
+    "region": ["europe-west1"]
   }
 }
