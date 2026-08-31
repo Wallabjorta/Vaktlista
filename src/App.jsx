@@ -33,8 +33,8 @@ const VACATIONS = {
   "2026-08-07": "Sommerferie", "2026-08-08": "Sommerferie", "2026-08-09": "Sommerferie",
   "2026-08-10": "Sommerferie", "2026-08-11": "Sommerferie", "2026-08-12": "Sommerferie",
   "2026-08-13": "Sommerferie", "2026-08-14": "Sommerferie", "2026-08-15": "Sommerferie",
-  "2026-09-28": "Høstferie", "2026-09-29": "Høstferie", "2026-09-30": "Høstferie",
-  "2026-10-01": "Høstferie", "2026-10-02": "Høstferie",
+  "2026-09-28": "H\u00f8stferie", "2026-09-29": "H\u00f8stferie", "2026-09-30": "H\u00f8stferie",
+  "2026-10-01": "H\u00f8stferie", "2026-10-02": "H\u00f8stferie",
   "2026-12-20": "Juleferie", "2026-12-21": "Juleferie", "2026-12-22": "Juleferie",
   "2026-12-23": "Juleferie", "2026-12-27": "Juleferie", "2026-12-28": "Juleferie",
   "2026-12-29": "Juleferie", "2026-12-30": "Juleferie", "2026-12-31": "Juleferie",
@@ -45,10 +45,10 @@ const VACATIONS = {
   "2027-02-21": "Vinterferie", "2027-02-22": "Vinterferie", "2027-02-23": "Vinterferie",
   "2027-02-24": "Vinterferie", "2027-02-25": "Vinterferie", "2027-02-26": "Vinterferie",
   "2027-02-27": "Vinterferie", "2027-02-28": "Vinterferie",
-  "2027-04-12": "Påskeferie", "2027-04-13": "Påskeferie", "2027-04-14": "Påskeferie",
-  "2027-04-15": "Påskeferie", "2027-04-16": "Påskeferie", "2027-04-17": "Påskeferie",
-  "2027-04-18": "Påskeferie", "2027-04-19": "Påskeferie", "2027-04-20": "Påskeferie",
-  "2027-04-21": "Påskeferie", "2027-04-22": "Påskeferie", "2027-04-23": "Påskeferie",
+  "2027-04-12": "P\u00e5skeferie", "2027-04-13": "P\u00e5skeferie", "2027-04-14": "P\u00e5skeferie",
+  "2027-04-15": "P\u00e5skeferie", "2027-04-16": "P\u00e5skeferie", "2027-04-17": "P\u00e5skeferie",
+  "2027-04-18": "P\u00e5skeferie", "2027-04-19": "P\u00e5skeferie", "2027-04-20": "P\u00e5skeferie",
+  "2027-04-21": "P\u00e5skeferie", "2027-04-22": "P\u00e5skeferie", "2027-04-23": "P\u00e5skeferie",
   "2027-06-19": "Sommerferie", "2027-06-20": "Sommerferie", "2027-06-21": "Sommerferie",
   "2027-06-22": "Sommerferie", "2027-06-23": "Sommerferie", "2027-06-24": "Sommerferie",
   "2027-06-25": "Sommerferie", "2027-06-26": "Sommerferie", "2027-06-27": "Sommerferie",
@@ -104,6 +104,8 @@ function App() {
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [selectedDates, setSelectedDates] = useState([]);
+  const [selectedEmployeeForBulk, setSelectedEmployeeForBulk] = useState(null);
   const [newShift, setNewShift] = useState({
     employeeId: "",
     departmentId: "",
@@ -167,7 +169,7 @@ function App() {
     
     // Check password - all users now have individual passwords
     if (!password) {
-      alert('Passord er påkrevd!');
+      alert('Passord er p\u00e5krevd!');
       return false;
     }
     
@@ -201,14 +203,14 @@ function App() {
       return;
     }
     if (newShift.startTime >= newShift.endTime) {
-      alert('Sluttid må være etter starttid!');
+      alert('Sluttid m\u00e5 v\u00e6re etter starttid!');
       return;
     }
 
-    // Varning for norsk arbeidslov (men tillåt åndå)
+    // Varning for norsk arbeidslov (men till\u00e5t \u00e5nd\u00e5)
     const validation = validate(newShift.employeeId, newShift.date);
     if (!validation.isValid) {
-      alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
+      alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
     }
 
     const shiftToSave = {
@@ -227,21 +229,129 @@ function App() {
         endTime: "16:00",
         comment: ""
       });
+      setSelectedDates([]);
+      setSelectedEmployeeForBulk(null);
     } catch (error) {
       console.error('Error saving shift:', error);
       alert('Feil ved lagring av vakt: ' + error.message);
     }
   }, [newShift, selectedDepartment, addShiftFirebase, validate]);
 
-  const handleDeleteShift = useCallback(async (shiftId) => {
-    if (!confirm('Slett vakt?')) return;
-    try {
-      await deleteShiftFirebase(shiftId);
-    } catch (error) {
-      console.error('Error deleting shift:', error);
-      alert('Feil ved sletting av vakt: ' + error.message);
+  const handleBulkAddShift = useCallback(async () => {
+    if (!selectedEmployeeForBulk) {
+      alert('Velg en ansatt!');
+      return;
     }
-  }, [deleteShiftFirebase]);
+    if (!newShift.departmentId) {
+      alert('Velg en avdeling!');
+      return;
+    }
+    if (!newShift.startTime || !newShift.endTime) {
+      alert('Fyll ut start- og sluttid!');
+      return;
+    }
+    if (newShift.startTime >= newShift.endTime) {
+      alert('Sluttid m\u00e5 v\u00e6re etter starttid!');
+      return;
+    }
+    if (selectedDates.length === 0) {
+      alert('Velg minst en dato!');
+      return;
+    }
+
+    // Hoppe over dager som allerede har vakter for denne ansatte
+    const datesToCreate = selectedDates.filter(dateStr => {
+      const hasExistingShift = shifts.some(shift => 
+        shift.date === dateStr && 
+        shift.employeeId === selectedEmployeeForBulk
+      );
+      return !hasExistingShift;
+    });
+
+    if (datesToCreate.length === 0) {
+      alert('Alle valgte dager har allerede vakter for denne ansatte. Ingen vakter opprettet.');
+      return;
+    }
+
+    if (datesToCreate.length < selectedDates.length) {
+      alert(`\u26a0\ufe0f Advarsel: ${selectedDates.length - datesToCreate.length} dager har allerede vakter og vil bli hoppet over.`);
+    }
+
+    // Opprett vakter for alle valgte dager
+    const shiftsToSave = datesToCreate.map(dateStr => ({
+      employeeId: selectedEmployeeForBulk,
+      departmentId: newShift.departmentId,
+      date: dateStr,
+      startTime: newShift.startTime,
+      endTime: newShift.endTime,
+      comment: newShift.comment || "",
+      breaks: []
+    }));
+
+    try {
+      for (const shift of shiftsToSave) {
+        // Validering for norsk arbeidslov
+        const validation = validate(shift.employeeId, shift.date);
+        if (!validation.isValid) {
+          console.warn(`Advarsel for ${shift.date}: ${validation.errors.join(', ')}`);
+        }
+        await addShiftFirebase(shift);
+      }
+      setShowAddShiftModal(false);
+      setSelectedDates([]);
+      setSelectedEmployeeForBulk(null);
+      setNewShift(prev => ({
+        ...prev,
+        employeeId: "",
+        date: new Date().toISOString().split('T')[0],
+        startTime: "08:00",
+        endTime: "16:00",
+        comment: ""
+      }));
+      alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
+    } catch (error) {
+      console.error('Error saving bulk shifts:', error);
+      alert('Feil ved lagring av vakter: ' + error.message);
+    }
+  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, addShiftFirebase, validate]);
+
+  const handleDateSelection = useCallback((dateStr, employeeId) => {
+    // Hvis vi allerede har valgt en ansatt for bulk, m\u00e5 vi bruke den samme
+    const targetEmployee = selectedEmployeeForBulk || employeeId;
+    
+    // Hvis vi bytter ansatt, nullstill valgte dager
+    if (selectedEmployeeForBulk && selectedEmployeeForBulk !== employeeId) {
+      setSelectedDates([]);
+      setSelectedEmployeeForBulk(employeeId);
+      return;
+    }
+    
+    // Hvis dette er en ny ansatt (ingen valgt enn\u00e5)
+    if (!selectedEmployeeForBulk) {
+      setSelectedEmployeeForBulk(employeeId);
+    }
+    
+    setSelectedDates(prev => {
+      const newSelected = [...prev];
+      const index = newSelected.indexOf(dateStr);
+      
+      if (index > -1) {
+        // Avvelg datoen
+        newSelected.splice(index, 1);
+      } else {
+        // Velg datoen
+        newSelected.push(dateStr);
+      }
+      
+      // Sorter datoer
+      return newSelected.sort();
+    });
+  }, [selectedEmployeeForBulk]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedDates([]);
+    setSelectedEmployeeForBulk(null);
+  }, []);
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
@@ -270,14 +380,14 @@ function App() {
 
     const hasShifts = shifts.some(shift => shift.employeeId === employeeToDelete.id);
     if (hasShifts) {
-      alert('Kan ikke slette ansatt som har vakter! Slett vaktene først.');
+      alert('Kan ikke slette ansatt som har vakter! Slett vaktene f\u00f8rst.');
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
       return;
     }
 
     if (currentUser?.id === employeeToDelete.id) {
-      alert('Kan ikke slette den innloggede brukeren! Logg ut først.');
+      alert('Kan ikke slette den innloggede brukeren! Logg ut f\u00f8rst.');
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
       return;
@@ -365,9 +475,9 @@ function App() {
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">⬅ Forrige</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">\u2b05 Forrige</button>
             <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700">I dag</button>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste ➡</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste \u27a1</button>
           </div>
         </div>
       </header>
@@ -405,20 +515,38 @@ function App() {
           </h2>
           {currentUser && (
             <div className="flex gap-2">
+              {selectedDates.length > 0 ? (
+                <button
+                  onClick={handleClearSelection}
+                  className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
+                >
+                  Avbryt valgte dager ({selectedDates.length})
+                </button>
+              ) : null}
               <button
                 onClick={() => {
-                  setNewShift({
-                    employeeId: "",
-                    departmentId: selectedDepartment || "",
-                    date: new Date().toISOString().split('T')[0],
-                    startTime: "08:00",
-                    endTime: "16:00"
-                  });
+                  if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+                    // Bulk modus
+                    setNewShift(prev => ({
+                      ...prev,
+                      employeeId: selectedEmployeeForBulk,
+                      departmentId: selectedDepartment || "",
+                      date: selectedDates[0]
+                    }));
+                  } else {
+                    setNewShift({
+                      employeeId: "",
+                      departmentId: selectedDepartment || "",
+                      date: new Date().toISOString().split('T')[0],
+                      startTime: "08:00",
+                      endTime: "16:00"
+                    });
+                  }
                   setShowAddShiftModal(true);
                 }}
                 className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
               >
-                + Legg til vakt
+                {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
               </button>
               {currentUser.isAdmin && (
                 <>
@@ -432,13 +560,13 @@ function App() {
                     onClick={() => window.open('/api/export/ical', '_blank')}
                     className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700"
                   >
-                    📅 Eksporter til iCal
+                    \ud83d\udcc5 Eksporter til iCal
                   </button>
                   <button
                     onClick={() => setShowDepartmentModal(true)}
                     className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
                   >
-                    ⚙️ Avdelinger
+                    \u2699\ufe0f Avdelinger
                   </button>
                 </>
               )}
@@ -451,7 +579,7 @@ function App() {
               key={emp.id}
               className="flex items-center gap-2 bg-gray-50 px-2 md:px-3 py-1 rounded-full border cursor-pointer hover:bg-gray-100 group"
               onClick={() => currentUser?.isAdmin && handleShowEmployeeDetails(emp)}
-              title={currentUser?.isAdmin ? "Klikk for å se detaljer" : ""}
+              title={currentUser?.isAdmin ? "Klikk for \u00e5 se detaljer" : ""}
             >
               <span>{emp.name}</span>
               {emp.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 md:px-1.5 py-0.5 rounded">Admin</span>}
@@ -469,7 +597,7 @@ function App() {
                     className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Rediger ansatt"
                   >
-                    ✏️
+                    \u270f\ufe0f
                   </button>
 
                   <button
@@ -480,7 +608,7 @@ function App() {
                     className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
                     title="Slett ansatt"
                   >
-                    ❌
+                    \u274c
                   </button>
                 </>
               )}
@@ -500,20 +628,36 @@ function App() {
           vacations={VACATIONS}
           currentUser={currentUser}
           showHistory={showHistory}
+          selectedDates={selectedDates}
+          selectedEmployeeForBulk={selectedEmployeeForBulk}
+          onDateSelection={handleDateSelection}
+          onClearSelection={handleClearSelection}
           onAddShift={(employeeId, date, deptId) => {
-            // Varning for norsk arbeidslov (men tillåt åndå)
-            const validation = validate(employeeId, date);
-            if (!validation.isValid) {
-              alert(`⚠️ Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
+            // Hvis vi har valgt dager for bulk, bruk bulk-modus
+            if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+              // \u00c5pne modal for bulk vakt-opprettelse
+              setNewShift(prev => ({
+                ...prev,
+                employeeId: selectedEmployeeForBulk,
+                departmentId: deptId || selectedDepartment || "",
+                date: selectedDates[0] || date
+              }));
+              setShowAddShiftModal(true);
+            } else {
+              // Vanlig enkelt-vakt
+              const validation = validate(employeeId, date);
+              if (!validation.isValid) {
+                alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
+              }
+              setNewShift({
+                employeeId: employeeId,
+                departmentId: deptId || selectedDepartment || "",
+                date: date,
+                startTime: "08:00",
+                endTime: "16:00"
+              });
+              setShowAddShiftModal(true);
             }
-            setNewShift({
-              employeeId: employeeId,
-              departmentId: deptId || selectedDepartment || "",
-              date: date,
-              startTime: "08:00",
-              endTime: "16:00"
-            });
-            setShowAddShiftModal(true);
           }}
           onDeleteShift={handleDeleteShift}
         />
@@ -544,8 +688,15 @@ function App() {
           departments={departments}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
-          onSave={handleAddShift}
-          onClose={() => setShowAddShiftModal(false)}
+          onSave={selectedDates.length > 0 && selectedEmployeeForBulk ? handleBulkAddShift : handleAddShift}
+          onClose={() => {
+            setShowAddShiftModal(false);
+            setSelectedDates([]);
+            setSelectedEmployeeForBulk(null);
+          }}
+          isBulkMode={selectedDates.length > 0 && selectedEmployeeForBulk}
+          bulkCount={selectedDates.length}
+          selectedEmployeeForBulk={selectedEmployeeForBulk}
         />
       )}
 
