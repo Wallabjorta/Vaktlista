@@ -1,21 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 function LoginModal({ employees, onLogin, onClose }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Show/hide password field based on selected user
-  useEffect(() => {
-    const selectedUser = employees.find(emp => emp.id === email);
-    const passwordContainer = document.getElementById('admin-password-container');
-    if (passwordContainer) {
-      if (selectedUser?.isAdmin) {
-        passwordContainer.classList.remove('hidden');
-      } else {
-        passwordContainer.classList.add('hidden');
-      }
-    }
-  }, [email, employees]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -28,8 +15,8 @@ function LoginModal({ employees, onLogin, onClose }) {
       alert('Ogiltig ansatt! Vennligst velg en ansatt fra listen.');
       return;
     }
-    if (selectedUser.isAdmin && !password) {
-      alert('Admin må oppgi passord!');
+    if (!password) {
+      alert('Passord er pkrevd!');
       return;
     }
     onLogin(email, password);
@@ -40,7 +27,9 @@ function LoginModal({ employees, onLogin, onClose }) {
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Logg inn</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            
+          </button>
         </div>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -60,15 +49,16 @@ function LoginModal({ employees, onLogin, onClose }) {
                 ))}
               </select>
             </div>
-            <div id="admin-password-container" className="hidden">
-              <label className="block text-sm font-medium mb-1">Admin-passord</label>
+            <div>
+              <label className="block text-sm font-medium mb-1">Passord</label>
               <input
                 type="password"
                 id="login-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-2 border rounded"
-                placeholder="Oppgi admin-passord"
+                placeholder="Oppgi passord"
+                required
               />
             </div>
             <div className="flex gap-2 pt-4 border-t">
