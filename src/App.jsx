@@ -189,6 +189,16 @@ function App() {
     localStorage.removeItem('currentUser');
   }, []);
 
+  const handleDeleteShift = useCallback(async (shiftId) => {
+    if (!confirm('Slett vakt?')) return;
+    try {
+      await deleteShiftFirebase(shiftId);
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      alert('Feil ved sletting av vakt: ' + error.message);
+    }
+  }, [deleteShiftFirebase]);
+
   const handleAddShift = useCallback(async () => {
     if (!newShift.employeeId) {
       alert('Velg en ansatt!');
