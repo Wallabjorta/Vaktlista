@@ -541,7 +541,7 @@ function App() {
           <h2 className="text-lg font-semibold">
             {selectedDepartment ? `Ansatte (${departments.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
           </h2>
-          {currentUser && (
+          {currentUser?.isAdmin && (
             <div className="flex gap-2">
               {selectedDates.length > 0 ? (
                 <button
