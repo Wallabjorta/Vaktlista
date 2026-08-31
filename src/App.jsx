@@ -626,7 +626,7 @@ function App() {
                     className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Rediger ansatt"
                   >
-                    ⏎
+                    💏
                   </button>
 
                   <button
