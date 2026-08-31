@@ -1,14 +1,5 @@
 [
   {
-    "id": "1",
-    "name": "Ola Nordmann",
-    "deptIds": [
-      "dept-1"
-    ],
-    "email": "ola@test.no",
-    "isAdmin": false
-  },
-  {
     "id": "2",
     "name": "Kari Peterson",
     "deptIds": [
