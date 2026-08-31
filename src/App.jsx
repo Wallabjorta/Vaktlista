@@ -485,9 +485,9 @@ function App() {
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">\u2b05 Forrige</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">⬅ Forrige</button>
             <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700">I dag</button>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste \u27a1</button>
+            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste ➡</button>
           </div>
         </div>
       </header>
@@ -570,13 +570,13 @@ function App() {
                     onClick={() => window.open('/api/export/ical', '_blank')}
                     className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700"
                   >
-                    \ud83d\udcc5 Eksporter til iCal
+                    📅 Eksporter til iCal
                   </button>
                   <button
                     onClick={() => setShowDepartmentModal(true)}
                     className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
                   >
-                    \u2699\ufe0f Avdelinger
+                    ⚙️ Avdelinger
                   </button>
                 </>
               )}
