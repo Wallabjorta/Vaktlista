@@ -10,15 +10,15 @@
       {
         "source": "/api/export/ical",
         "function": {
-          "region": ["europe-west1"],
-          "functionName": "ical"
+          "functionName": "ical",
+          "region": "europe-west1"
         }
       },
       {
         "source": "/api/export/ical/:employeeId",
         "function": {
-          "region": ["europe-west1"],
-          "functionName": "icalEmployee"
+          "functionName": "icalEmployee",
+          "region": "europe-west1"
         }
       },
       {
@@ -26,9 +26,5 @@
         "destination": "/index.html"
       }
     ]
-  },
-  "functions": {
-    "runtime": "nodejs20",
-    "region": ["europe-west1"]
   }
 }
