@@ -189,16 +189,6 @@ function App() {
     localStorage.removeItem('currentUser');
   }, []);
 
-  const handleDeleteShift = useCallback(async (shiftId) => {
-    if (!confirm('Slett vakt?')) return;
-    try {
-      await deleteShiftFirebase(shiftId);
-    } catch (error) {
-      console.error('Error deleting shift:', error);
-      alert('Feil ved sletting av vakt: ' + error.message);
-    }
-  }, [deleteShiftFirebase]);
-
   const handleAddShift = useCallback(async () => {
     if (!newShift.employeeId) {
       alert('Velg en ansatt!');
@@ -362,6 +352,35 @@ function App() {
     setSelectedDates([]);
     setSelectedEmployeeForBulk(null);
   }, []);
+
+  // Handle single shift from calendar cell
+  const handleSingleShiftFromCalendar = useCallback((employeeId, date, deptId) => {
+    const validation = validate(employeeId, date);
+    if (!validation.isValid) {
+      alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
+    }
+    // Nullstill eventuelle valgte dager
+    setSelectedDates([]);
+    setSelectedEmployeeForBulk(null);
+    setNewShift({
+      employeeId: employeeId,
+      departmentId: deptId || selectedDepartment || "",
+      date: date,
+      startTime: "08:00",
+      endTime: "16:00"
+    });
+    setShowAddShiftModal(true);
+  }, [selectedDepartment, validate]);
+
+  const handleDeleteShift = useCallback(async (shiftId) => {
+    if (!confirm('Slett vakt?')) return;
+    try {
+      await deleteShiftFirebase(shiftId);
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      alert('Feil ved sletting av vakt: ' + error.message);
+    }
+  }, [deleteShiftFirebase]);
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
@@ -536,7 +555,6 @@ function App() {
               <button
                 onClick={() => {
                   if (selectedDates.length > 0 && selectedEmployeeForBulk) {
-                    // Bulk modus
                     setNewShift(prev => ({
                       ...prev,
                       employeeId: selectedEmployeeForBulk,
@@ -555,6 +573,7 @@ function App() {
                   setShowAddShiftModal(true);
                 }}
                 className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
+                disabled={selectedDates.length > 0 && !selectedEmployeeForBulk}
               >
                 {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
               </button>
@@ -607,7 +626,7 @@ function App() {
                     className="text-blue-500 hover:text-blue-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Rediger ansatt"
                   >
-                    \u270f\ufe0f
+                    ⏎
                   </button>
 
                   <button
@@ -618,7 +637,7 @@ function App() {
                     className="text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity ml-1"
                     title="Slett ansatt"
                   >
-                    \u274c
+                    ❌
                   </button>
                 </>
               )}
@@ -642,51 +661,7 @@ function App() {
           selectedEmployeeForBulk={selectedEmployeeForBulk}
           onDateSelection={handleDateSelection}
           onClearSelection={handleClearSelection}
-          onAddShift={(employeeId, date, deptId, forceSingle = false) => {
-            // Hvis forceSingle er true, bruk alltid enkelt-modus (fra +Legg til lenken)
-            if (forceSingle) {
-              const validation = validate(employeeId, date);
-              if (!validation.isValid) {
-                alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
-              }
-              // Nullstill eventuelle valgte dager
-              setSelectedDates([]);
-              setSelectedEmployeeForBulk(null);
-              setNewShift({
-                employeeId: employeeId,
-                departmentId: deptId || selectedDepartment || "",
-                date: date,
-                startTime: "08:00",
-                endTime: "16:00"
-              });
-              setShowAddShiftModal(true);
-            }
-            // Hvis vi har valgt dager for bulk, bruk bulk-modus
-            else if (selectedDates.length > 0 && selectedEmployeeForBulk) {
-              // \u00c5pne modal for bulk vakt-opprettelse
-              setNewShift(prev => ({
-                ...prev,
-                employeeId: selectedEmployeeForBulk,
-                departmentId: deptId || selectedDepartment || "",
-                date: selectedDates[0] || date
-              }));
-              setShowAddShiftModal(true);
-            } else {
-              // Vanlig enkelt-vakt
-              const validation = validate(employeeId, date);
-              if (!validation.isValid) {
-                alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
-              }
-              setNewShift({
-                employeeId: employeeId,
-                departmentId: deptId || selectedDepartment || "",
-                date: date,
-                startTime: "08:00",
-                endTime: "16:00"
-              });
-              setShowAddShiftModal(true);
-            }
-          }}
+          onAddShift={handleSingleShiftFromCalendar}
           onDeleteShift={handleDeleteShift}
         />
       )}

@@ -104,14 +104,13 @@ function ShiftCalendar({
 
     // Hvis brukeren pr\u00f8ver \u00e5 velge en annen ansatt enn den som allerede er valgt for bulk
     if (selectedEmployeeForBulk && selectedEmployeeForBulk !== employeeId) {
-      return; // La foreldrekomponenten h\u00e5ndtere bytte av ansatt
+      return;
     }
 
     const isShiftKey = event.shiftKey;
-    const isCtrlKey = event.ctrlKey || event.metaKey; // metaKey for Mac
+    const isCtrlKey = event.ctrlKey || event.metaKey;
 
     if (isShiftKey && lastClickedRef.current) {
-      // Shift+klikk: velg alle dager mellom siste klikk og dette klikket
       const allDates = dates.map(d => {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -127,30 +126,24 @@ function ShiftCalendar({
         const end = Math.max(lastIndex, currentIndex);
         const datesInRange = allDates.slice(start, end + 1);
         
-        // Bare velg datoer uten eksisterende vakter for den valgte ansatte
         const newSelected = datesInRange.filter(d => !hasExistingShift(d, targetEmployee));
         
-        // Kall foreldre med hver dato individuelt
         newSelected.forEach(d => onDateSelection(d, targetEmployee));
         return;
       }
     } else if (isCtrlKey) {
-      // Ctrl+klikk: velg/avvelg individuell dag
       if (isDateSelected(dateStr, employeeId)) {
         onDateSelection(dateStr, targetEmployee);
       } else {
-        // Bare velg hvis det ikke er eksisterende vakt
         if (!hasExistingShift(dateStr, targetEmployee)) {
           onDateSelection(dateStr, targetEmployee);
         }
       }
       return;
     } else {
-      // Enkeltklikk: velg/avvelg
       if (isDateSelected(dateStr, employeeId)) {
         onDateSelection(dateStr, targetEmployee);
       } else {
-        // Bare velg hvis det ikke er eksisterende vakt
         if (!hasExistingShift(dateStr, targetEmployee)) {
           onDateSelection(dateStr, targetEmployee);
         }
@@ -166,7 +159,6 @@ function ShiftCalendar({
         <table className="w-full border-collapse min-w-[800px]">
           <thead>
             <tr className="border-b">
-              {/* Tom cell for ansatt-kolonnen */}
               <th className="p-2 border-r bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]"></th>
               {dates.map((date, index) => {
                 const isToday = date.toDateString() === new Date().toDateString();
@@ -228,7 +220,6 @@ function ShiftCalendar({
                       className="p-1 border-r border-b h-12 md:h-16 min-w-[80px] md:min-w-[100px] relative"
                       style={{
                         ...bgStyle,
-                        // Legg til markering for valgte dager
                         ...(isSelected && isForSelectedEmployee && !hasShift ? { backgroundColor: '#DBEAFE' } : {})
                       }}
                     >
@@ -259,9 +250,9 @@ function ShiftCalendar({
                           </div>
                           {currentUser && (
                             <button
-                              onClick={() => onAddShift(employee.id, dateStr, selectedDepartment, true)}
+                              onClick={() => onAddShift(employee.id, dateStr, selectedDepartment)}
                               className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                              title="Legg til vakt for denne dagen"
+                              title="Legg til vakt"
                             >
                               + Legg til
                             </button>
@@ -273,7 +264,6 @@ function ShiftCalendar({
                             <button
                               onClick={(e) => {
                                 if (isBulkMode && !isForSelectedEmployee) {
-                                  // Hvis vi er i bulk-modus og dette ikke er den valgte ansatte, sp\u00f8r om bytte
                                   if (confirm(`Vil du bytte til ${employee.name}?`)) {
                                     onClearSelection();
                                     onDateSelection(dateStr, employee.id);
@@ -284,7 +274,7 @@ function ShiftCalendar({
                               }}
                               className={`text-xs p-1 w-full text-left rounded ${isSelected && isForSelectedEmployee ? 'font-medium' : ''}`}
                               style={isSelected && isForSelectedEmployee ? { backgroundColor: '#DBEAFE' } : {}}
-                              title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Legg til vakt"}
+                              title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Velg dato for vakt"}
                             >
                               {isSelected && isForSelectedEmployee ? (
                                 <span className="text-blue-700">\u2713 Valgt</span>
