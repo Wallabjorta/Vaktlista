@@ -3,7 +3,7 @@ import * as logger from 'firebase-functions/logger';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin SDK
 initializeApp();
 
 const db = getFirestore();
