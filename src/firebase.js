@@ -593,30 +593,70 @@ export const approveSwapRequest = async (requestId, adminId) => {
       throw new Error("Swap request already processed");
     }
     
-    const { employeeId, originalDate, targetEmployeeId, targetDate } = request;
+    const { employeeId, originalDate, targetEmployeeId, targetDate, targetEmployeeName, employeeName, departmentId } = request;
     
-    const shiftsQuery = query(
+    const batch = writeBatch(db);
+    
+    const originalShiftQuery = query(
       shiftsCollection,
       where("employeeId", "==", employeeId),
       where("date", "==", originalDate)
     );
-    const shiftsSnapshot = await getDocs(shiftsQuery);
+    const originalShiftSnapshot = await getDocs(originalShiftQuery);
     
-    if (!shiftsSnapshot.empty) {
-      const shiftDoc = shiftsSnapshot.docs[0];
-      await updateDoc(doc(db, "shifts", shiftDoc.id), {
+    if (!originalShiftSnapshot.empty) {
+      const originalShiftDoc = originalShiftSnapshot.docs[0];
+      const originalShiftData = originalShiftDoc.data();
+      
+      const targetShiftQuery = query(
+        shiftsCollection,
+        where("employeeId", "==", targetEmployeeId),
+        where("date", "==", targetDate)
+      );
+      const targetShiftSnapshot = await getDocs(targetShiftQuery);
+      
+      const newOriginalShiftRef = doc(shiftsCollection);
+      batch.set(newOriginalShiftRef, {
+        ...originalShiftData,
+        id: newOriginalShiftRef.id,
         employeeId: targetEmployeeId,
-        employeeName: request.targetEmployeeName || "Ukjent"
+        employeeName: targetEmployeeName || "Ukjent"
       });
+      batch.delete(originalShiftDoc.ref);
+      
+      if (!targetShiftSnapshot.empty) {
+        const targetShiftDoc = targetShiftSnapshot.docs[0];
+        const targetShiftData = targetShiftDoc.data();
+        const newTargetShiftRef = doc(shiftsCollection);
+        batch.set(newTargetShiftRef, {
+          ...targetShiftData,
+          id: newTargetShiftRef.id,
+          employeeId: employeeId,
+          employeeName: employeeName || "Ukjent",
+          date: originalDate
+        });
+        batch.delete(targetShiftDoc.ref);
+      } else {
+        const newTargetShiftRef = doc(shiftsCollection);
+        batch.set(newTargetShiftRef, {
+          employeeId: employeeId,
+          employeeName: employeeName || "Ukjent",
+          date: targetDate,
+          departmentId: departmentId || originalShiftData.departmentId,
+          startTime: originalShiftData.startTime || "08:00",
+          endTime: originalShiftData.endTime || "16:00"
+        });
+      }
     }
     
-    await updateDoc(requestDoc, {
+    batch.update(requestDoc, {
       status: "approved",
       updatedAt: new Date().toISOString(),
       handledBy: adminId,
       handledAt: new Date().toISOString()
     });
     
+    await batch.commit();
     return true;
   } catch (error) {
     console.error("Error approving swap request:", error);
