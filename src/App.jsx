@@ -757,10 +757,14 @@ function App() {
           onClearSelection={handleClearSelection}
           onAddShift={handleSingleShiftFromCalendar}
           onDeleteShift={handleDeleteShift}
-          onNavigateWeek={(days) => {
+          onNavigateWeek={(action) => {
             const newDate = new Date(currentDate);
-            newDate.setDate(newDate.getDate() + days);
-            setCurrentDate(newDate);
+            if (action === 'today') {
+              setCurrentDate(new Date());
+            } else {
+              newDate.setDate(newDate.getDate() + action);
+              setCurrentDate(newDate);
+            }
           }}
         />
       )}

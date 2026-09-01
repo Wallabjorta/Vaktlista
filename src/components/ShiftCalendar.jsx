@@ -140,7 +140,7 @@ function ShiftCalendar({
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => onNavigateWeek(-7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
-                    <button onClick={() => onNavigateWeek(0)} className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
+                    <button onClick={() => onNavigateWeek('today')} className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
                     <button onClick={() => onNavigateWeek(7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
                   </div>
                 )}
