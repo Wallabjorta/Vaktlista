@@ -608,45 +608,16 @@ export const approveSwapRequest = async (requestId, adminId) => {
       const originalShiftDoc = originalShiftSnapshot.docs[0];
       const originalShiftData = originalShiftDoc.data();
       
-      const targetShiftQuery = query(
-        shiftsCollection,
-        where("employeeId", "==", targetEmployeeId),
-        where("date", "==", targetDate)
-      );
-      const targetShiftSnapshot = await getDocs(targetShiftQuery);
-      
-      const newOriginalShiftRef = doc(shiftsCollection);
-      batch.set(newOriginalShiftRef, {
-        ...originalShiftData,
-        id: newOriginalShiftRef.id,
-        employeeId: targetEmployeeId,
-        employeeName: targetEmployeeName || "Ukjent"
-      });
       batch.delete(originalShiftDoc.ref);
       
-      if (!targetShiftSnapshot.empty) {
-        const targetShiftDoc = targetShiftSnapshot.docs[0];
-        const targetShiftData = targetShiftDoc.data();
-        const newTargetShiftRef = doc(shiftsCollection);
-        batch.set(newTargetShiftRef, {
-          ...targetShiftData,
-          id: newTargetShiftRef.id,
-          employeeId: employeeId,
-          employeeName: employeeName || "Ukjent",
-          date: originalDate
-        });
-        batch.delete(targetShiftDoc.ref);
-      } else {
-        const newTargetShiftRef = doc(shiftsCollection);
-        batch.set(newTargetShiftRef, {
-          employeeId: employeeId,
-          employeeName: employeeName || "Ukjent",
-          date: targetDate,
-          departmentId: departmentId || originalShiftData.departmentId,
-          startTime: originalShiftData.startTime || "08:00",
-          endTime: originalShiftData.endTime || "16:00"
-        });
-      }
+      const newShiftRef = doc(shiftsCollection);
+      batch.set(newShiftRef, {
+        ...originalShiftData,
+        id: newShiftRef.id,
+        employeeId: targetEmployeeId,
+        employeeName: targetEmployeeName || "Ukjent",
+        date: targetDate
+      });
     }
     
     batch.update(requestDoc, {
