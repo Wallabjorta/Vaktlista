@@ -1,13 +1,13 @@
 import React, { useCallback, useRef } from 'react';
 
 function ShiftCalendar({
-  employees,
-  shifts,
+  employees = [],
+  shifts = [],
   selectedDepartment,
   currentDate,
   departments = [],
-  holidays,
-  vacations,
+  holidays = [],
+  vacations = {},
   currentUser,
   onAddShift,
   onDeleteShift,
@@ -55,11 +55,11 @@ function ShiftCalendar({
   };
 
   const isHoliday = useCallback((dateStr) => {
-    return holidays.includes(dateStr);
+    return (holidays || []).includes(dateStr);
   }, [holidays]);
 
   const isVacation = useCallback((dateStr) => {
-    return vacations[dateStr] !== undefined;
+    return (vacations || {})[dateStr] !== undefined;
   }, [vacations]);
 
   const getShiftsForDateAndEmployee = useCallback((date, employeeId) => {
@@ -146,7 +146,7 @@ function ShiftCalendar({
             </tr>
           </thead>
           <tbody>
-            {employees.map((employee) => (
+            {(employees || []).map((employee) => (
               <tr key={employee.id} className="border-b last:border-b-0">
                 <td className="p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]">
                   <div className="flex items-center gap-2">
