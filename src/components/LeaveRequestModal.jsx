@@ -11,7 +11,7 @@ function LeaveRequestModal({ employee, onClose, onSubmit }) {
   const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
-    if (requestType === 'swap' && employee) {
+    if (requestType === 'swap' && employee?.id) {
       getEmployees().then(data => setEmployees(data.filter(e => e.id !== employee.id)));
     }
   }, [requestType, employee?.id]);
