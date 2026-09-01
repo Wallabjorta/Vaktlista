@@ -61,7 +61,7 @@ function AddShiftModal({
               required
             >
               <option value="">Velg avdeling</option>
-              {departments.filter(dept => dept.name !== 'Fri').map(dept => (
+              {(departments || []).filter(dept => dept && dept.name !== 'Fri').map(dept => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>

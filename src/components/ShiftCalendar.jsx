@@ -5,7 +5,7 @@ function ShiftCalendar({
   shifts,
   selectedDepartment,
   currentDate,
-  departments,
+  departments = [],
   holidays,
   vacations,
   currentUser,
@@ -67,8 +67,13 @@ function ShiftCalendar({
   }, [shifts]);
 
   const getDeptColor = useCallback((deptId) => {
-    const dept = departments.find(d => d.id === deptId);
+    const dept = (departments || []).find(d => d && d.id === deptId);
     return dept ? dept.color : '#3B82F6';
+  }, [departments]);
+
+  const getDeptName = useCallback((deptId) => {
+    const dept = (departments || []).find(d => d && d.id === deptId);
+    return dept ? dept.name : deptId;
   }, [departments]);
 
   const isDateSelected = useCallback((dateStr, employeeId) => {
@@ -188,34 +193,40 @@ function ShiftCalendar({
                       {hasShift ? (
                         <>
                           <div className="flex flex-col gap-1">
-                            {shiftsForDay.map((shift, shiftIndex) => (
-                              <div
-                                key={shiftIndex}
-                                className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate group relative"
-                                style={{ backgroundColor: getDeptColor(shift.departmentId) }}
-                                title={`${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})${shift.comment ? `: ${shift.comment}` : ''}`}
-                              >
-                                <div className="truncate text-center">
-                                  {departments.find(d => d.id === shift.departmentId)?.name === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
-                                  {currentUser?.isAdmin && departments.find(d => d.id === shift.departmentId)?.name !== 'Fri' && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteShift(shift.id);
-                                      }}
-                                      className="ml-1 text-xs cursor-pointer hover:opacity-70"
-                                    >
-                                      x
-                                    </button>
+                            {shiftsForDay.map((shift, shiftIndex) => {
+                              const dept = (departments || []).find(d => d && d.id === shift.departmentId);
+                              const deptName = dept ? dept.name : shift.departmentId;
+                              const deptColor = dept ? dept.color : '#3B82F6';
+                              
+                              return (
+                                <div
+                                  key={shiftIndex}
+                                  className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate group relative"
+                                  style={{ backgroundColor: deptColor }}
+                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                >
+                                  <div className="truncate text-center">
+                                    {deptName === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
+                                    {currentUser?.isAdmin && deptName !== 'Fri' && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onDeleteShift(shift.id);
+                                        }}
+                                        className="ml-1 text-xs cursor-pointer hover:opacity-70"
+                                      >
+                                        x
+                                      </button>
+                                    )}
+                                  </div>
+                                  {shift.comment && (
+                                    <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                                      {shift.comment}
+                                    </div>
                                   )}
                                 </div>
-                                {shift.comment && (
-                                  <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                    {shift.comment}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           {currentUser?.isAdmin && (
                             <button
