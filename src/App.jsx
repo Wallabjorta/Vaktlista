@@ -117,10 +117,11 @@ function App() {
   });
 
   // Hent norske helligdager dynamisk
-  const { holidays } = useNorwegianHolidays([2024, 2025, 2026, 2027]);
+  const { holidays: holidaysObj } = useNorwegianHolidays([2024, 2025, 2026, 2027]);
+  const holidays = Object.keys(holidaysObj);
   
   // Validering av norske arbeidslover
-  const { validate } = useWorkLawValidation(shifts, holidays);
+  const { validate } = useWorkLawValidation(shifts, holidaysObj);
 
   // Load user from localStorage on initial render
   useEffect(() => {
