@@ -103,12 +103,10 @@ function ShiftCalendar({
         onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     } else {
-      // Single click: replace selection for this employee
-      const employeeDates = selectedDates.filter(d => d.employeeId === employeeId);
-      
-      if (employeeDates.length === 1 && employeeDates[0].date === dateStr) {
-        // Clicking the same date again - clear selection
-        onDateSelection(selectedDates.filter(d => d.employeeId !== employeeId));
+      // Single click: toggle selection (no need for Ctrl/Shift)
+      if (alreadySelected) {
+        // Clicking an already selected date - remove it
+        onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
         // Check if this date is already selected for ANY employee
         const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
@@ -118,10 +116,8 @@ function ShiftCalendar({
           newSelection.push({ date: dateStr, employeeId });
           onDateSelection(newSelection);
         } else {
-          // Replace all dates for this employee with the new date
-          const newSelection = selectedDates.filter(d => d.employeeId !== employeeId);
-          newSelection.push({ date: dateStr, employeeId });
-          onDateSelection(newSelection);
+          // Add to selection
+          onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
         }
       }
     }
@@ -266,10 +262,10 @@ function ShiftCalendar({
                                   handleDateClick(dateStr, employee.id, e);
                                 }
                               }}
-                              title={isSelected ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
+                              title={isSelected ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato"}
                             >
                               {isSelected ? (
-                                <span className="text-blue-700">\u2713 Valgt</span>
+                                <span className="text-blue-700">Valgt</span>
                               ) : (
                                 <button
                                   onClick={(e) => {
