@@ -20,6 +20,8 @@ import {
   getLeaveRequestsByEmployee,
   updateLeaveRequestStatus,
   deleteLeaveRequest,
+  updateSwapRequestStatus,
+  deleteSwapRequest,
   addSwapRequest,
   getSwapRequests,
   getSwapRequestsByEmployee,
@@ -392,7 +394,13 @@ function App() {
 
   const handleApproveLeaveRequest = useCallback(async (requestId, adminId) => {
     try {
-      await updateLeaveRequestStatus(requestId, "approved", adminId);
+      // Check if this is a swap request by trying leaveRequests first
+      // If it fails, try swapRequests
+      try {
+        await updateLeaveRequestStatus(requestId, "approved", adminId);
+      } catch (leaveError) {
+        await updateSwapRequestStatus(requestId, "approved", adminId);
+      }
       loadRequests();
     } catch (error) {
       alert("Feil: " + error.message);
@@ -401,7 +409,11 @@ function App() {
 
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId) => {
     try {
-      await updateLeaveRequestStatus(requestId, "rejected", adminId);
+      try {
+        await updateLeaveRequestStatus(requestId, "rejected", adminId);
+      } catch (leaveError) {
+        await updateSwapRequestStatus(requestId, "rejected", adminId);
+      }
       loadRequests();
     } catch (error) {
       alert("Feil: " + error.message);
