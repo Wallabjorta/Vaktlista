@@ -715,7 +715,6 @@ function App() {
                   >
                     ❌
                   </button>
-                  <button
               )}
             </div>
           ))}
