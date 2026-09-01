@@ -218,6 +218,7 @@ function ShiftCalendar({
                                     className="truncate text-center cursor-pointer"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      e.preventDefault();
                                       if (currentUser?.isAdmin) {
                                         onDeleteShift(shift.id);
                                       }
