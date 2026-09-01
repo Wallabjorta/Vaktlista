@@ -2,7 +2,7 @@
 // Install: npm install firebase
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ============ FIREBASE CONFIGURATION ============
