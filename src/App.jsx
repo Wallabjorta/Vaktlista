@@ -111,6 +111,7 @@ function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [employeeSort, setEmployeeSort] = useState('name');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
@@ -616,6 +617,10 @@ function App() {
           <h2 className="text-lg font-semibold">
             {selectedDepartment ? `Ansatte (${departments.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
           </h2>
+          <div className="flex gap-2">
+            <button onClick={() => setEmployeeSort('name')} className={`px-2 py-1 text-xs rounded border ${employeeSort === 'name' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>A-Å</button>
+            <button onClick={() => setEmployeeSort('department')} className={`px-2 py-1 text-xs rounded border ${employeeSort === 'department' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>Avdeling</button>
+          </div>
           {currentUser?.isAdmin && (
             <div className="flex gap-2">
               {selectedDates.length > 0 ? (
@@ -693,9 +698,13 @@ function App() {
           {employees
             .slice()
             .sort((a, b) => {
-              const aName = a.name || '';
-              const bName = b.name || '';
-              return aName.localeCompare(bName, 'no-NO');
+              if (employeeSort === 'department') {
+                const aDept = (a.deptIds || []).map(id => departments.find(d => d.id === id)?.name).filter(Boolean).join(', ') || '';
+                const bDept = (b.deptIds || []).map(id => departments.find(d => d.id === id)?.name).filter(Boolean).join(', ') || '';
+                if (aDept !== bDept) return aDept.localeCompare(bDept, 'no-NO');
+                return (a.name || '').localeCompare(b.name || '', 'no-NO');
+              }
+              return (a.name || '').localeCompare(b.name || '', 'no-NO');
             })
             .map(emp => (
             <div
