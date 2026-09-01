@@ -22,6 +22,8 @@ import {
   deleteLeaveRequest,
   updateSwapRequestStatus,
   deleteSwapRequest,
+  approveSwapRequest,
+  rejectSwapRequest,
   addSwapRequest,
   getSwapRequests,
   getSwapRequestsByEmployee
@@ -393,7 +395,7 @@ function App() {
   const handleApproveLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
       if (requestType === 'swap') {
-        await updateSwapRequestStatus(requestId, "approved", adminId);
+        await approveSwapRequest(requestId, adminId);
       } else {
         await updateLeaveRequestStatus(requestId, "approved", adminId);
       }
@@ -406,7 +408,7 @@ function App() {
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
       if (requestType === 'swap') {
-        await updateSwapRequestStatus(requestId, "rejected", adminId);
+        await rejectSwapRequest(requestId, adminId);
       } else {
         await updateLeaveRequestStatus(requestId, "rejected", adminId);
       }

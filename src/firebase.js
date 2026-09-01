@@ -578,6 +578,68 @@ export const updateSwapRequestStatus = async (id, status, adminId) => {
   }
 };
 
+export const approveSwapRequest = async (requestId, adminId) => {
+  try {
+    const requestDoc = doc(db, "swapRequests", requestId);
+    const requestSnap = await getDoc(requestDoc);
+    
+    if (!requestSnap.exists()) {
+      throw new Error("Swap request not found");
+    }
+    
+    const request = requestSnap.data();
+    
+    if (request.status !== 'pending') {
+      throw new Error("Swap request already processed");
+    }
+    
+    const { employeeId, originalDate, targetEmployeeId, targetDate } = request;
+    
+    const shiftsQuery = query(
+      shiftsCollection,
+      where("employeeId", "==", employeeId),
+      where("date", "==", originalDate)
+    );
+    const shiftsSnapshot = await getDocs(shiftsQuery);
+    
+    if (!shiftsSnapshot.empty) {
+      const shiftDoc = shiftsSnapshot.docs[0];
+      await updateDoc(doc(db, "shifts", shiftDoc.id), {
+        employeeId: targetEmployeeId,
+        employeeName: request.targetEmployeeName || "Ukjent"
+      });
+    }
+    
+    await updateDoc(requestDoc, {
+      status: "approved",
+      updatedAt: new Date().toISOString(),
+      handledBy: adminId,
+      handledAt: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error approving swap request:", error);
+    throw error;
+  }
+};
+
+export const rejectSwapRequest = async (requestId, adminId) => {
+  try {
+    const requestDoc = doc(db, "swapRequests", requestId);
+    await updateDoc(requestDoc, {
+      status: "rejected",
+      updatedAt: new Date().toISOString(),
+      handledBy: adminId,
+      handledAt: new Date().toISOString()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error rejecting swap request:", error);
+    throw error;
+  }
+};
+
 export const deleteSwapRequest = async (id) => {
   try {
     await deleteDoc(doc(db, "swapRequests", id));
