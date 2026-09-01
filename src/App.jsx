@@ -690,7 +690,14 @@ function App() {
             )}
         </div>
         <div className="flex flex-wrap gap-1 md:gap-2">
-          {employees.map(emp => (
+          {employees
+            .slice()
+            .sort((a, b) => {
+              const aName = a.name || '';
+              const bName = b.name || '';
+              return aName.localeCompare(bName, 'no-NO');
+            })
+            .map(emp => (
             <div
               key={emp.id}
               className="flex items-center gap-2 bg-gray-50 px-2 md:px-3 py-1 rounded-full border cursor-pointer hover:bg-gray-100 group"
