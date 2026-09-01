@@ -218,7 +218,7 @@ function ShiftCalendar({
                                     className="truncate text-center cursor-pointer"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (currentUser?.isAdmin && confirm('Slett vakt?')) {
+                                      if (currentUser?.isAdmin) {
                                         onDeleteShift(shift.id);
                                       }
                                     }}
