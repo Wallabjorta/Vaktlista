@@ -96,19 +96,30 @@ END:VEVENT
 
 // Main iCal endpoint (alle vakter)
 export const ical = onRequest({ 
-  cors: true 
+  cors: { 
+    origin: true,
+    methods: ['GET'],
+    maxAge: 86400 
+  } 
 }, async (req, res) => {
   try {
     logger.info('Generating iCal file for all employees...');
     const icalContent = await generateICalContent();
     
-    // CORS headers for subscription
+    // Full CORS configuration for iCal subscription
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
     
+    // iCal specific headers
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-    res.setHeader('Content-Disposition', 'inline; filename="vaktlista.ics"');
+    res.setHeader('Content-Disposition', 'attachment; filename="vaktlista.ics"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.status(200).send(icalContent);
   } catch (error) {
     logger.error('Error generating iCal:', error);
@@ -118,7 +129,11 @@ export const ical = onRequest({
 
 // Person-spesifikk iCal endpoint
 export const icalEmployee = onRequest({ 
-  cors: true 
+  cors: { 
+    origin: true,
+    methods: ['GET'],
+    maxAge: 86400 
+  } 
 }, async (req, res) => {
   try {
     const { employeeId } = req.params;
@@ -137,13 +152,20 @@ export const icalEmployee = onRequest({
       ? `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`
       : `vaktlista-${employeeId}.ics`;
     
-    // CORS headers for subscription
+    // Full CORS configuration for iCal subscription
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400');
     
+    // iCal specific headers - use attachment to avoid CORB issues
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.status(200).send(icalContent);
   } catch (error) {
     logger.error('Error generating employee iCal:', error);
