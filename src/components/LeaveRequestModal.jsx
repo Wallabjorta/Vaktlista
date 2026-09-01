@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getEmployees } from '../firebase';
 
 function LeaveRequestModal({ employee, onClose, onSubmit }) {
   const [requestType, setRequestType] = useState('leave');
@@ -11,10 +12,7 @@ function LeaveRequestModal({ employee, onClose, onSubmit }) {
 
   useEffect(() => {
     if (requestType === 'swap' && employee) {
-      fetch('/api/employees')
-        .then(res => res.json())
-        .then(data => setEmployees(data.filter(e => e.id !== employee.id)))
-        .catch(console.error);
+      getEmployees().then(data => setEmployees(data.filter(e => e.id !== employee.id)));
     }
   }, [requestType, employee?.id]);
 
