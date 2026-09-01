@@ -50,101 +50,70 @@ function ShiftCalendar({
     return 1 + Math.round(((d - week1) / 86400000 + 3) / 7);
   };
 
-  const getDeptColor = (deptId) => {
-    const dept = departments.find(d => d.id === deptId);
-    return dept ? dept.color : '#ccc';
-  };
-
-  const holidayColor = '#FEF2F2';
-  const vacationColor = '#FED7AA';
-  const sundayColor = '#FECACA';
-
-  const getShiftsForDateAndEmployee = (dateStr, employeeId) => {
-    return shifts.filter(shift =>
-      shift.date === dateStr &&
-      shift.employeeId === employeeId
-    );
-  };
-
-  const isHoliday = (dateStr) => {
-    return holidays[dateStr] !== undefined;
-  };
-
-  const isVacation = (dateStr) => {
-    return vacations[dateStr] !== undefined;
-  };
-
   const isSunday = (date) => {
     return date.getDay() === 0;
   };
 
-  const isDateSelected = (dateStr, employeeId) => {
-    if (selectedEmployeeForBulk) {
-      return selectedDates.includes(dateStr) && employeeId === selectedEmployeeForBulk;
-    }
-    return selectedDates.includes(dateStr);
-  };
+  const isHoliday = useCallback((dateStr) => {
+    return holidays.includes(dateStr);
+  }, [holidays]);
 
-  const hasExistingShift = (dateStr, employeeId) => {
-    return shifts.some(shift => shift.date === dateStr && shift.employeeId === employeeId);
-  };
+  const isVacation = useCallback((dateStr) => {
+    return vacations[dateStr] !== undefined;
+  }, [vacations]);
+
+  const getShiftsForDateAndEmployee = useCallback((date, employeeId) => {
+    return shifts.filter(shift => shift.date === date && shift.employeeId === employeeId);
+  }, [shifts]);
+
+  const getDeptColor = useCallback((deptId) => {
+    const dept = departments.find(d => d.id === deptId);
+    return dept ? dept.color : '#3B82F6';
+  }, [departments]);
+
+  const isDateSelected = useCallback((dateStr, employeeId) => {
+    return selectedDates.some(d => d.date === dateStr && d.employeeId === employeeId);
+  }, [selectedDates]);
 
   const lastClickedRef = useRef(null);
 
   const handleDateClick = useCallback((dateStr, employeeId, event) => {
-    if (!currentUser || !onDateSelection) return;
+    if (!currentUser?.isAdmin) return;
 
-    const targetEmployee = selectedEmployeeForBulk || employeeId;
-
-    if (selectedEmployeeForBulk && selectedEmployeeForBulk !== employeeId) {
-      return;
-    }
-
-    const isShiftKey = event.shiftKey;
-    const isCtrlKey = event.ctrlKey || event.metaKey;
-
-    if (isShiftKey && lastClickedRef.current) {
-      const allDates = dates.map(d => {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-      });
+    if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+      const newSelection = selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId));
+      const dateExists = selectedDates.some(d => d.date === dateStr && d.employeeId === employeeId);
       
-      const lastIndex = allDates.indexOf(lastClickedRef.current);
-      const currentIndex = allDates.indexOf(dateStr);
+      if (!dateExists) {
+        newSelection.push({ date: dateStr, employeeId });
+      }
       
-      if (lastIndex !== -1 && currentIndex !== -1) {
-        const start = Math.min(lastIndex, currentIndex);
-        const end = Math.max(lastIndex, currentIndex);
-        const datesInRange = allDates.slice(start, end + 1);
-        
-        const newSelected = datesInRange.filter(d => !hasExistingShift(d, targetEmployee));
-        
-        newSelected.forEach(d => onDateSelection(d, targetEmployee));
-        return;
-      }
-    } else if (isCtrlKey) {
-      if (isDateSelected(dateStr, employeeId)) {
-        onDateSelection(dateStr, targetEmployee);
-      } else {
-        if (!hasExistingShift(dateStr, targetEmployee)) {
-          onDateSelection(dateStr, targetEmployee);
-        }
-      }
-      return;
+      onDateSelection(newSelection);
     } else {
-      if (isDateSelected(dateStr, employeeId)) {
-        onDateSelection(dateStr, targetEmployee);
+      if (selectedDates.length === 0 || !selectedDates.some(d => d.employeeId === employeeId)) {
+        onDateSelection([{ date: dateStr, employeeId }]);
       } else {
-        if (!hasExistingShift(dateStr, targetEmployee)) {
-          onDateSelection(dateStr, targetEmployee);
+        const newSelection = selectedDates.filter(d => d.employeeId === employeeId);
+        if (newSelection.length === 1 && newSelection[0].date === dateStr) {
+          onDateSelection([]);
+        } else {
+          const existingIndex = newSelection.findIndex(d => d.date === dateStr);
+          if (existingIndex >= 0) {
+            newSelection.splice(existingIndex, 1);
+          } else {
+            newSelection.push({ date: dateStr, employeeId });
+          }
+          onDateSelection(newSelection);
         }
       }
     }
 
     lastClickedRef.current = dateStr;
-  }, [dates, selectedDates, selectedEmployeeForBulk, employees, hasExistingShift, onDateSelection, currentUser]);
+  }, [dates, selectedDates, selectedEmployeeForBulk, employees, onDateSelection, currentUser]);
+
+  const sundayColor = '#FCA5A5';
+  const holidayColor = '#F87171';
+  const vacationColor = '#FEF3C7';
 
   return (
     <div className="bg-white border rounded-lg shadow-sm">
@@ -248,7 +217,7 @@ function ShiftCalendar({
                               </div>
                             ))}
                           </div>
-                          {currentUser && (
+                          {currentUser?.isAdmin && (
                             <button
                               onClick={() => onAddShift(employee.id, dateStr, selectedDepartment)}
                               className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
@@ -260,7 +229,7 @@ function ShiftCalendar({
                         </>
                       ) : (
                         <>
-                          {currentUser && (
+                          {currentUser?.isAdmin && (
                             <div
                               className="w-full h-full relative"
                               onClick={(e) => {
@@ -276,18 +245,20 @@ function ShiftCalendar({
                               title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
                             >
                               {isSelected && isForSelectedEmployee ? (
-                                <span className="text-blue-700">✓ Valgt</span>
+                                <span className="text-blue-700">\u2713 Valgt</span>
                               ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAddShift(employee.id, dateStr, selectedDepartment);
-                                  }}
-                                  className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                                  title="Legg til vakt for denne dagen"
-                                >
-                                  + Legg til
-                                </button>
+                                currentUser?.isAdmin && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onAddShift(employee.id, dateStr, selectedDepartment);
+                                    }}
+                                    className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
+                                    title="Legg til vakt for denne dagen"
+                                  >
+                                    + Legg til
+                                  </button>
+                                )
                               )}
                             </div>
                           )}

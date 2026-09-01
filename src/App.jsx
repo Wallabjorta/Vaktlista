@@ -354,6 +354,7 @@ function App() {
 
   // Handle single shift from calendar cell
   const handleSingleShiftFromCalendar = useCallback((employeeId, date, deptId) => {
+    if (!currentUser?.isAdmin) return;
     const validation = validate(employeeId, date);
     if (!validation.isValid) {
       alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Du kan likevel legge til vakten.`);
@@ -369,7 +370,7 @@ function App() {
       endTime: "16:00"
     });
     setShowAddShiftModal(true);
-  }, [selectedDepartment, validate]);
+  }, [currentUser?.isAdmin, selectedDepartment, validate]);
 
   const handleDeleteShift = useCallback(async (shiftId) => {
     if (!confirm('Slett vakt?')) return;
@@ -551,32 +552,34 @@ function App() {
                   Avbryt valgte dager ({selectedDates.length})
                 </button>
               ) : null}
-              <button
-                onClick={() => {
-                  if (selectedDates.length > 0 && selectedEmployeeForBulk) {
-                    setNewShift(prev => ({
-                      ...prev,
-                      employeeId: selectedEmployeeForBulk,
-                      departmentId: selectedDepartment || "",
-                      date: selectedDates[0]
-                    }));
-                  } else {
-                    setNewShift({
-                      employeeId: "",
-                      departmentId: selectedDepartment || "",
-                      date: new Date().toISOString().split('T')[0],
-                      startTime: "08:00",
-                      endTime: "16:00"
-                    });
-                  }
-                  setShowAddShiftModal(true);
-                }}
-                className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
-                disabled={selectedDates.length > 0 && !selectedEmployeeForBulk}
-              >
-                {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
-              </button>
-              {currentUser.isAdmin && (
+              {currentUser?.isAdmin && (
+                <button
+                  onClick={() => {
+                    if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+                      setNewShift(prev => ({
+                        ...prev,
+                        employeeId: selectedEmployeeForBulk,
+                        departmentId: selectedDepartment || "",
+                        date: selectedDates[0]
+                      }));
+                    } else {
+                      setNewShift({
+                        employeeId: "",
+                        departmentId: selectedDepartment || "",
+                        date: new Date().toISOString().split('T')[0],
+                        startTime: "08:00",
+                        endTime: "16:00"
+                      });
+                    }
+                    setShowAddShiftModal(true);
+                  }}
+                  className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
+                  disabled={selectedDates.length > 0 && !selectedEmployeeForBulk}
+                >
+                  {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
+                </button>
+              )}
+              {currentUser?.isAdmin && (
                 <>
                   <button
                     onClick={() => setShowAddEmployeeModal(true)}
