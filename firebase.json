@@ -26,5 +26,9 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "runtime": "nodejs22",
+    "source": "functions"
   }
 }
