@@ -107,7 +107,12 @@ export const ical = onRequest({
     logger.info('Generating iCal file for all employees...');
     const icalContent = await generateICalContent();
     
-    // iCal specific headers only - CORS handled by onRequest cors option
+    // Set CORS headers explicitly
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
+    
+    // iCal specific headers
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="vaktlista.ics"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -147,7 +152,12 @@ export const icalEmployee = onRequest({
       ? `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`
       : `vaktlista-${employeeId}.ics`;
     
-    // iCal specific headers only - CORS handled by onRequest cors option
+    // Set CORS headers explicitly
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
+    
+    // iCal specific headers
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
