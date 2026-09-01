@@ -136,7 +136,9 @@ export const icalEmployee = onRequest({
   } 
 }, async (req, res) => {
   try {
-    const { employeeId } = req.params;
+    // Extract employeeId from URL path for Firebase Functions v2
+    const pathParts = req.path.split('/');
+    const employeeId = pathParts[pathParts.length - 1];
     
     if (!employeeId) {
       return res.status(400).send('Employee ID is required');
@@ -148,9 +150,12 @@ export const icalEmployee = onRequest({
     const employeesSnapshot = await db.collection('employees').get();
     const employees = employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const employee = employees.find(e => e.id === employeeId);
-    const filename = employee 
-      ? `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`
-      : `vaktlista-${employeeId}.ics`;
+    
+    if (!employee) {
+      return res.status(404).send(`Employee with ID ${employeeId} not found`);
+    }
+    
+    const filename = `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`;
     
     // Set CORS headers explicitly
     res.setHeader('Access-Control-Allow-Origin', '*');
