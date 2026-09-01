@@ -222,15 +222,22 @@ function ShiftCalendar({
                             {shiftsForDay.map((shift, shiftIndex) => (
                               <div
                                 key={shiftIndex}
-                                className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate cursor-pointer hover:opacity-80 group relative"
+                                className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate group relative"
                                 style={{ backgroundColor: getDeptColor(shift.departmentId) }}
-                                onClick={() => currentUser?.isAdmin && onDeleteShift(shift.id)}
                                 title={`${shift.startTime}-${shift.endTime} (${departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId})${shift.comment ? `: ${shift.comment}` : ''}`}
                               >
                                 <div className="truncate text-center">
                                   {departments.find(d => d.id === shift.departmentId)?.name === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
                                   {currentUser?.isAdmin && departments.find(d => d.id === shift.departmentId)?.name !== 'Fri' && (
-                                    <button className="ml-1 text-xs">x</button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteShift(shift.id);
+                                      }}
+                                      className="ml-1 text-xs cursor-pointer hover:opacity-70"
+                                    >
+                                      x
+                                    </button>
                                   )}
                                 </div>
                                 {shift.comment && (
