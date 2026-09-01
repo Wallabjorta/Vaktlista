@@ -600,8 +600,8 @@ function App() {
             <div
               key={emp.id}
               className="flex items-center gap-2 bg-gray-50 px-2 md:px-3 py-1 rounded-full border cursor-pointer hover:bg-gray-100 group"
-              onClick={() => currentUser?.isAdmin && handleShowEmployeeDetails(emp)}
-              title={currentUser?.isAdmin ? "Klikk for \u00e5 se detaljer" : ""}
+              onClick={() => handleShowEmployeeDetails(emp)}
+              title="Klikk for \u00e5 se detaljer"
             >
               <span>{emp.name}</span>
               {emp.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 md:px-1.5 py-0.5 rounded">Admin</span>}
