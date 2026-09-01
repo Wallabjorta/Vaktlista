@@ -24,9 +24,7 @@ import {
   deleteSwapRequest,
   addSwapRequest,
   getSwapRequests,
-  getSwapRequestsByEmployee,
-  updateSwapRequestStatus,
-  deleteSwapRequest
+  getSwapRequestsByEmployee
 } from './firebase';
 
 // Skoleferier for Norge
