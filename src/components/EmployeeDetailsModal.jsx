@@ -9,9 +9,9 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   };
 
   // Generer personlig iCal-URL
-  // Use Firebase Hosting URL where Functions are deployed
-  const firebaseHostingUrl = 'https://vaktlista-d0efd.web.app';
-  const apiUrl = import.meta.env.VITE_API_URL || firebaseHostingUrl;
+  // Use Firebase Functions URL
+  const firebaseFunctionsUrl = 'https://us-central1-vaktlista-d0efd.cloudfunctions.net';
+  const apiUrl = import.meta.env.VITE_API_URL || firebaseFunctionsUrl;
   const icalUrl = `${apiUrl}/api/export/ical/${employee?.id}`;
 
   // Kopier lenke til utklippstavle

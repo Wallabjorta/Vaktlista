@@ -668,7 +668,7 @@ function App() {
                   </button>
                   <button
                     onClick={() => {
-                      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+                      const apiUrl = import.meta.env.VITE_API_URL || 'https://us-central1-vaktlista-d0efd.cloudfunctions.net';
                       window.open(`${apiUrl}/api/export/ical`, '_blank');
                     }}
                     className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700"
