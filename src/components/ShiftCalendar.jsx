@@ -85,36 +85,33 @@ function ShiftCalendar({
   const handleDateClick = useCallback((dateStr, employeeId, event) => {
     if (!currentUser?.isAdmin) return;
 
+    // Check if this date is already selected for this employee
+    const alreadySelected = selectedDates.some(d => d.date === dateStr && d.employeeId === employeeId);
+    
     if (event && (event.ctrlKey || event.metaKey || event.shiftKey)) {
-      const newSelection = selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId));
-      const dateExists = selectedDates.some(d => d.date === dateStr && d.employeeId === employeeId);
-      
-      if (!dateExists) {
-        newSelection.push({ date: dateStr, employeeId });
-      }
-      
-      onDateSelection(newSelection);
-    } else {
-      if (selectedDates.length === 0 || !selectedDates.some(d => d.employeeId === employeeId)) {
-        onDateSelection([{ date: dateStr, employeeId }]);
+      // Multi-select: toggle selection
+      if (alreadySelected) {
+        onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
-        const newSelection = selectedDates.filter(d => d.employeeId === employeeId);
-        if (newSelection.length === 1 && newSelection[0].date === dateStr) {
-          onDateSelection([]);
-        } else {
-          const existingIndex = newSelection.findIndex(d => d.date === dateStr);
-          if (existingIndex >= 0) {
-            newSelection.splice(existingIndex, 1);
-          } else {
-            newSelection.push({ date: dateStr, employeeId });
-          }
-          onDateSelection(newSelection);
-        }
+        onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
+      }
+    } else {
+      // Single click: replace selection for this employee
+      const employeeDates = selectedDates.filter(d => d.employeeId === employeeId);
+      
+      if (employeeDates.length === 1 && employeeDates[0].date === dateStr) {
+        // Clicking the same date again - clear selection
+        onDateSelection(selectedDates.filter(d => d.employeeId !== employeeId));
+      } else {
+        // Replace all dates for this employee with the new date
+        const newSelection = selectedDates.filter(d => d.employeeId !== employeeId);
+        newSelection.push({ date: dateStr, employeeId });
+        onDateSelection(newSelection);
       }
     }
 
     lastClickedRef.current = dateStr;
-  }, [dates, selectedDates, selectedEmployeeForBulk, employees, onDateSelection, currentUser]);
+  }, [selectedDates, onDateSelection, currentUser]);
 
   const sundayColor = '#FCA5A5';
   const holidayColor = '#F87171';
