@@ -63,11 +63,11 @@ function LeaveRequestList({ requests, onApprove, onReject, onDelete, currentUser
               
               {currentUser?.isAdmin && req.status === 'pending' && (
                 <div className="flex gap-1">
-                  <button onClick={() => onApprove(req.id, currentUser?.id)}
+                  <button onClick={() => onApprove(req.id, currentUser?.id, req.type)}
                     className="px-3 py-1 bg-green-600 text-white text-xs rounded">
                     Godkjenn
                   </button>
-                  <button onClick={() => onReject(req.id, currentUser?.id)}
+                  <button onClick={() => onReject(req.id, currentUser?.id, req.type)}
                     className="px-3 py-1 bg-red-600 text-white text-xs rounded">
                     Avslå
                   </button>

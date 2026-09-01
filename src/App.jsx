@@ -390,14 +390,12 @@ function App() {
     }
   }, [currentUser, loadRequests]);
 
-  const handleApproveLeaveRequest = useCallback(async (requestId, adminId) => {
+  const handleApproveLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
-      // Check if this is a swap request by trying leaveRequests first
-      // If it fails, try swapRequests
-      try {
-        await updateLeaveRequestStatus(requestId, "approved", adminId);
-      } catch (leaveError) {
+      if (requestType === 'swap') {
         await updateSwapRequestStatus(requestId, "approved", adminId);
+      } else {
+        await updateLeaveRequestStatus(requestId, "approved", adminId);
       }
       loadRequests();
     } catch (error) {
@@ -405,12 +403,12 @@ function App() {
     }
   }, [loadRequests]);
 
-  const handleRejectLeaveRequest = useCallback(async (requestId, adminId) => {
+  const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
-      try {
-        await updateLeaveRequestStatus(requestId, "rejected", adminId);
-      } catch (leaveError) {
+      if (requestType === 'swap') {
         await updateSwapRequestStatus(requestId, "rejected", adminId);
+      } else {
+        await updateLeaveRequestStatus(requestId, "rejected", adminId);
       }
       loadRequests();
     } catch (error) {
