@@ -214,19 +214,16 @@ function ShiftCalendar({
                                   style={{ backgroundColor: deptColor }}
                                   title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
                                 >
-                                  <div className="truncate text-center">
+                                  <div 
+                                    className="truncate text-center cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (currentUser?.isAdmin && confirm('Slett vakt?')) {
+                                        onDeleteShift(shift.id);
+                                      }
+                                    }}
+                                  >
                                     {deptName === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
-                                    {currentUser?.isAdmin && deptName !== 'Fri' && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onDeleteShift(shift.id);
-                                        }}
-                                        className="ml-1 text-xs cursor-pointer hover:opacity-70"
-                                      >
-                                        x
-                                      </button>
-                                    )}
                                   </div>
                                   {shift.comment && (
                                     <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
