@@ -88,12 +88,12 @@ function DepartmentModal({
 
   // Predefined colors for easy selection
   const colorOptions = [
-    { value: '#FF0000', label: 'Rød', name: 'Fri' },
     { value: '#3B82F6', label: 'Blå', name: 'Vest' },
     { value: '#10B981', label: 'Grønn', name: 'Øst' },
     { value: '#F59E0B', label: 'Oransje', name: 'Skiskole' },
     { value: '#EF4444', label: 'Rød', name: 'Butikk' },
     { value: '#8B5CF6', label: 'Lilla', name: 'Skolegrupper' },
+    { value: '#6B7280', label: 'Grå', name: 'Fri' },
     { value: '#000000', label: 'Sort' },
     { value: '#FFFFFF', label: 'Hvit', border: '1px solid #ccc' }
   ];
@@ -118,7 +118,7 @@ function DepartmentModal({
                 value={newDepartment.name}
                 onChange={(e) => setNewDepartment(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full p-2 border rounded"
-                placeholder="f.eks. Fri, Vest, Butikk"
+                placeholder="f.eks. Vest, Butikk, Skiskole"
                 required
               />
             </div>
