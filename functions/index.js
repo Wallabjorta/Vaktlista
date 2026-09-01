@@ -97,23 +97,17 @@ END:VEVENT
 // Main iCal endpoint (alle vakter)
 export const ical = onRequest({ 
   cors: { 
-    origin: true,
-    methods: ['GET'],
-    maxAge: 86400 
+    origin: '*',
+    methods: ['GET', 'OPTIONS'],
+    maxAge: 86400,
+    allowHeaders: ['Content-Type', 'Origin']
   } 
 }, async (req, res) => {
   try {
     logger.info('Generating iCal file for all employees...');
     const icalContent = await generateICalContent();
     
-    // Full CORS configuration for iCal subscription
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    
-    // iCal specific headers
+    // iCal specific headers only - CORS handled by onRequest cors option
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="vaktlista.ics"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -130,9 +124,10 @@ export const ical = onRequest({
 // Person-spesifikk iCal endpoint
 export const icalEmployee = onRequest({ 
   cors: { 
-    origin: true,
-    methods: ['GET'],
-    maxAge: 86400 
+    origin: '*',
+    methods: ['GET', 'OPTIONS'],
+    maxAge: 86400,
+    allowHeaders: ['Content-Type', 'Origin']
   } 
 }, async (req, res) => {
   try {
@@ -152,14 +147,7 @@ export const icalEmployee = onRequest({
       ? `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`
       : `vaktlista-${employeeId}.ics`;
     
-    // Full CORS configuration for iCal subscription
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Origin');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    
-    // iCal specific headers - use attachment to avoid CORB issues
+    // iCal specific headers only - CORS handled by onRequest cors option
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
