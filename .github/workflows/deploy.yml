@@ -29,8 +29,10 @@ jobs:
         run: cd functions && npm install
 
       - name: Deploy to Firebase
-        run: firebase deploy --only hosting,functions
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
+          firebase deploy --only hosting,functions --token "$FIREBASE_DEPLOY_TOKEN"
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VAKTLISTA_D0EFD }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/service-account.json
+          FIREBASE_DEPLOY_TOKEN: ${{ secrets.FIREBASE_DEPLOY_TOKEN }}
         shell: bash
