@@ -93,6 +93,13 @@ function ShiftCalendar({
       if (alreadySelected) {
         onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
+        // Check if this date is already selected for ANY employee (prevent duplicate dates)
+        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
+        if (dateAlreadySelectedForAny) {
+          // Can't select same date for multiple employees in bulk mode
+          alert('Du kan ikke velge samme dag for flere ansatte samtidig i bulk-modus.');
+          return;
+        }
         onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     } else {
@@ -103,10 +110,19 @@ function ShiftCalendar({
         // Clicking the same date again - clear selection
         onDateSelection(selectedDates.filter(d => d.employeeId !== employeeId));
       } else {
-        // Replace all dates for this employee with the new date
-        const newSelection = selectedDates.filter(d => d.employeeId !== employeeId);
-        newSelection.push({ date: dateStr, employeeId });
-        onDateSelection(newSelection);
+        // Check if this date is already selected for ANY employee
+        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
+        if (dateAlreadySelectedForAny) {
+          // Replace all selections for this date with the new employee
+          const newSelection = selectedDates.filter(d => d.date !== dateStr);
+          newSelection.push({ date: dateStr, employeeId });
+          onDateSelection(newSelection);
+        } else {
+          // Replace all dates for this employee with the new date
+          const newSelection = selectedDates.filter(d => d.employeeId !== employeeId);
+          newSelection.push({ date: dateStr, employeeId });
+          onDateSelection(newSelection);
+        }
       }
     }
 
@@ -184,7 +200,7 @@ function ShiftCalendar({
                       className="p-1 border-r border-b h-12 md:h-16 min-w-[80px] md:min-w-[100px] relative"
                       style={{
                         ...bgStyle,
-                        ...(isSelected && isForSelectedEmployee && !hasShift ? { backgroundColor: '#DBEAFE' } : {})
+                        ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
                       }}
                     >
                       {hasShift ? (
@@ -244,29 +260,27 @@ function ShiftCalendar({
                                 if (isBulkMode && !isForSelectedEmployee) {
                                   if (confirm(`Vil du bytte til ${employee.name}?`)) {
                                     onClearSelection();
-                                    onDateSelection(dateStr, employee.id);
+                                    onDateSelection([{ date: dateStr, employeeId }]);
                                   }
                                 } else {
                                   handleDateClick(dateStr, employee.id, e);
                                 }
                               }}
-                              title={isSelected && isForSelectedEmployee ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
+                              title={isSelected ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato (Shift/Ctrl for flere)"}
                             >
-                              {isSelected && isForSelectedEmployee ? (
+                              {isSelected ? (
                                 <span className="text-blue-700">\u2713 Valgt</span>
                               ) : (
-                                currentUser?.isAdmin && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onAddShift(employee.id, dateStr, selectedDepartment);
-                                    }}
-                                    className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                                    title="Legg til vakt for denne dagen"
-                                  >
-                                    + Legg til
-                                  </button>
-                                )
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddShift(employee.id, dateStr, selectedDepartment);
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
+                                  title="Legg til vakt for denne dagen"
+                                >
+                                  + Legg til
+                                </button>
                               )}
                             </div>
                           )}
