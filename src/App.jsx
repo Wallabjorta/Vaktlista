@@ -7,11 +7,25 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
+import LeaveRequestModal from './components/LeaveRequestModal';
+import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
 
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
+import {
+  addLeaveRequest,
+  getLeaveRequests,
+  getLeaveRequestsByEmployee,
+  updateLeaveRequestStatus,
+  deleteLeaveRequest,
+  addSwapRequest,
+  getSwapRequests,
+  getSwapRequestsByEmployee,
+  updateSwapRequestStatus,
+  deleteSwapRequest
+} from './firebase';
 
 // Skoleferier for Norge
 const VACATIONS = {
@@ -102,6 +116,9 @@ function App() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [swapRequests, setSwapRequests] = useState([]);
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
@@ -139,6 +156,11 @@ function App() {
       });
     }
   }, [employees.length, shifts.length, loading, migrateData]);
+
+  // Load requests when user changes
+  useEffect(() => {
+    if (currentUser) loadRequests();
+  }, [currentUser]);
 
   // Fallback: Load default employees if Firebase returns empty
   useEffect(() => {
@@ -339,6 +361,61 @@ function App() {
     setSelectedDates([]);
     setSelectedEmployeeForBulk(null);
   }, []);
+
+  const loadRequests = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const [leaveReqs, swapReqs] = await Promise.all([
+        currentUser.isAdmin ? getLeaveRequests() : getLeaveRequestsByEmployee(currentUser.id),
+        currentUser.isAdmin ? getSwapRequests() : getSwapRequestsByEmployee(currentUser.id)
+      ]);
+      setLeaveRequests(leaveReqs);
+      setSwapRequests(swapReqs);
+    } catch (error) {
+      console.error("Error loading requests:", error);
+    }
+  }, [currentUser]);
+
+  const handleSubmitRequest = useCallback(async (request) => {
+    try {
+      if (request.type === "leave") {
+        await addLeaveRequest({ ...request, employeeId: currentUser.id, employeeName: currentUser.name });
+      } else {
+        await addSwapRequest({ ...request, employeeId: currentUser.id, employeeName: currentUser.name });
+      }
+      alert("Foresprsel sendt inn!");
+      loadRequests();
+    } catch (error) {
+      alert("Feil: " + error.message);
+    }
+  }, [currentUser, loadRequests]);
+
+  const handleApproveLeaveRequest = useCallback(async (requestId, adminId) => {
+    try {
+      await updateLeaveRequestStatus(requestId, "approved", adminId);
+      loadRequests();
+    } catch (error) {
+      alert("Feil: " + error.message);
+    }
+  }, [loadRequests]);
+
+  const handleRejectLeaveRequest = useCallback(async (requestId, adminId) => {
+    try {
+      await updateLeaveRequestStatus(requestId, "rejected", adminId);
+      loadRequests();
+    } catch (error) {
+      alert("Feil: " + error.message);
+    }
+  }, [loadRequests]);
+
+  const handleDeleteLeaveRequest = useCallback(async (requestId) => {
+    try {
+      await deleteLeaveRequest(requestId);
+      loadRequests();
+    } catch (error) {
+      alert("Feil: " + error.message);
+    }
+  }, [loadRequests]);
 
   // Handle single shift from calendar cell
   const handleSingleShiftFromCalendar = useCallback((employeeId, date, deptId) => {
@@ -736,6 +813,24 @@ function App() {
             setShowDeleteConfirmModal(false);
             setEmployeeToDelete(null);
           }}
+        />
+      )}
+
+      {showLeaveRequestModal && (
+        <LeaveRequestModal
+          employee={currentUser}
+          onClose={() => setShowLeaveRequestModal(false)}
+          onSubmit={handleSubmitRequest}
+        />
+      )}
+
+      {currentUser && (
+        <LeaveRequestList
+          requests={[...leaveRequests, ...swapRequests]}
+          onApprove={handleApproveLeaveRequest}
+          onReject={handleRejectLeaveRequest}
+          onDelete={handleDeleteLeaveRequest}
+          currentUser={currentUser}
         />
       )}
 

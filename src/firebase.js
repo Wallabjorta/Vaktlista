@@ -28,6 +28,8 @@ const shiftsCollection = collection(db, "shifts");
 const departmentsCollection = collection(db, "departments");
 const usersCollection = collection(db, "users");
 const notificationsCollection = collection(db, "notifications");
+const leaveRequestsCollection = collection(db, "leaveRequests");
+const swapRequestsCollection = collection(db, "swapRequests");
 
 // ============ FIREBASE SERVICE FUNCTIONS ============
 
@@ -451,6 +453,138 @@ export const migrateFromLocalStorage = async () => {
     console.error("Migration error:", error);
     result.errors.push(`Migration failed: ${error.message}`);
     return result;
+  }
+};
+
+// ============ LEAVE & SWAP REQUESTS ============
+
+// ============ LEAVE REQUESTS ============
+
+export const addLeaveRequest = async (request) => {
+  try {
+    const docRef = doc(leaveRequestsCollection);
+    await setDoc(docRef, {
+      ...request,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      updatedAt: new Date().toISOString()
+    });
+    return { id: docRef.id, ...request };
+  } catch (error) {
+    console.error("Error adding leave request:", error);
+    throw error;
+  }
+};
+
+export const getLeaveRequests = async () => {
+  try {
+    const snapshot = await getDocs(leaveRequestsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error getting leave requests:", error);
+    return [];
+  }
+};
+
+export const getLeaveRequestsByEmployee = async (employeeId) => {
+  try {
+    const q = query(leaveRequestsCollection, where("employeeId", "==", employeeId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error getting leave requests by employee:", error);
+    return [];
+  }
+};
+
+export const updateLeaveRequestStatus = async (id, status, adminId) => {
+  try {
+    const docRef = doc(db, "leaveRequests", id);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: new Date().toISOString(),
+      handledBy: adminId,
+      handledAt: new Date().toISOString()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating leave request:", error);
+    throw error;
+  }
+};
+
+export const deleteLeaveRequest = async (id) => {
+  try {
+    await deleteDoc(doc(db, "leaveRequests", id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting leave request:", error);
+    throw error;
+  }
+};
+
+// ============ SWAP REQUESTS ============
+
+export const addSwapRequest = async (request) => {
+  try {
+    const docRef = doc(swapRequestsCollection);
+    await setDoc(docRef, {
+      ...request,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      updatedAt: new Date().toISOString()
+    });
+    return { id: docRef.id, ...request };
+  } catch (error) {
+    console.error("Error adding swap request:", error);
+    throw error;
+  }
+};
+
+export const getSwapRequests = async () => {
+  try {
+    const snapshot = await getDocs(swapRequestsCollection);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error getting swap requests:", error);
+    return [];
+  }
+};
+
+export const getSwapRequestsByEmployee = async (employeeId) => {
+  try {
+    const q = query(swapRequestsCollection, where("employeeId", "==", employeeId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Error getting swap requests by employee:", error);
+    return [];
+  }
+};
+
+export const updateSwapRequestStatus = async (id, status, adminId) => {
+  try {
+    const docRef = doc(db, "swapRequests", id);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: new Date().toISOString(),
+      handledBy: adminId,
+      handledAt: new Date().toISOString()
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating swap request:", error);
+    throw error;
+  }
+};
+
+export const deleteSwapRequest = async (id) => {
+  try {
+    await deleteDoc(doc(db, "swapRequests", id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting swap request:", error);
+    throw error;
   }
 };
 
