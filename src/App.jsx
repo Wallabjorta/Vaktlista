@@ -669,12 +669,14 @@ function App() {
                   </button>
                 </>
               )}
-              <button
-                onClick={() => setShowLeaveRequestModal(true)}
-                className="px-3 py-1 bg-teal-600 text-white rounded border border-teal-600 hover:bg-teal-700"
-              >
-                Forespørsler
-              </button>
+              {currentUser && (
+                <button
+                  onClick={() => setShowLeaveRequestModal(true)}
+                  className="px-3 py-1 bg-teal-600 text-white rounded border border-teal-600 hover:bg-teal-700"
+                >
+                  Forespørsler
+                </button>
+              )}
             </div>
           )}
         </div>
