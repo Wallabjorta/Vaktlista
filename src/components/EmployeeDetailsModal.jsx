@@ -9,7 +9,8 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   };
 
   // Generer personlig iCal-URL
-  const icalUrl = `https://${window.location.hostname}/api/export/ical/${employee?.id}`;
+  const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+  const icalUrl = `${apiUrl}/api/export/ical/${employee?.id}`;
 
   // Kopier lenke til utklippstavle
   const copyToClipboard = () => {
@@ -21,9 +22,14 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   const downloadICal = () => {
     const filename = `${employee?.name || 'vaktlista'}.ics`;
     fetch(icalUrl)
-      .then(response => response.text())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Server svarte med ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+      })
       .then(icalContent => {
-        const blob = new Blob([icalContent], { type: 'text/calendar' });
+        const blob = new Blob([icalContent], { type: 'text/calendar; charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -43,7 +49,9 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg max-w-md w-full border">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Ansattinformasjon</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
         </div>
 
         <div className="space-y-4">
@@ -92,7 +100,7 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
           {/* ============ iCal-LENKE ============ */}
           <div className="pt-4 border-t border-gray-200 bg-blue-50 p-4 rounded-lg">
             <h3 className="font-medium text-gray-800 mb-3">
-               Personlig kalenderlenke (iCal)
+              📅 Personlig kalenderlenke (iCal)
             </h3>
             <div className="space-y-3">
               <div className="flex gap-2">
@@ -117,11 +125,15 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
                 onClick={downloadICal}
                 className="text-sm text-purple-600 hover:text-purple-800 underline flex items-center gap-1"
               >
-                 Last ned iCal-fil
+                📥 Last ned iCal-fil
               </button>
               <p className="text-xs text-gray-600">
                 <strong>Hvordan bruke:</strong> Lim inn lenken i kalenderappen din (Outlook, Google Calendar, Apple Calendar) 
-                for automatisk oppdatering. Kalenderen oppdateres hver 15. minutt.
+                for automatisk oppdatering. Kalenderen oppdateres i sanntid.
+                <br/><br/>
+                <strong>For Google Calendar:</strong> Gå til "Andre kalendere" → "Prenumerer på kalender" → Lim inn lenken.
+                <br/>
+                <strong>For Outlook/Apple Calendar:</strong> Velg "Åpne kalender fra Internett" og lim inn lenken.
               </p>
             </div>
           </div>

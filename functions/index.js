@@ -95,10 +95,17 @@ END:VEVENT
 };
 
 // Main iCal endpoint (alle vakter)
-export const ical = onRequest(async (req, res) => {
+export const ical = onRequest({ 
+  cors: true 
+}, async (req, res) => {
   try {
     logger.info('Generating iCal file for all employees...');
     const icalContent = await generateICalContent();
+    
+    // CORS headers for subscription
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'inline; filename="vaktlista.ics"');
@@ -110,7 +117,9 @@ export const ical = onRequest(async (req, res) => {
 });
 
 // Person-spesifikk iCal endpoint
-export const icalEmployee = onRequest(async (req, res) => {
+export const icalEmployee = onRequest({ 
+  cors: true 
+}, async (req, res) => {
   try {
     const { employeeId } = req.params;
     
@@ -127,6 +136,11 @@ export const icalEmployee = onRequest(async (req, res) => {
     const filename = employee 
       ? `vaktlista-${employee.name.replace(/\s+/g, '-').toLowerCase()}.ics`
       : `vaktlista-${employeeId}.ics`;
+    
+    // CORS headers for subscription
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);

@@ -8,7 +8,7 @@ import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
 import DepartmentModal from './components/DepartmentModal';
-import { generateICal, downloadICal } from './utils/icalGenerator';
+
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
@@ -586,9 +586,9 @@ function App() {
                   </button>
                   <button
                     onClick={() => {
-  const icalContent = generateICal(shifts, employees, departments);
-  downloadICal(icalContent, 'vaktlista');
-}}
+                      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+                      window.open(`${apiUrl}/api/export/ical`, '_blank');
+                    }}
                     className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700"
                   >
                     📅 Eksporter til iCal
