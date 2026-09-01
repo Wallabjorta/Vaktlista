@@ -12,7 +12,7 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   // Use Firebase Functions URL
   const firebaseFunctionsUrl = 'https://us-central1-vaktlista-d0efd.cloudfunctions.net';
   const apiUrl = import.meta.env.VITE_API_URL || firebaseFunctionsUrl;
-  const icalUrl = `${apiUrl}/api/export/ical/${employee?.id}`;
+  const icalUrl = `${apiUrl}/icalEmployee/${employee?.id}`;
 
   // Kopier lenke til utklippstavle
   const copyToClipboard = () => {
