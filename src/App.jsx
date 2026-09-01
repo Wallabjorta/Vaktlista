@@ -418,7 +418,7 @@ function App() {
     }
   }, [loadRequests]);
 
-  const handleDeleteLeaveRequest = useCallback(async (requestId, requestType) => {
+  const handleDeleteLeaveRequest = useCallback(async (requestId, requestType = 'leave') => {
     try {
       if (requestType === 'swap') {
         await deleteSwapRequest(requestId);
