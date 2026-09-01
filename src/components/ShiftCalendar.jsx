@@ -15,7 +15,8 @@ function ShiftCalendar({
   selectedDates = [],
   selectedEmployeeForBulk = null,
   onDateSelection,
-  onClearSelection
+  onClearSelection,
+  onNavigateWeek
 }) {
   const getDates = () => {
     const dates = [];
@@ -135,7 +136,15 @@ function ShiftCalendar({
         <table className="w-full border-collapse min-w-[800px]">
           <thead>
             <tr className="border-b">
-              <th className="p-2 border-r bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]"></th>
+              <th className="p-2 border-r bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]">
+                {onNavigateWeek && (
+                  <div className="flex gap-1 justify-center">
+                    <button onClick={() => onNavigateWeek(-7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">\u2b05</button>
+                    <button onClick={() => onNavigateWeek(0)} className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
+                    <button onClick={() => onNavigateWeek(7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">\u27a1</button>
+                  </div>
+                )}
+              </th>
               {dates.map((date, index) => {
                 const isToday = date.toDateString() === new Date().toDateString();
                 return (
