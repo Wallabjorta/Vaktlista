@@ -418,9 +418,13 @@ function App() {
     }
   }, [loadRequests]);
 
-  const handleDeleteLeaveRequest = useCallback(async (requestId) => {
+  const handleDeleteLeaveRequest = useCallback(async (requestId, requestType) => {
     try {
-      await deleteLeaveRequest(requestId);
+      if (requestType === 'swap') {
+        await deleteSwapRequest(requestId);
+      } else {
+        await deleteLeaveRequest(requestId);
+      }
       loadRequests();
     } catch (error) {
       alert("Feil: " + error.message);

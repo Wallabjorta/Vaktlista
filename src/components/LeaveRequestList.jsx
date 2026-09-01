@@ -95,7 +95,7 @@ function LeaveRequestList({ requests, onApprove, onReject, onDelete, currentUser
 
             {currentUser?.isAdmin && req.status !== 'pending' && (
               <div className="mt-2 ml-6">
-                <button onClick={() => onDelete(req.id)}
+                <button onClick={() => onDelete(req.id, req.type)}
                   className="px-3 py-1 bg-gray-200 text-xs rounded">
                   Slett
                 </button>
