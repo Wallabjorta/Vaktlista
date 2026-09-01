@@ -262,13 +262,14 @@ function App() {
     }
 
     // Hoppe over dager som allerede har vakter for denne ansatte
-    const datesToCreate = selectedDates.filter(dateStr => {
+    // selectedDates is now array of { date: string, employeeId: string }
+    const datesToCreate = selectedDates.filter(dateObj => {
       const hasExistingShift = shifts.some(shift => 
-        shift.date === dateStr && 
+        shift.date === dateObj.date && 
         shift.employeeId === selectedEmployeeForBulk
       );
       return !hasExistingShift;
-    });
+    }).map(dateObj => dateObj.date);
 
     if (datesToCreate.length === 0) {
       alert('Alle valgte dager har allerede vakter for denne ansatte. Ingen vakter opprettet.');
@@ -315,38 +316,24 @@ function App() {
     }
   }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, addShiftFirebase, validate]);
 
-  const handleDateSelection = useCallback((dateStr, employeeId) => {
-    // Hvis vi allerede har valgt en ansatt for bulk, m\u00e5 vi bruke den samme
-    const targetEmployee = selectedEmployeeForBulk || employeeId;
+  const handleDateSelection = useCallback((newDates) => {
+    // newDates is now an array of { date: string, employeeId: string } objects
+    setSelectedDates(newDates);
     
-    // Hvis vi bytter ansatt, nullstill valgte dager
-    if (selectedEmployeeForBulk && selectedEmployeeForBulk !== employeeId) {
-      setSelectedDates([]);
-      setSelectedEmployeeForBulk(employeeId);
-      return;
-    }
-    
-    // Hvis dette er en ny ansatt (ingen valgt enn\u00e5)
-    if (!selectedEmployeeForBulk) {
-      setSelectedEmployeeForBulk(employeeId);
-    }
-    
-    setSelectedDates(prev => {
-      const newSelected = [...prev];
-      const index = newSelected.indexOf(dateStr);
-      
-      if (index > -1) {
-        // Avvelg datoen
-        newSelected.splice(index, 1);
+    // Extract unique employeeId if there are selected dates
+    if (newDates.length > 0) {
+      // If all dates are for the same employee, set as bulk employee
+      const uniqueEmployees = [...new Set(newDates.map(d => d.employeeId))];
+      if (uniqueEmployees.length === 1) {
+        setSelectedEmployeeForBulk(uniqueEmployees[0]);
       } else {
-        // Velg datoen
-        newSelected.push(dateStr);
+        // Multiple employees selected - clear bulk employee
+        setSelectedEmployeeForBulk(null);
       }
-      
-      // Sorter datoer
-      return newSelected.sort();
-    });
-  }, [selectedEmployeeForBulk]);
+    } else {
+      setSelectedEmployeeForBulk(null);
+    }
+  }, []);
 
   const handleClearSelection = useCallback(() => {
     setSelectedDates([]);
