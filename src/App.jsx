@@ -582,7 +582,9 @@ function App() {
             </h1>
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
-          <div className="flex gap-2 items-center flex-wrap">
+        </div>
+        <div className="flex justify-center mt-2">
+          <div className="flex gap-2 items-center">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">⬅ Forrige</button>
             <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700">I dag</button>
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="px-3 py-1 bg-gray-200 rounded border hover:bg-gray-300">Neste ➡</button>
