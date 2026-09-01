@@ -639,7 +639,7 @@ function App() {
                     setShowAddShiftModal(true);
                   }}
                   className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
-                  disabled={selectedDates.length > 0 && !selectedEmployeeForBulk}
+                  disabled={false}
                 >
                   {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
                 </button>

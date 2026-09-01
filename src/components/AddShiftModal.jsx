@@ -43,7 +43,7 @@ function AddShiftModal({
               onChange={(e) => onChange('employeeId', e.target.value)}
               className="w-full p-2 border rounded"
               required
-              disabled={isBulkMode && selectedEmployeeForBulk}
+              disabled={false}
             >
               <option value="">Velg ansatt</option>
               {employees.map(emp => (
