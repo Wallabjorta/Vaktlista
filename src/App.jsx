@@ -694,6 +694,34 @@ function App() {
               </button>
             )}
         </div>
+      {currentUser && (
+        <ShiftCalendar
+          employees={employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
+          shifts={shifts}
+          selectedDepartment={selectedDepartment}
+          currentDate={currentDate}
+          departments={departments}
+          holidays={holidays}
+          vacations={VACATIONS}
+          currentUser={currentUser}
+          showHistory={showHistory}
+          selectedDates={selectedDates}
+          selectedEmployeeForBulk={selectedEmployeeForBulk}
+          onDateSelection={handleDateSelection}
+          onClearSelection={handleClearSelection}
+          onAddShift={handleSingleShiftFromCalendar}
+          onDeleteShift={handleDeleteShift}
+          onNavigateWeek={(action) => {
+            const newDate = new Date(currentDate);
+            if (action === 'today') {
+              setCurrentDate(new Date());
+            } else {
+              newDate.setDate(newDate.getDate() + action);
+              setCurrentDate(newDate);
+            }
+          }}
+        />
+      )}
         <div className="flex flex-wrap gap-1 md:gap-2">
           {employees
             .slice()
