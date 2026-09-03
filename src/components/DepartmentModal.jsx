@@ -103,6 +103,32 @@ function DepartmentModal({
     }
   };
 
+  const handleReorder = async (targetDept) => {
+    if (!draggedItem || draggedItem.id === targetDept.id) return;
+    
+    // Create new array with updated order
+    const newDepartments = [...sortedDepartments];
+    const draggedIndex = newDepartments.findIndex(d => d.id === draggedItem.id);
+    const targetIndex = newDepartments.findIndex(d => d.id === targetDept.id);
+    
+    // Remove dragged item and insert at new position
+    const [removed] = newDepartments.splice(draggedIndex, 1);
+    newDepartments.splice(targetIndex, 0, removed);
+    
+    // Update order values
+    const updatedDepartments = newDepartments.map((d, index) => ({
+      ...d,
+      order: index + 1
+    }));
+    
+    setSortedDepartments(updatedDepartments);
+    
+    // Save new order to database
+    if (onReorder) {
+      await onReorder(updatedDepartments);
+    }
+  };
+
   // Predefined colors for easy selection
   const colorOptions = [
     { value: '#3B82F6', label: 'Blå', name: 'Vest' },
@@ -198,10 +224,11 @@ function DepartmentModal({
               {sortedDepartments.map((dept) => (
                 <div 
                   key={dept.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded border cursor-grab active:cursor-grabbing"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded border cursor-grab active:cursor-grabbing hover:bg-gray-100"
                   draggable
                   onDragStart={(e) => {
                     setDraggedItem(dept);
+                    e.dataTransfer.setData('text/plain', dept.id);
                     e.dataTransfer.effectAllowed = 'move';
                   }}
                   onDragOver={(e) => {
@@ -209,30 +236,10 @@ function DepartmentModal({
                     e.dataTransfer.dropEffect = 'move';
                   }}
                   onDragEnd={() => setDraggedItem(null)}
-                  onDrop={async (e) => {
+                  onDrop={(e) => {
                     e.preventDefault();
                     if (draggedItem && draggedItem.id !== dept.id) {
-                      // Reorder departments
-                      const newDepartments = [...sortedDepartments];
-                      const draggedIndex = newDepartments.findIndex(d => d.id === draggedItem.id);
-                      const targetIndex = newDepartments.findIndex(d => d.id === dept.id);
-                      
-                      // Remove dragged item and insert at new position
-                      const [removed] = newDepartments.splice(draggedIndex, 1);
-                      newDepartments.splice(targetIndex, 0, removed);
-                      
-                      // Update order values
-                      const updatedDepartments = newDepartments.map((d, index) => ({
-                        ...d,
-                        order: index + 1
-                      }));
-                      
-                      setSortedDepartments(updatedDepartments);
-                      
-                      // Save new order to database
-                      if (onReorder) {
-                        await onReorder(updatedDepartments);
-                      }
+                      handleReorder(dept);
                     }
                     setDraggedItem(null);
                   }}
