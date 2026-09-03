@@ -231,7 +231,7 @@ export const addDepartment = async (department) => {
 export const updateDepartment = async (id, updates) => {
   try {
     const docRef = doc(db, "departments", id);
-    await updateDoc(docRef, updates);
+    await setDoc(docRef, updates, { merge: true });
     return true;
   } catch (error) {
     console.error("Error updating department:", error);
