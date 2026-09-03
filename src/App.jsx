@@ -549,6 +549,20 @@ function App() {
     }
   }, [deleteDepartmentFirebase]);
 
+  const handleReorderDepartments = useCallback(async (reorderedDepartments) => {
+    try {
+      // Update each department with its new order
+      const updatePromises = reorderedDepartments.map(dept => 
+        updateDepartmentFirebase(dept.id, { order: dept.order })
+      );
+      await Promise.all(updatePromises);
+      alert('Rekkefølge lagret!');
+    } catch (error) {
+      console.error('Error reordering departments:', error);
+      alert('Feil ved lagring av rekkefølge: ' + error.message);
+    }
+  }, [updateDepartmentFirebase]);
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="mb-4 flex justify-between items-center">
@@ -591,7 +605,10 @@ function App() {
         >
           Oversikt (Alle)
         </button>
-        {departments.map(dept => (
+        {departments
+          .slice()
+          .sort((a, b) => (a.order || 999) - (b.order || 999) || a.name.localeCompare(b.name, 'no-NO'))
+          .map(dept => (
           <button
             key={dept.id}
             onClick={() => setSelectedDepartment(dept.id)}
@@ -880,6 +897,7 @@ function App() {
           onSave={handleSaveDepartment}
           onDelete={handleDeleteDepartment}
           onClose={() => setShowDepartmentModal(false)}
+          onReorder={handleReorderDepartments}
         />
       )}
 

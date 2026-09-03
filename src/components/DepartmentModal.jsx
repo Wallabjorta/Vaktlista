@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * Modal for managing departments (add, edit, delete)
+ * Modal for managing departments (add, edit, delete, reorder)
  */
 function DepartmentModal({ 
   departments, 
   onSave, 
   onDelete, 
   onClose,
-  editingDepartment = null
+  editingDepartment = null,
+  onReorder = null
 }) {
   const [newDepartment, setNewDepartment] = useState({
     name: '',
@@ -16,6 +17,17 @@ function DepartmentModal({
   });
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sortedDepartments, setSortedDepartments] = useState([]);
+  const [draggedItem, setDraggedItem] = useState(null);
+
+  // Initialize sorted departments and if editing, populate the form
+  useEffect(() => {
+    // Sort departments by order field, fallback to name
+    const sorted = [...departments].sort((a, b) => 
+      (a.order || 999) - (b.order || 999) || a.name.localeCompare(b.name, 'no-NO')
+    );
+    setSortedDepartments(sorted);
+  }, [departments]);
 
   // If editing, populate the form
   useEffect(() => {
@@ -59,9 +71,14 @@ function DepartmentModal({
       color: newDepartment.color
     };
     
-    // If editing, include the ID
+    // If editing, include the ID and preserve order
     if (editingDepartment) {
       departmentData.id = editingDepartment.id;
+      departmentData.order = editingDepartment.order;
+    } else {
+      // New department gets the next highest order number
+      const maxOrder = Math.max(...departments.map(d => d.order || 0), 0);
+      departmentData.order = maxOrder + 1;
     }
     
     onSave(departmentData);
@@ -171,18 +188,57 @@ function DepartmentModal({
 
         {/* List of existing departments */}
         <div className="border-t pt-4">
-          <h3 className="text-lg font-medium mb-3">Eksisterende avdelinger ({departments.length})</h3>
+          <h3 className="text-lg font-medium mb-3">Sorter avdelinger ({departments.length})</h3>
+          <p className="text-sm text-gray-600 mb-3">Dra og slipp for å endre rekkefølgen</p>
           
-          {departments.length === 0 ? (
+          {sortedDepartments.length === 0 ? (
             <p className="text-gray-500 text-center py-4">Ingen avdelinger lagt til ennå</p>
           ) : (
             <div className="space-y-2">
-              {departments.map((dept) => (
+              {sortedDepartments.map((dept) => (
                 <div 
                   key={dept.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded border"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded border cursor-grab active:cursor-grabbing"
+                  draggable
+                  onDragStart={(e) => {
+                    setDraggedItem(dept);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDragEnd={() => setDraggedItem(null)}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem.id !== dept.id) {
+                      // Reorder departments
+                      const newDepartments = [...sortedDepartments];
+                      const draggedIndex = newDepartments.findIndex(d => d.id === draggedItem.id);
+                      const targetIndex = newDepartments.findIndex(d => d.id === dept.id);
+                      
+                      // Remove dragged item and insert at new position
+                      const [removed] = newDepartments.splice(draggedIndex, 1);
+                      newDepartments.splice(targetIndex, 0, removed);
+                      
+                      // Update order values
+                      const updatedDepartments = newDepartments.map((d, index) => ({
+                        ...d,
+                        order: index + 1
+                      }));
+                      
+                      setSortedDepartments(updatedDepartments);
+                      
+                      // Save new order to database
+                      if (onReorder) {
+                        await onReorder(updatedDepartments);
+                      }
+                    }
+                    setDraggedItem(null);
+                  }}
                 >
                   <div className="flex items-center gap-3">
+                    <span className="text-gray-400">&#8285;&#8285;</span>
                     <div 
                       className="w-4 h-4 rounded" 
                       style={{ backgroundColor: dept.color }}
