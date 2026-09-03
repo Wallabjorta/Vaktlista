@@ -169,9 +169,6 @@ function App() {
   useEffect(() => {
     if (!loading && employees.length === 0) {
       const defaultEmployees = [
-        { id: "1", name: "Ola Nordmann", deptIds: ["dept-1"], email: "ola@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
-        { id: "2", name: "Kari Peterson", deptIds: ["dept-1", "dept-2"], email: "kari@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
-        { id: "3", name: "Per Hansen", deptIds: ["dept-3"], email: "per@vaktlista.no", phone: "", isAdmin: false, password: "1234" },
         { id: "4", name: "Admin Adminsson", deptIds: ["dept-1", "dept-2", "dept-3", "dept-4"], email: "admin@vaktlista.no", phone: "", isAdmin: true, password: "admin123" }
       ];
       
