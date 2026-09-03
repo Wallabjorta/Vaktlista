@@ -231,17 +231,7 @@ export const addDepartment = async (department) => {
 export const updateDepartment = async (id, updates) => {
   try {
     const docRef = doc(db, "departments", id);
-    
-    // Check if document exists first
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      await updateDoc(docRef, updates);
-    } else {
-      // Document doesn't exist, create it with the updates
-      await setDoc(docRef, updates);
-    }
-    
+    await updateDoc(docRef, updates);
     return true;
   } catch (error) {
     console.error("Error updating department:", error);

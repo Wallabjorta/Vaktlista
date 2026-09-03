@@ -23,12 +23,12 @@ import {
 
 // Default departments for initial setup
 const DEFAULT_DEPARTMENTS = [
-  { id: "dept-1", name: "Vest", color: "#3B82F6", order: 1 },
-  { id: "dept-2", name: "Øst", color: "#10B981", order: 2 },
-  { id: "dept-3", name: "Skiskole", color: "#F59E0B", order: 3 },
-  { id: "dept-4", name: "Butikk", color: "#EF4444", order: 4 },
-  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6", order: 5 },
-  { id: "dept-6", name: "Fri", color: "#6B7280", order: 6 }
+  { id: "dept-1", name: "Vest", color: "#3B82F6" },
+  { id: "dept-2", name: "Øst", color: "#10B981" },
+  { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
+  { id: "dept-4", name: "Butikk", color: "#EF4444" },
+  { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
+  { id: "dept-6", name: "Fri", color: "#6B7280" }
 ];
 
 export default function useFirebaseData() {
