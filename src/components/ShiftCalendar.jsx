@@ -162,7 +162,7 @@ function ShiftCalendar({
           <tbody>
             {(employees || []).map((employee) => (
               <tr key={employee.id} className="border-b last:border-b-0">
-                <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[20px] md:min-w-[100px] lg:min-w-[150px] max-w-[40px] md:max-w-[120px] lg:max-w-[200px]">
+                <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[20px] md:min-w-[100px] lg:min-w-[150px] max-w-[20px] md:max-w-[120px] lg:max-w-[200px]">
                   <div className="flex items-center gap-1 text-xs md:text-sm truncate">
                     <span className="truncate">{employee.name}</span>
                     {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -198,7 +198,7 @@ function ShiftCalendar({
                   return (
                     <td
                       key={dateIndex}
-                      className="p-1 border-r border-b h-10 md:h-12 min-w-[30px] md:min-w-[40px] relative text-xs"
+                      className="p-1 border-r border-b h-10 md:h-12 min-w-[60px] md:min-w-[80px] relative text-xs"
                       style={{
                         ...bgStyle,
                         ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
