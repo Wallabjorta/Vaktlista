@@ -218,7 +218,7 @@ function ShiftCalendar({
                               return (
                                 <div
                                   key={shiftIndex}
-                                  className="p-1 rounded text-xs text-white font-medium truncate group relative"
+                                  className="p-1 rounded text-xs text-white font-medium group relative"
                                   style={{ backgroundColor: deptColor }}
                                   title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
                                 >
@@ -234,6 +234,11 @@ function ShiftCalendar({
                                   >
                                     {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
+                                  {shift.comment && (
+                                    <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                                      {shift.comment}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
