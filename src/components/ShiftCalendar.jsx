@@ -198,7 +198,7 @@ function ShiftCalendar({
                   return (
                     <td
                       key={dateIndex}
-                      className="p-1 border-r border-b h-10 md:h-12 min-w-[60px] md:min-w-[80px] relative text-xs"
+                      className="p-1 border-r border-b h-10 md:h-12 min-w-[40px] md:min-w-[60px] relative text-xs"
                       style={{
                         ...bgStyle,
                         ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
