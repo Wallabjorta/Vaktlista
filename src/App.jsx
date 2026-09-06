@@ -722,6 +722,17 @@ function App() {
                 }
               }}
             />
+            <div className="flex items-center gap-2 my-2 flex-wrap">
+              <span className="text-sm text-gray-600">Sorter:</span>
+              <select
+                value={employeeSort}
+                onChange={(e) => setEmployeeSort(e.target.value)}
+                className="p-1 text-sm rounded border bg-white"
+              >
+                <option value="name">A-Å (navn)</option>
+                <option value="department">Avdeling</option>
+              </select>
+            </div>
             <div className="flex flex-wrap gap-1 md:gap-2">
           {employees
             .slice()
