@@ -131,17 +131,16 @@ function ShiftCalendar({
   const vacationColor = '#FEF3C7';
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[800px]">
+    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto">
+      <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
           <thead>
             <tr className="border-b">
-              <th className="p-2 border-r bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]">
+              <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[80px] md:min-w-[120px] lg:min-w-[150px]">
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
-                    <button onClick={() => onNavigateWeek(-7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
-                    <button onClick={() => onNavigateWeek('today')} className="px-2 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
-                    <button onClick={() => onNavigateWeek(7)} className="px-2 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
+                    <button onClick={() => onNavigateWeek(-7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
+                    <button onClick={() => onNavigateWeek('today')} className="px-1 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
+                    <button onClick={() => onNavigateWeek(7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
                   </div>
                 )}
               </th>
@@ -150,13 +149,10 @@ function ShiftCalendar({
                 return (
                   <th
                     key={index}
-                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                    className={`p-1 text-center border-r last:border-r-0 text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                   >
-                    <div className="font-medium text-gray-700">
-                      {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
-                    </div>
-                    <div className="hidden md:block text-xs text-gray-500">
-                      Uke {getWeekNumber(date)}
+                    <div className="font-medium text-gray-700 truncate">
+                      {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
                     </div>
                   </th>
                 );
@@ -166,9 +162,9 @@ function ShiftCalendar({
           <tbody>
             {(employees || []).map((employee) => (
               <tr key={employee.id} className="border-b last:border-b-0">
-                <td className="p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[150px]">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate max-w-full">{employee.name}</span>
+                <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[60px] md:min-w-[100px] lg:min-w-[150px] max-w-[80px] md:max-w-[120px] lg:max-w-[200px]">
+                  <div className="flex items-center gap-1 text-xs md:text-sm truncate">
+                    <span className="truncate">{employee.name}</span>
                     {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
                   </div>
                 </td>
@@ -202,7 +198,7 @@ function ShiftCalendar({
                   return (
                     <td
                       key={dateIndex}
-                      className="p-1 border-r border-b h-12 md:h-16 min-w-[80px] md:min-w-[100px] relative"
+                      className="p-1 border-r border-b h-10 md:h-12 min-w-[60px] md:min-w-[80px] relative text-xs"
                       style={{
                         ...bgStyle,
                         ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
@@ -219,7 +215,7 @@ function ShiftCalendar({
                               return (
                                 <div
                                   key={shiftIndex}
-                                  className="p-1 md:p-2 rounded text-xs md:text-sm text-white font-medium truncate group relative"
+                                  className="p-1 rounded text-xs text-white font-medium truncate group relative"
                                   style={{ backgroundColor: deptColor }}
                                   title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
                                 >
@@ -233,13 +229,8 @@ function ShiftCalendar({
                                       }
                                     }}
                                   >
-                                    {deptName === 'Fri' ? 'Fri' : `${shift.startTime} - ${shift.endTime}`}
+                                    {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
-                                  {shift.comment && (
-                                    <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                      {shift.comment}
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
@@ -247,8 +238,8 @@ function ShiftCalendar({
                           {currentUser?.isAdmin && (
                             <button
                               onClick={() => onAddShift(employee.id, dateStr, selectedDepartment)}
-                              className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                              title="Legg til vakt"
+                              className="text-xs text-blue-600 hover:text-blue-800 p-0.5 w-full text-left"
+                              title="Legg til"
                             >
                               + Legg til
                             </button>
@@ -279,8 +270,8 @@ function ShiftCalendar({
                                     e.stopPropagation();
                                     onAddShift(employee.id, dateStr, selectedDepartment);
                                   }}
-                                  className="text-xs text-blue-600 hover:text-blue-800 p-1 w-full text-left"
-                                  title="Legg til vakt for denne dagen"
+                                  className="text-xs text-blue-600 hover:text-blue-800 p-0.5 w-full text-left"
+                                  title="Legg til"
                                 >
                                   + Legg til
                                 </button>
@@ -296,7 +287,6 @@ function ShiftCalendar({
             ))}
           </tbody>
         </table>
-      </div>
     </div>
   );
 }

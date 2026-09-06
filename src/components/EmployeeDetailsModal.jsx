@@ -47,8 +47,8 @@ function EmployeeDetailsModal({ employee, departments, currentUser, onClose, onE
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg max-w-md w-full border">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-3 rounded-lg shadow-lg w-full border text-sm" style={{ maxWidth: '85vw', maxHeight: '70vh', overflowY: 'auto' }}>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Ansattinformasjon</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">

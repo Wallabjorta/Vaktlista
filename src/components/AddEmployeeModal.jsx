@@ -45,8 +45,8 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg max-w-md w-full border">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-3 rounded-lg shadow-lg w-full border" style={{ maxWidth: '85vw', maxHeight: '70vh', overflowY: 'auto' }}>
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Legg til ny ansatt</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -94,13 +94,13 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
             {/* Avdelinger */}
             <div>
               <label className="block text-sm font-medium mb-1">Avdelinger *</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-h-20 overflow-y-auto">
                 {departments.map(dept => (
                   <button
                     key={dept.id}
                     type="button"
                     onClick={() => handleDeptToggle(dept.id)}
-                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                    className={`px-3 py-1 rounded text-sm transition-colors whitespace-nowrap ${
                       newEmployee.deptIds?.includes(dept.id)
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 hover:bg-gray-300'
