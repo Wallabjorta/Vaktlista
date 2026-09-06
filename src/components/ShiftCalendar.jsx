@@ -135,7 +135,7 @@ function ShiftCalendar({
       <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
           <thead>
             <tr className="border-b">
-              <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[80px] md:min-w-[120px] lg:min-w-[150px]">
+              <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => onNavigateWeek(-7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
@@ -165,7 +165,7 @@ function ShiftCalendar({
           <tbody>
             {(employees || []).map((employee) => (
               <tr key={employee.id} className="border-b last:border-b-0">
-                <td className="p-1 md:p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[80px] md:min-w-[120px] lg:min-w-[150px] max-w-[120px] md:max-w-[150px] lg:max-w-[200px]">
+                <td className="p-1 md:p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]">
                   <div className="flex items-center gap-1 text-sm truncate">
                     <span className="truncate">{employee.name}</span>
                     {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -201,7 +201,7 @@ function ShiftCalendar({
                   return (
                     <td
                       key={dateIndex}
-                      className="p-1 border-r border-b h-10 md:h-12 min-w-[60px] md:min-w-[80px] relative text-xs"
+                      className="p-1 border-r border-b h-10 md:h-14 min-w-[70px] md:min-w-[90px] relative text-xs"
                       style={{
                         ...bgStyle,
                         ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
