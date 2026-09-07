@@ -7,9 +7,10 @@ function OverviewCalendar({
   holidays = [],
   vacations = {},
   selectedDepartment,
+  currentDate,
   onClose
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
 
   // Hent ukenummer
   const getWeekNumber = (date) => {
@@ -21,17 +22,18 @@ function OverviewCalendar({
     return 1 + Math.round(((d - week1) / 86400000 + 3) / 7);
   };
 
-  // Generer dager for 3 måneder (ca. 12 uker)
+  // Generer dager for 3 måneder (ca. 12 uker) - same logic as ShiftCalendar
   const getDates = () => {
     const dates = [];
-    const startDate = new Date(currentDate);
-    startDate.setHours(0, 0, 0, 0);
+    const baseDate = new Date(overviewDate);
+    baseDate.setHours(0, 0, 0, 0);
 
-    const dayOfWeek = startDate.getDay();
+    const dayOfWeek = baseDate.getDay();
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    startDate.setDate(startDate.getDate() - daysToSubtract);
+    const startDate = new Date(baseDate);
+    startDate.setDate(baseDate.getDate() - daysToSubtract);
 
-    // Generer ca. 12 uker (3 måneder)
+    // Start from current week (week 0) for 12 weeks
     for (let week = 0; week < 12; week++) {
       for (let day = 0; day < 7; day++) {
         const date = new Date(startDate);
@@ -42,6 +44,7 @@ function OverviewCalendar({
     }
     return dates;
   };
+
 
   const dates = getDates();
 
@@ -103,16 +106,16 @@ function OverviewCalendar({
           <table className="w-full border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b">
-                <th className="p-0.5 border-r bg-gray-50 sticky left-0 z-10 w-[60px]">
+                <th className="p-0.5 border-r bg-gray-50 sticky left-0 z-10 w-[60px]" style={{ backgroundColor: 
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
-                      const newDate = new Date(currentDate);
+                      const newDate = new Date(overviewDate);
                       newDate.setDate(newDate.getDate() - 7);
                       setCurrentDate(newDate);
                     }} className="px-1 py-0.25 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
                     <button onClick={() => setCurrentDate(new Date())} className="px-1 py-0.25 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
                     <button onClick={() => {
-                      const newDate = new Date(currentDate);
+                      const newDate = new Date(overviewDate);
                       newDate.setDate(newDate.getDate() + 7);
                       setCurrentDate(newDate);
                     }} className="px-1 py-0.25 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
@@ -137,7 +140,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-0.5 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[60px] truncate text-xs">
+                  <td className="p-0.5 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[60px] truncate text-xs" style={{ backgroundColor: 
                     <div className="flex items-center gap-1 truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-0.5 rounded">Admin</span>}
