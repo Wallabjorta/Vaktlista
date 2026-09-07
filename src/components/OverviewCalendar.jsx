@@ -138,7 +138,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]" style={{ backgroundColor: '#f9fafb' }}>
+                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[140px] lg:min-w-[180px]" style={{ backgroundColor: '#f9fafb' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -169,7 +169,7 @@ function OverviewCalendar({
                     return (
                       <td
                         key={dateIndex}
-                        className="p-0.5 border-r border-b h-8 md:h-10 min-w-[40px] md:min-w-[60px] relative text-xs overflow-hidden"
+                        className="p-0.5 border-r border-b h-8 md:h-10 min-w-[60px] md:min-w-[80px] relative text-xs"
                         style={bgStyle}
                       >
                         {shiftsForDay.length > 0 && (
@@ -181,7 +181,7 @@ function OverviewCalendar({
                               return (
                                 <div
                                   key={shiftIndex}
-                                  className="p-0.5 rounded text-[10px] md:text-xs text-white font-medium truncate"
+                                  className="p-0.5 rounded text-xs text-white font-medium truncate"
                                   style={{ backgroundColor: deptColor }}
                                   title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
                                 >
