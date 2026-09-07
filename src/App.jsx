@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ShiftCalendar from './components/ShiftCalendar';
+import OverviewCalendar from './components/OverviewCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
@@ -120,6 +121,7 @@ function App() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [showOverviewCalendar, setShowOverviewCalendar] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
 
@@ -723,6 +725,12 @@ function App() {
               }}
             />
             <div className="flex items-center gap-2 my-2 flex-wrap">
+              <button
+                onClick={() => setShowOverviewCalendar(true)}
+                className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700 text-sm"
+              >
+                3-måneders oversikt
+              </button>
               <span className="text-sm text-gray-600">Sorter:</span>
               <select
                 value={employeeSort}
@@ -855,6 +863,18 @@ function App() {
           departments={departments}
           onSave={handleAddEmployee}
           onClose={() => setShowAddEmployeeModal(false)}
+        />
+      )}
+
+      
+      {showOverviewCalendar && (
+        <OverviewCalendar
+          employees={employees}
+          shifts={shifts}
+          departments={departments}
+          holidays={Object.keys(holidaysObj || {})}
+          vacations={VACATIONS}
+          onClose={() => setShowOverviewCalendar(false)}
         />
       )}
 
