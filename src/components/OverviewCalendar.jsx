@@ -138,10 +138,10 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[80px] md:min-w-[100px] lg:min-w-[120px] max-w-[100px] md:max-w-[120px] lg:max-w-[150px]" style={{ backgroundColor: '#f9fafb' }}>
-                    <div className="flex items-center gap-1 text-xs md:text-sm truncate">
+                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]" style={{ backgroundColor: '#f9fafb' }}>
+                    <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
-                      {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-0.5 rounded">Admin</span>}
+                      {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
                     </div>
                   </td>
                   {dates.map((date, dateIndex) => {
