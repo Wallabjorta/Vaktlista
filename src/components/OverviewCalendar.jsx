@@ -8,8 +8,19 @@ function OverviewCalendar({
   vacations = {},
   onClose
 }) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMonth, setSelectedMonth] = useState(null);
+
+  // Hent ukenummer
+  const getWeekNumber = (date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const week1 = new Date(d.getFullYear(), 0, 4);
+    week1.setHours(0, 0, 0, 0);
+    return 1 + Math.round(((d - week1) / 86400000 + 3) / 7);
+  };
+
 
   // Generer 3 måneder fremover
   const getMonths = () => {
@@ -119,7 +130,7 @@ function OverviewCalendar({
                 <table className="w-full border-collapse min-w-[700px]">
                   <thead>
                     <tr className="border-b">
-                      {['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map((day, i) => (
+                      {['Man (Uke)', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map((day, i) => (
                         <th key={i} className="p-2 text-center border-r last:border-r-0 bg-gray-50 text-sm font-medium">{day}</th>
                       ))}
                     </tr>
@@ -152,13 +163,17 @@ function OverviewCalendar({
                               bgStyle = { backgroundColor: vacationColor };
                             }
 
+                            const weekNum = getWeekNumber(date);
+
                             return (
                               <td
                                 key={dayIndex}
                                 className="p-1 border-r last:border-r-0 h-20 relative"
                                 style={bgStyle}
                               >
-                                <div className="text-sm font-medium text-gray-700">{date.getDate()}</div>
+                                <div className="text-sm font-medium text-gray-700">{date.getDate()}
+                                  {dayIndex === 0 && <div className="text-xs text-gray-500">Uke {weekNum}</div>}
+                                </div>
                                 {dayShifts.map((shift, shiftIndex) => {
                                   const deptColor = getDeptColor(shift.departmentId);
                                   const deptName = getDeptName(shift.departmentId);
