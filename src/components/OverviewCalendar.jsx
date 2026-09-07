@@ -97,10 +97,10 @@ function OverviewCalendar({
         </div>
         
         <div className="overflow-x-auto max-h-[calc(90vh-60px)] overflow-y-auto">
-          <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]" style={{ tableLayout: 'fixed' }}>
+          <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[80px] md:min-w-[100px] lg:min-w-[120px]" style={{ backgroundColor: '#f9fafb' }}>
+                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '120px' }}>
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
@@ -120,13 +120,14 @@ function OverviewCalendar({
                   return (
                     <th
                       key={index}
-                      className={`p-0.5 text-center border-r last:border-r-0 text-[10px] md:text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                      className={`p-0.5 text-center border-r last:border-r-0 text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                      style={{ minWidth: '60px' }}
                     >
                       <div className="font-medium text-gray-700 truncate">
                         {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
                       </div>
                       {index % 7 === 0 && (
-                        <div className="text-[10px] md:text-xs text-gray-500">
+                        <div className="text-xs text-gray-500">
                           Uke {getWeekNumber(date)}
                         </div>
                       )}
@@ -138,7 +139,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[120px] md:min-w-[140px] lg:min-w-[180px]" style={{ backgroundColor: '#f9fafb' }}>
+                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '120px' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -155,21 +156,21 @@ function OverviewCalendar({
                     const sunday = isSunday(date);
                     const isToday = date.toDateString() === new Date().toDateString();
 
-                    let bgStyle = { backgroundColor: 'white' };
+                    let bgStyle = { backgroundColor: 'white', minWidth: '60px' };
                     if (isToday) {
-                      bgStyle = { backgroundColor: '#f3f4f6' };
+                      bgStyle = { ...bgStyle, backgroundColor: '#f3f4f6' };
                     } else if (holiday) {
-                      bgStyle = { backgroundColor: holidayColor };
+                      bgStyle = { ...bgStyle, backgroundColor: holidayColor };
                     } else if (sunday) {
-                      bgStyle = { backgroundColor: sundayColor };
+                      bgStyle = { ...bgStyle, backgroundColor: sundayColor };
                     } else if (vacation) {
-                      bgStyle = { backgroundColor: vacationColor };
+                      bgStyle = { ...bgStyle, backgroundColor: vacationColor };
                     }
 
                     return (
                       <td
                         key={dateIndex}
-                        className="p-0.5 border-r border-b h-8 md:h-10 min-w-[60px] md:min-w-[80px] relative text-xs"
+                        className="p-0.5 border-r border-b h-auto relative text-xs"
                         style={bgStyle}
                       >
                         {shiftsForDay.length > 0 && (
