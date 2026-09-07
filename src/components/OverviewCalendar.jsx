@@ -10,8 +10,6 @@ function OverviewCalendar({
   currentDate,
   onClose
 }) {
-  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
-
   // Hent ukenummer
   const getWeekNumber = (date) => {
     const d = new Date(date);
@@ -22,10 +20,10 @@ function OverviewCalendar({
     return 1 + Math.round(((d - week1) / 86400000 + 3) / 7);
   };
 
-  // Generer dager for 3 måneder (ca. 12 uker) - same logic as ShiftCalendar
+  // Generer dager for 12 uker (3 m\u00e5neder) - same logic as ShiftCalendar
   const getDates = () => {
     const dates = [];
-    const baseDate = new Date(overviewDate);
+    const baseDate = new Date(currentDate || new Date());
     baseDate.setHours(0, 0, 0, 0);
 
     const dayOfWeek = baseDate.getDay();
@@ -33,7 +31,7 @@ function OverviewCalendar({
     const startDate = new Date(baseDate);
     startDate.setDate(baseDate.getDate() - daysToSubtract);
 
-    // Start from current week (week 0) for 12 weeks
+    // 12 weeks for 3 months overview
     for (let week = 0; week < 12; week++) {
       for (let day = 0; day < 7; day++) {
         const date = new Date(startDate);
@@ -44,7 +42,6 @@ function OverviewCalendar({
     }
     return dates;
   };
-
 
   const dates = getDates();
 
@@ -90,6 +87,9 @@ function OverviewCalendar({
     ? employees.filter(emp => emp.deptIds?.includes(selectedDepartment))
     : employees;
 
+  // Local date state for navigation
+  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-[95vw] max-h-[90vh] overflow-auto border">
@@ -99,25 +99,25 @@ function OverviewCalendar({
               ? `Oversikt (${departments.find(d => d.id === selectedDepartment)?.name || 'Ukjent'})` 
               : 'Oversiktskalender (Alle)'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl"></button>
         </div>
         
         <div className="p-2 overflow-x-auto">
           <table className="w-full border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b">
-                <th className="p-0.5 border-r bg-gray-50 sticky left-0 z-10 w-[60px]" style={{ backgroundColor: 
+                <th className="p-0.5 border-r bg-gray-50 sticky left-0 z-10 w-[60px]" style={{ backgroundColor: '#f9fafb' }}>
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
                       newDate.setDate(newDate.getDate() - 7);
-                      setCurrentDate(newDate);
+                      setOverviewDate(newDate);
                     }} className="px-1 py-0.25 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
-                    <button onClick={() => setCurrentDate(new Date())} className="px-1 py-0.25 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
+                    <button onClick={() => setOverviewDate(new Date())} className="px-1 py-0.25 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
                       newDate.setDate(newDate.getDate() + 7);
-                      setCurrentDate(newDate);
+                      setOverviewDate(newDate);
                     }} className="px-1 py-0.25 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
                   </div>
                 </th>
@@ -129,7 +129,7 @@ function OverviewCalendar({
                       className={`p-0.25 text-center border-r last:border-r-0 text-[10px] ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                     >
                       <div className="font-medium text-gray-700 truncate text-[10px]">
-                        {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', day: 'numeric' })}
+                        {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
                         {index % 7 === 0 && <div className="text-[10px] text-gray-500">U{getWeekNumber(date)}</div>}
                       </div>
                     </th>
@@ -140,7 +140,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-0.5 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[60px] truncate text-xs" style={{ backgroundColor: 
+                  <td className="p-0.5 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[60px] truncate text-xs" style={{ backgroundColor: '#f9fafb' }}>
                     <div className="flex items-center gap-1 truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-0.5 rounded">Admin</span>}
