@@ -156,7 +156,7 @@ function OverviewCalendar({
                     const sunday = isSunday(date);
                     const isToday = date.toDateString() === new Date().toDateString();
 
-                    let bgStyle = { backgroundColor: 'white', minWidth: '40px' };
+                    let bgStyle = { backgroundColor: 'white', minWidth: '20px' };
                     if (isToday) {
                       bgStyle = { ...bgStyle, backgroundColor: '#f3f4f6' };
                     } else if (holiday) {
