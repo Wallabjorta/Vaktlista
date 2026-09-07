@@ -100,7 +100,7 @@ function OverviewCalendar({
           <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '120px' }}>
+                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '80px' }}>
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
@@ -121,7 +121,7 @@ function OverviewCalendar({
                     <th
                       key={index}
                       className={`p-0.5 text-center border-r last:border-r-0 text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                      style={{ minWidth: '60px' }}
+                      style={{ minWidth: '40px' }}
                     >
                       <div className="font-medium text-gray-700 truncate">
                         {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
@@ -139,7 +139,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '120px' }}>
+                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '80px' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -156,7 +156,7 @@ function OverviewCalendar({
                     const sunday = isSunday(date);
                     const isToday = date.toDateString() === new Date().toDateString();
 
-                    let bgStyle = { backgroundColor: 'white', minWidth: '60px' };
+                    let bgStyle = { backgroundColor: 'white', minWidth: '40px' };
                     if (isToday) {
                       bgStyle = { ...bgStyle, backgroundColor: '#f3f4f6' };
                     } else if (holiday) {
