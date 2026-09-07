@@ -6,6 +6,7 @@ function OverviewCalendar({
   departments = [],
   holidays = [],
   vacations = {},
+  selectedDepartment,
   onClose
 }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -118,7 +119,7 @@ function OverviewCalendar({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-[95vw] max-h-[90vh] overflow-auto border">
         <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-semibold">Oversiktskalender (3 måneder)</h2>
+          <h2 className="text-xl font-semibold">{selectedDepartment ? `Oversiktskalender (${departments.find(d => d.id === selectedDepartment)?.name || 'Ukjent'})` : 'Oversiktskalender (Alle avdelinger)'} (3 måneder)</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
         </div>
         
@@ -146,7 +147,10 @@ function OverviewCalendar({
                             }
                             
                             const dateStr = date.toISOString().split('T')[0];
-                            const dayShifts = getShiftsForDate(date);
+                            const dayShifts = getShiftsForDate(date).filter(shift => {
+  if (!selectedDepartment) return true;
+  return shift.departmentId === selectedDepartment;
+});
                             const sunday = isSunday(date);
                             const holiday = isHoliday(date);
                             const vacation = isVacation(date);

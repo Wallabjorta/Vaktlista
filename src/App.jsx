@@ -874,6 +874,7 @@ function App() {
           departments={departments}
           holidays={Object.keys(holidaysObj || {})}
           vacations={VACATIONS}
+          selectedDepartment={selectedDepartment}
           onClose={() => setShowOverviewCalendar(false)}
         />
       )}
