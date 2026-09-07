@@ -103,7 +103,7 @@ function OverviewCalendar({
           <table className="w-full border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 w-[80px]">
+                <th className="p-0.5 border-r bg-gray-50 sticky left-0 z-10 w-[60px]">
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(currentDate);
@@ -123,16 +123,12 @@ function OverviewCalendar({
                   return (
                     <th
                       key={index}
-                      className={`p-0.5 text-center border-r last:border-r-0 text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                      className={`p-0.25 text-center border-r last:border-r-0 text-[10px] ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                     >
-                      <div className="font-medium text-gray-700 truncate">
-                        {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
+                      <div className="font-medium text-gray-700 truncate text-[10px]">
+                        {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', day: 'numeric' })}
+                        {index % 7 === 0 && <div className="text-[10px] text-gray-500">U{getWeekNumber(date)}</div>}
                       </div>
-                      {index % 7 === 0 && (
-                        <div className="text-xs text-gray-500">
-                          Uke {getWeekNumber(date)}
-                        </div>
-                      )}
                     </th>
                   );
                 })}
@@ -141,7 +137,7 @@ function OverviewCalendar({
             <tbody>
               {(filteredEmployees || []).map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[80px] truncate text-sm">
+                  <td className="p-0.5 border-r font-medium bg-gray-50 sticky left-0 z-10 w-[60px] truncate text-xs">
                     <div className="flex items-center gap-1 truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-0.5 rounded">Admin</span>}
@@ -172,31 +168,28 @@ function OverviewCalendar({
                     return (
                       <td
                         key={dateIndex}
-                        className="p-0.5 border-r border-b h-8 w-[40px] text-xs relative"
+                        className="p-0.5 border-r border-b h-6 w-[30px] text-[10px] relative overflow-hidden"
                         style={bgStyle}
                       >
-                        {shiftsForDay.map((shift, shiftIndex) => {
-                          const deptColor = getDeptColor(shift.departmentId);
-                          const deptName = getDeptName(shift.departmentId);
-                          
-                          return (
-                            <div
-                              key={shiftIndex}
-                              className="p-0.5 rounded text-xs text-white font-medium truncate"
-                              style={{ backgroundColor: deptColor }}
-                              title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
-                            >
-                              <div className="truncate text-center">
-                                {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
-                              </div>
-                              {shift.comment && (
-                                <div className="text-xs opacity-80 truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                  {shift.comment}
+                        {shiftsForDay.length > 0 && (
+                          <div className="flex flex-wrap gap-0.25">
+                            {shiftsForDay.map((shift, shiftIndex) => {
+                              const deptColor = getDeptColor(shift.departmentId);
+                              const deptName = getDeptName(shift.departmentId);
+                              
+                              return (
+                                <div
+                                  key={shiftIndex}
+                                  className="p-0.25 rounded text-[10px] text-white font-medium truncate"
+                                  style={{ backgroundColor: deptColor }}
+                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                >
+                                  {deptName === 'Fri' ? 'Fri' : shift.startTime}
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                     );
                   })}
