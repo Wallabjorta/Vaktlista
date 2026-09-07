@@ -124,7 +124,7 @@ function OverviewCalendar({
                       style={{ minWidth: '40px' }}
                     >
                       <div className="font-medium text-gray-700 truncate">
-                        {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric' })}
+                        {date.getDate()}
                       </div>
                       {index % 7 === 0 && (
                         <div className="text-xs text-gray-500">
