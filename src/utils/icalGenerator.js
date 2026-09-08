@@ -9,7 +9,7 @@ export function generateICal(shifts, employees, departments) {
   // Default departments if not provided
   const DEFAULT_DEPARTMENTS = [
     { id: "dept-1", name: "Vest", color: "#3B82F6" },
-    { id: "dept-2", name: "\u00d8st", color: "#10B981" },
+    { id: "dept-2", name: "Øst", color: "#10B981" },
     { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
     { id: "dept-4", name: "Butikk", color: "#EF4444" },
     { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
@@ -18,11 +18,10 @@ export function generateICal(shifts, employees, departments) {
 
   const allDepartments = departments?.length > 0 ? departments : DEFAULT_DEPARTMENTS;
 
-  // Format date for iCal (UTC)
+  // Format date for iCal (local time with timezone)
   const formatICalDate = (dateStr, timeStr) => {
-    const date = new Date(`${dateStr}T${timeStr}`);
     const pad = (n) => n.toString().padStart(2, '0');
-    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}00Z`;
+    return `${dateStr.replace(/-/g, '')}T${timeStr.replace(':', '')}00`;
   };
 
   // Escape special characters for iCal
@@ -42,7 +41,7 @@ PRODID://Vaktlista//NO
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:Vaktlista - Alle ansatte
-X-WR-TIMEZONE:Europe/Oslo
+TZID:Europe/Oslo
 `;
 
   shifts.forEach(shift => {
@@ -58,8 +57,8 @@ X-WR-TIMEZONE:Europe/Oslo
 
     icalContent += `BEGIN:VEVENT
 UID:${shift.id}@vaktlista
-DTSTART:${startDate}
-DTEND:${endDate}
+DTSTART;TZID=Europe/Oslo:${startDate}
+DTEND;TZID=Europe/Oslo:${endDate}
 SUMMARY:${summary}
 DESCRIPTION:${description}
 LOCATION:${escapeICal(dept.name)}
