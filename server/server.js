@@ -242,6 +242,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT15M
     shifts.forEach(shift => {
       const employee = employees.find(e => e.id === shift.employeeId);
       const dept = DEPARTMENTS.find(d => d.id === shift.departmentId);
+      if (shift.departmentId === "dept-6" || dept?.name === "Fri") return;
       const startDate = formatICalDate(shift.date, shift.startTime);
       const endDate = formatICalDate(shift.date, shift.endTime);
       const summary = `${employee?.name || 'Ukjent'} - ${dept?.name || shift.departmentId}`;
@@ -322,6 +323,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT15M
 
     employeeShifts.forEach(shift => {
       const dept = DEPARTMENTS.find(d => d.id === shift.departmentId);
+      if (shift.departmentId === "dept-6" || dept?.name === "Fri") return;
       const startDate = formatICalDate(shift.date, shift.startTime);
       const endDate = formatICalDate(shift.date, shift.endTime);
       const summary = `Vakt - ${dept?.name || shift.departmentId}`;

@@ -88,6 +88,7 @@ END:VTIMEZONE
     const dept = allDepartments.find(d => d.id === shift.departmentId);
 
     if (!emp || !dept) return;
+    if (shift.departmentId === "dept-6" || dept.name === "Fri") return;
 
     const startDate = formatICalDate(shift.date, shift.startTime);
     const endDate = formatICalDate(shift.date, shift.endTime);
