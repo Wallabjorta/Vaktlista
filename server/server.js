@@ -208,9 +208,7 @@ app.get('/api/export/ical', async (req, res) => {
     const employees = await readData(employeesPath);
 
     const formatICalDate = (dateStr, timeStr) => {
-      const date = new Date(`${dateStr}T${timeStr}`);
-      const pad = (n) => n.toString().padStart(2, '0');
-      return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}00Z`;
+      return `${dateStr.replace(/-/g, '')}T${String(timeStr).replace(':', '')}00`;
     };
 
     let icalContent = `BEGIN:VCALENDAR
@@ -220,6 +218,24 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:Vaktlista - Alle ansatte
 X-WR-TIMEZONE:Europe/Oslo
+BEGIN:VTIMEZONE
+TZID:Europe/Oslo
+X-LIC-LOCATION:Europe/Oslo
+BEGIN:DAYLIGHT
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+END:VTIMEZONE
 REFRESH-INTERVAL;VALUE=DURATION:PT15M
 `;
 
@@ -233,8 +249,8 @@ REFRESH-INTERVAL;VALUE=DURATION:PT15M
 
       icalContent += `BEGIN:VEVENT
 UID:${shift.id}@vaktlista
-DTSTART:${startDate}
-DTEND:${endDate}
+DTSTART;TZID=Europe/Oslo:${startDate}
+DTEND;TZID=Europe/Oslo:${endDate}
 SUMMARY:${summary}
 DESCRIPTION:${description.replace(/\n/g, '\\n')}
 LOCATION:${dept?.name || 'Ukjent avdeling'}
@@ -273,9 +289,7 @@ app.get('/api/export/ical/:employeeId', async (req, res) => {
     }
 
     const formatICalDate = (dateStr, timeStr) => {
-      const date = new Date(`${dateStr}T${timeStr}`);
-      const pad = (n) => n.toString().padStart(2, '0');
-      return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}00Z`;
+      return `${dateStr.replace(/-/g, '')}T${String(timeStr).replace(':', '')}00`;
     };
 
     let icalContent = `BEGIN:VCALENDAR
@@ -285,6 +299,24 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:Vaktlista - ${employee.name.replace(/[^a-zA-Z0-9]/g, '')}
 X-WR-TIMEZONE:Europe/Oslo
+BEGIN:VTIMEZONE
+TZID:Europe/Oslo
+X-LIC-LOCATION:Europe/Oslo
+BEGIN:DAYLIGHT
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+END:VTIMEZONE
 REFRESH-INTERVAL;VALUE=DURATION:PT15M
 `;
 
@@ -297,8 +329,8 @@ REFRESH-INTERVAL;VALUE=DURATION:PT15M
 
       icalContent += `BEGIN:VEVENT
 UID:${shift.id}@vaktlista-${employeeId}
-DTSTART:${startDate}
-DTEND:${endDate}
+DTSTART;TZID=Europe/Oslo:${startDate}
+DTEND;TZID=Europe/Oslo:${endDate}
 SUMMARY:${summary}
 DESCRIPTION:${description.replace(/\n/g, '\\n')}
 LOCATION:${dept?.name || 'Ukjent avdeling'}

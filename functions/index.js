@@ -18,9 +18,8 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 const formatICalDate = (dateStr, timeStr) => {
-  const date = new Date(`${dateStr}T${timeStr}`);
-  const pad = (n) => n.toString().padStart(2, '0');
-  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}00Z`;
+  const date = `${dateStr.replace(/-/g, '')}T${String(timeStr).replace(':', '')}00`;
+  return date;
 };
 
 const escapeICal = (str) => {
@@ -64,6 +63,24 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:${escapeICal(calName)}
 X-WR-TIMEZONE:Europe/Oslo
+BEGIN:VTIMEZONE
+TZID:Europe/Oslo
+X-LIC-LOCATION:Europe/Oslo
+BEGIN:DAYLIGHT
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+TZNAME:CEST
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+TZNAME:CET
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+END:VTIMEZONE
 `;
 
   filteredShifts.forEach(shift => {
@@ -79,8 +96,8 @@ X-WR-TIMEZONE:Europe/Oslo
 
     icalContent += `BEGIN:VEVENT
 UID:${shift.id}@vaktlista
-DTSTART:${startDate}
-DTEND:${endDate}
+DTSTART;TZID=Europe/Oslo:${startDate}
+DTEND;TZID=Europe/Oslo:${endDate}
 SUMMARY:${escapeICal(summary)}
 DESCRIPTION:${escapeICal(description)}
 LOCATION:${escapeICal(dept.name)}
