@@ -11,14 +11,7 @@ jobs:
     env:
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
       FIREBASE_DEPLOY_TOKEN: ${{ secrets.FIREBASE_DEPLOY_TOKEN_STAGING }}
-      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY_STAGING }}
-      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN_STAGING }}
-      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID_STAGING }}
-      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET_STAGING }}
-      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID_STAGING }}
-      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID_STAGING }}
-      VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID_STAGING }}
-      VITE_API_URL: ${{ secrets.VITE_API_URL_STAGING }}
+      VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,10 +33,16 @@ jobs:
       - name: Install Functions dependencies
         run: cd functions && npm install
 
+      - name: Derive staging project ID
+        id: project
+        run: echo "id=$(node -e "console.log(JSON.parse(process.env.VITE_FIREBASE_CONFIG).projectId)")" >> "$GITHUB_OUTPUT"
+        env:
+          VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
+
       - name: Deploy to Firebase (staging)
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
-          firebase deploy --only hosting,functions --project "$FIREBASE_PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN"
+          firebase deploy --only hosting,functions --project "$PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN"
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID_STAGING }}
+          PROJECT_ID: ${{ steps.project.outputs.id }}
         shell: bash

@@ -7,24 +7,33 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 
 // ============ FIREBASE CONFIGURATION ============
 // Config is environment-driven so a separate test/staging environment can point
-// at its own Firebase project. Falls back to the live config (vaktlista-d0efd)
-// when no VITE_FIREBASE_* env vars are set, so production behaviour is unchanged.
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCW0p942dGWKCVvQCwb2_y3PpAQSXN1ArU",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "vaktlista-d0efd.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "vaktlista-d0efd",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "vaktlista-d0efd.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "627526854242",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:627526854242:web:b7d5d4e7c66a1a708e933b",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S5EEYJ05GP"
-};
+// at its own Firebase project. Provide VITE_FIREBASE_CONFIG as a JSON string with
+// the web app config from the staging Firebase console. Falls back to the live
+// config (vaktlista-d0efd) when unset, so production behaviour is unchanged.
+const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG
+  ? JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG)
+  : {
+      apiKey: "AIzaSyCW0p942dGWKCVvQCwb2_y3PpAQSXN1ArU",
+      authDomain: "vaktlista-d0efd.firebaseapp.com",
+      projectId: "vaktlista-d0efd",
+      storageBucket: "vaktlista-d0efd.firebasestorage.app",
+      messagingSenderId: "627526854242",
+      appId: "1:627526854242:web:b7d5d4e7c66a1a708e933b",
+      measurementId: "G-S5EEYJ05GP"
+    };
 
 // ============ INITIALIZE FIREBASE ============
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ============ COLLECTION REFERENCES ============
+// Cloud Functions URL for iCal endpoints. Derived from the active project ID so
+// staging points at its own functions automatically. Overridable via VITE_API_URL.
+const functionsUrl =
+  import.meta.env.VITE_API_URL ||
+  `https://us-central1-${firebaseConfig.projectId}.cloudfunctions.net`;
+
+
 const employeesCollection = collection(db, "employees");
 const shiftsCollection = collection(db, "shifts");
 const departmentsCollection = collection(db, "departments");
@@ -664,4 +673,4 @@ export const deleteSwapRequest = async (id) => {
 };
 
 // ============ EXPORT ============
-export { db, auth, firebaseConfig };
+export { db, auth, firebaseConfig, functionsUrl };
