@@ -11,14 +11,14 @@
         "source": "/api/export/ical",
         "function": {
           "functionName": "ical",
-          "region": "europe-west1"
+          "region": "us-central1"
         }
       },
       {
         "source": "/api/export/ical/:employeeId",
         "function": {
           "functionName": "icalEmployee",
-          "region": "europe-west1"
+          "region": "us-central1"
         }
       },
       {
