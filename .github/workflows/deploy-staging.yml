@@ -50,12 +50,19 @@ jobs:
 
       - name: Derive staging project ID
         id: project
-        run: echo "id=$(node -e "console.log(JSON.parse(process.env.VITE_FIREBASE_CONFIG).projectId)")" >> "$GITHUB_OUTPUT"
+        run: |
+          PROJECT_ID=$(node -e "const c=JSON.parse(process.env.VITE_FIREBASE_CONFIG); if(!c.projectId){throw new Error('projectId missing in config')}; console.log(c.projectId)" 2>err.txt || { echo "::error::VITE_FIREBASE_CONFIG_STAGING is not valid JSON or is missing projectId. It must be a compact JSON object, e.g. {\"apiKey\":\"...\",\"projectId\":\"vaktlista-staging\",...}. Raw error: $(cat err.txt)"; exit 1; }
+          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "Resolved staging project ID: $PROJECT_ID"
         env:
           VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
 
       - name: Deploy to Firebase (staging)
         run: |
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Staging project ID could not be resolved. Aborting to avoid overwriting the live app."
+            exit 1
+          fi
           echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
           firebase deploy --only hosting,functions --project "$PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN"
         env:
