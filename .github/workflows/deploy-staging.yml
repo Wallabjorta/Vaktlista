@@ -54,9 +54,28 @@ jobs:
           VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
         run: |
           set +e
-          PROJECT_ID=$(python3 -c 'import json,os; print(json.loads(os.environ["VITE_FIREBASE_CONFIG"])["projectId"])' 2>/tmp/err.txt)
+          cat > /tmp/extract.py <<'PYEOF'
+          import json, os, sys
+          raw = os.environ["VITE_FIREBASE_CONFIG"].strip()
+          if raw.startswith('{') and not raw.startswith('{"'):
+              sys.stderr.write("Config looks like a JS object, not JSON. Keys and values must be in double quotes. See .env.example for the correct format.\n")
+              sys.exit(1)
+          try:
+              cfg = json.loads(raw)
+          except json.JSONDecodeError as e:
+              sys.stderr.write(f"JSON parse failed at pos {e.pos}: {e.msg}\n")
+              sys.exit(1)
+          pid = cfg.get("projectId")
+          if not pid:
+              sys.stderr.write("projectId missing in config\n")
+              sys.exit(1)
+          print(pid)
+          PYEOF
+          PROJECT_ID=$(python3 /tmp/extract.py 2>/tmp/err.txt)
           if [ $? -ne 0 ]; then
-            echo "::error::VITE_FIREBASE_CONFIG_STAGING is not valid JSON or is missing projectId. It must be a compact JSON object with double-quoted keys and values. Error: $(cat /tmp/err.txt)"
+            echo "::error::$(cat /tmp/err.txt)"
+            echo "::error::VITE_FIREBASE_CONFIG_STAGING must be a compact JSON object. Copy this template, fill in your staging values, and paste as ONE line:"
+            echo "::error::{\"apiKey\":\"...\",\"authDomain\":\"vaktlista-staging.firebaseapp.com\",\"projectId\":\"vaktlista-staging\",\"storageBucket\":\"vaktlista-staging.appspot.com\",\"messagingSenderId\":\"...\",\"appId\":\"...\",\"measurementId\":\"...\"}"
             exit 1
           fi
           echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
