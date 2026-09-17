@@ -50,12 +50,17 @@ jobs:
 
       - name: Derive staging project ID
         id: project
-        run: |
-          PROJECT_ID=$(node -e "const c=JSON.parse(process.env.VITE_FIREBASE_CONFIG); if(!c.projectId){throw new Error('projectId missing in config')}; console.log(c.projectId)" 2>err.txt || { echo "::error::VITE_FIREBASE_CONFIG_STAGING is not valid JSON or is missing projectId. It must be a compact JSON object, e.g. {\"apiKey\":\"...\",\"projectId\":\"vaktlista-staging\",...}. Raw error: $(cat err.txt)"; exit 1; }
-          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
-          echo "Resolved staging project ID: $PROJECT_ID"
         env:
           VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
+        run: |
+          set +e
+          PROJECT_ID=$(python3 -c 'import json,os; print(json.loads(os.environ["VITE_FIREBASE_CONFIG"])["projectId"])' 2>/tmp/err.txt)
+          if [ $? -ne 0 ]; then
+            echo "::error::VITE_FIREBASE_CONFIG_STAGING is not valid JSON or is missing projectId. It must be a compact JSON object with double-quoted keys and values. Error: $(cat /tmp/err.txt)"
+            exit 1
+          fi
+          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "Resolved staging project ID: $PROJECT_ID"
 
       - name: Deploy to Firebase (staging)
         run: |
