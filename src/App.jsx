@@ -133,7 +133,7 @@ function App() {
     employeeId: "",
     departmentId: "",
     date: new Date().toISOString().split('T')[0],
-    startTime: "08:00",
+    startTime: "08:45",
     endTime: "16:00",
     comment: ""
   });
