@@ -88,7 +88,7 @@ jobs:
             exit 1
           fi
           echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
-          firebase deploy --only hosting,functions --project "$PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN"
+          firebase deploy --only hosting,functions --project "$PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN" --force
         env:
           PROJECT_ID: ${{ steps.project.outputs.id }}
         shell: bash
