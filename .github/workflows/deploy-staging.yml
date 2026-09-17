@@ -1,0 +1,94 @@
+name: Deploy staging to Firebase
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [test]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGING }}
+      FIREBASE_DEPLOY_TOKEN: ${{ secrets.FIREBASE_DEPLOY_TOKEN_STAGING }}
+      VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify staging secrets are set
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_STAGING secret is missing. Add staging secrets before pushing to the test branch, otherwise this deploy would overwrite the live app."
+            exit 1
+          fi
+          if [ -z "$FIREBASE_DEPLOY_TOKEN" ]; then
+            echo "::error::FIREBASE_DEPLOY_TOKEN_STAGING secret is missing. Add staging secrets before pushing to the test branch."
+            exit 1
+          fi
+          if [ -z "$VITE_FIREBASE_CONFIG" ]; then
+            echo "::error::VITE_FIREBASE_CONFIG_STAGING secret is missing. Add the staging Firebase web config (JSON) before pushing to the test branch."
+            exit 1
+          fi
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project (staging config)
+        run: npm run build
+
+      - name: Install Functions dependencies
+        run: cd functions && npm install
+
+      - name: Derive staging project ID
+        id: project
+        env:
+          VITE_FIREBASE_CONFIG: ${{ secrets.VITE_FIREBASE_CONFIG_STAGING }}
+        run: |
+          set +e
+          cat > /tmp/extract.py <<'PYEOF'
+          import json, os, sys
+          raw = os.environ["VITE_FIREBASE_CONFIG"].strip()
+          if raw.startswith('{') and not raw.startswith('{"'):
+              sys.stderr.write("Config looks like a JS object, not JSON. Keys and values must be in double quotes. See .env.example for the correct format.\n")
+              sys.exit(1)
+          try:
+              cfg = json.loads(raw)
+          except json.JSONDecodeError as e:
+              sys.stderr.write(f"JSON parse failed at pos {e.pos}: {e.msg}\n")
+              sys.exit(1)
+          pid = cfg.get("projectId")
+          if not pid:
+              sys.stderr.write("projectId missing in config\n")
+              sys.exit(1)
+          print(pid)
+          PYEOF
+          PROJECT_ID=$(python3 /tmp/extract.py 2>/tmp/err.txt)
+          if [ $? -ne 0 ]; then
+            echo "::error::$(cat /tmp/err.txt)"
+            echo "::error::VITE_FIREBASE_CONFIG_STAGING must be a compact JSON object. Copy this template, fill in your staging values, and paste as ONE line:"
+            echo "::error::{\"apiKey\":\"...\",\"authDomain\":\"vaktlista-staging.firebaseapp.com\",\"projectId\":\"vaktlista-staging\",\"storageBucket\":\"vaktlista-staging.appspot.com\",\"messagingSenderId\":\"...\",\"appId\":\"...\",\"measurementId\":\"...\"}"
+            exit 1
+          fi
+          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "Resolved staging project ID: $PROJECT_ID"
+
+      - name: Deploy to Firebase (staging)
+        run: |
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Staging project ID could not be resolved. Aborting to avoid overwriting the live app."
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
+          firebase deploy --only hosting,functions --project "$PROJECT_ID" --token "$FIREBASE_DEPLOY_TOKEN" --force
+        env:
+          PROJECT_ID: ${{ steps.project.outputs.id }}
+        shell: bash

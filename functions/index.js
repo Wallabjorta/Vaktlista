@@ -92,7 +92,7 @@ END:VTIMEZONE
 
     const startDate = formatICalDate(shift.date, shift.startTime);
     const endDate = formatICalDate(shift.date, shift.endTime);
-    const summary = `${emp.name} - ${dept.name}`;
+    const summary = `${dept.name} ${shift.startTime}-${shift.endTime}`;
     const description = `Vakt: ${dept.name}\nAnsatt: ${emp.name}\nStart: ${shift.startTime}\nSlutt: ${shift.endTime}`;
 
     icalContent += `BEGIN:VEVENT
@@ -114,6 +114,7 @@ END:VEVENT
 
 // Main iCal endpoint (alle vakter)
 export const ical = onRequest({ 
+  region: 'us-central1',
   cors: { 
     origin: '*',
     methods: ['GET', 'OPTIONS'],
@@ -146,6 +147,7 @@ export const ical = onRequest({
 
 // Person-spesifikk iCal endpoint
 export const icalEmployee = onRequest({ 
+  region: 'us-central1',
   cors: { 
     origin: '*',
     methods: ['GET', 'OPTIONS'],
