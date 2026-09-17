@@ -6,15 +6,17 @@ import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteD
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ============ FIREBASE CONFIGURATION ============
-// Your Firebase configuration for vaktlista-d0efd
+// Config is environment-driven so a separate test/staging environment can point
+// at its own Firebase project. Falls back to the live config (vaktlista-d0efd)
+// when no VITE_FIREBASE_* env vars are set, so production behaviour is unchanged.
 const firebaseConfig = {
-  apiKey: "AIzaSyCW0p942dGWKCVvQCwb2_y3PpAQSXN1ArU",
-  authDomain: "vaktlista-d0efd.firebaseapp.com",
-  projectId: "vaktlista-d0efd",
-  storageBucket: "vaktlista-d0efd.firebasestorage.app",
-  messagingSenderId: "627526854242",
-  appId: "1:627526854242:web:b7d5d4e7c66a1a708e933b",
-  measurementId: "G-S5EEYJ05GP"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCW0p942dGWKCVvQCwb2_y3PpAQSXN1ArU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "vaktlista-d0efd.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "vaktlista-d0efd",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "vaktlista-d0efd.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "627526854242",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:627526854242:web:b7d5d4e7c66a1a708e933b",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S5EEYJ05GP"
 };
 
 // ============ INITIALIZE FIREBASE ============
