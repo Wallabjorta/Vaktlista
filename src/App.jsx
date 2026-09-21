@@ -31,6 +31,9 @@ import {
   functionsUrl
 } from './firebase';
 
+// Standard start- og sluttid for nye vakter (endre her)
+export const DEFAULT_SHIFT_TIMES = { start: "08:45", end: "16:00" };
+
 // Skoleferier for Norge
 const VACATIONS = {
   "2026-06-20": "Sommerferie", "2026-06-21": "Sommerferie", "2026-06-22": "Sommerferie",
@@ -134,8 +137,8 @@ function App() {
     employeeId: "",
     departmentId: "",
     date: new Date().toISOString().split('T')[0],
-    startTime: "08:45",
-    endTime: "16:00",
+    startTime: DEFAULT_SHIFT_TIMES.start,
+    endTime: DEFAULT_SHIFT_TIMES.end,
     comment: ""
   });
 
@@ -252,8 +255,8 @@ function App() {
         employeeId: "",
         departmentId: selectedDepartment || "",
         date: new Date().toISOString().split('T')[0],
-        startTime: "08:00",
-        endTime: "16:00",
+        startTime: DEFAULT_SHIFT_TIMES.start,
+        endTime: DEFAULT_SHIFT_TIMES.end,
         comment: ""
       });
       setSelectedDates([]);
@@ -330,8 +333,8 @@ function App() {
         ...prev,
         employeeId: "",
         date: new Date().toISOString().split('T')[0],
-        startTime: "08:00",
-        endTime: "16:00",
+        startTime: DEFAULT_SHIFT_TIMES.start,
+        endTime: DEFAULT_SHIFT_TIMES.end,
         comment: ""
       }));
       alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
@@ -446,8 +449,8 @@ function App() {
       employeeId: employeeId,
       departmentId: deptId || selectedDepartment || "",
       date: date,
-      startTime: "08:00",
-      endTime: "16:00"
+      startTime: DEFAULT_SHIFT_TIMES.start,
+      endTime: DEFAULT_SHIFT_TIMES.end
     });
     setShowAddShiftModal(true);
   }, [currentUser?.isAdmin, selectedDepartment, validate]);
@@ -649,8 +652,8 @@ function App() {
                         employeeId: "",
                         departmentId: selectedDepartment || "",
                         date: new Date().toISOString().split('T')[0],
-                        startTime: "08:00",
-                        endTime: "16:00"
+                        startTime: DEFAULT_SHIFT_TIMES.start,
+                        endTime: DEFAULT_SHIFT_TIMES.end
                       });
                     }
                     setShowAddShiftModal(true);
