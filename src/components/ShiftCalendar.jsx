@@ -19,6 +19,12 @@ function ShiftCalendar({
   onClearSelection,
   onNavigateWeek
 }) {
+  const shortenComment = (comment, maxWords = 2) => {
+    if (!comment) return '';
+    const words = comment.trim().split(/\s+/);
+    return words.slice(0, maxWords).join(' ');
+  };
+
   const getDates = () => {
     const dates = [];
     const startDate = new Date(currentDate);
@@ -249,8 +255,12 @@ function ShiftCalendar({
                                     </button>
                                   )}
                                   {shift.comment && (
-                                    <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                      {shift.comment}
+                                    <div
+                                      className="text-xs opacity-80 truncate mt-0.5"
+                                      style={{ color: 'rgba(255,255,255,0.9)' }}
+                                      title={shift.comment}
+                                    >
+                                      {shortenComment(shift.comment)}
                                     </div>
                                   )}
                                 </div>
