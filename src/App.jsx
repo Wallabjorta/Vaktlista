@@ -3,6 +3,7 @@ import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
+import EditShiftModal from './components/EditShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
 import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
@@ -105,6 +106,7 @@ function App() {
     updateEmployee: updateEmployeeFirebase,
     deleteEmployee: deleteEmployeeFirebase,
     addShift: addShiftFirebase,
+    updateShift: updateShiftFirebase,
     deleteShift: deleteShiftFirebase,
     addDepartment: addDepartmentFirebase,
     updateDepartment: updateDepartmentFirebase,
@@ -119,6 +121,7 @@ function App() {
   const [employeeSort, setEmployeeSort] = useState('name');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
+  const [shiftToEdit, setShiftToEdit] = useState(null);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
   const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] = useState(false);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
@@ -488,6 +491,20 @@ function App() {
     }
   }, [deleteShiftFirebase]);
 
+  const handleSaveShiftEdit = useCallback(async (shiftId, updates) => {
+    try {
+      await updateShiftFirebase(shiftId, {
+        startTime: updates.startTime,
+        endTime: updates.endTime,
+        comment: updates.comment || ""
+      });
+      setShiftToEdit(null);
+    } catch (error) {
+      console.error('Error updating shift:', error);
+      alert('Feil ved lagring av vakt: ' + error.message);
+    }
+  }, [updateShiftFirebase]);
+
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
       await updateEmployeeFirebase(updatedEmployee.id, updatedEmployee);
@@ -741,6 +758,7 @@ function App() {
               onClearSelection={handleClearSelection}
               onAddShift={handleSingleShiftFromCalendar}
               onDeleteShift={handleDeleteShift}
+              onEditShift={(shift, employeeName) => setShiftToEdit({ shift, employeeName })}
               onNavigateWeek={(action) => {
                 const newDate = new Date(currentDate);
                 if (action === 'today') {
@@ -924,6 +942,15 @@ function App() {
           employee={currentUser}
           onClose={() => setShowLeaveRequestModal(false)}
           onSubmit={handleSubmitRequest}
+        />
+      )}
+
+      {shiftToEdit && (
+        <EditShiftModal
+          shift={shiftToEdit.shift}
+          employeeName={shiftToEdit.employeeName}
+          onSave={handleSaveShiftEdit}
+          onClose={() => setShiftToEdit(null)}
         />
       )}
 
