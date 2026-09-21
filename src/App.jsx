@@ -14,7 +14,7 @@ import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
 
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
-import useWorkLawValidation from './hooks/useWorkLawValidation';
+import useWorkLawValidation, { validateShift } from './hooks/useWorkLawValidation';
 import useFirebaseData from './hooks/useFirebaseData';
 import {
   addLeaveRequest,
@@ -321,12 +321,19 @@ function App() {
     }));
 
     try {
-      for (const shift of shiftsToSave) {
-        // Validering for norsk arbeidslov
-        const validation = validate(shift.employeeId, shift.date);
+      // Validering for norsk arbeidslov - samle advarsler for alle dager
+      const warnings = [];
+      const validatedSoFar = [...shifts];
+      const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
+      for (const shift of sortedShifts) {
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
         if (!validation.isValid) {
-          console.warn(`Advarsel for ${shift.date}: ${validation.errors.join(', ')}`);
+          warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
         }
+        validatedSoFar.push(shift);
+      }
+
+      for (const shift of shiftsToSave) {
         await addShiftFirebase(shift);
       }
       setShowAddShiftModal(false);
@@ -340,12 +347,16 @@ function App() {
         endTime: DEFAULT_SHIFT_TIMES.end,
         comment: ""
       }));
-      alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
+      if (warnings.length > 0) {
+        alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+      } else {
+        alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
+      }
     } catch (error) {
       console.error('Error saving bulk shifts:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
     }
-  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, addShiftFirebase, validate]);
+  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate]);
 
   const handleDateSelection = useCallback((newDates) => {
     // newDates is now an array of { date: string, employeeId: string } objects
