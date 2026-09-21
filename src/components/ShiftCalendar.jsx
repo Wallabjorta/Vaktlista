@@ -11,6 +11,7 @@ function ShiftCalendar({
   currentUser,
   onAddShift,
   onDeleteShift,
+  onEditShift,
   showHistory = true,
   selectedDates = [],
   selectedEmployeeForBulk = null,
@@ -18,6 +19,13 @@ function ShiftCalendar({
   onClearSelection,
   onNavigateWeek
 }) {
+  const shortenComment = (comment, maxWords = 2) => {
+    if (!comment) return '';
+    const words = comment.trim().split(/\s+/);
+    if (words.length <= maxWords) return words.join(' ');
+    return words.slice(0, maxWords).join(' ') + '...';
+  };
+
   const getDates = () => {
     const dates = [];
     const startDate = new Date(currentDate);
@@ -234,9 +242,26 @@ function ShiftCalendar({
                                   >
                                     {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
+                                  {currentUser?.isAdmin && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        onEditShift(shift, employee.name);
+                                      }}
+                                      className="absolute top-0.5 right-0.5 hidden group-hover:flex items-center justify-center w-4 h-4 bg-white bg-opacity-80 text-gray-800 rounded text-[10px] leading-none hover:bg-opacity-100"
+                                      title="Rediger kommentar"
+                                    >
+                                      ✎
+                                    </button>
+                                  )}
                                   {shift.comment && (
-                                    <div className="text-xs opacity-80 truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                                      {shift.comment}
+                                    <div
+                                      className="text-xs opacity-80 truncate mt-0.5"
+                                      style={{ color: 'rgba(255,255,255,0.9)' }}
+                                      title={shift.comment}
+                                    >
+                                      {shortenComment(shift.comment)}
                                     </div>
                                   )}
                                 </div>

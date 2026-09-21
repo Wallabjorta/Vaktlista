@@ -3,6 +3,7 @@ import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
+import EditShiftModal from './components/EditShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
 import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
@@ -30,6 +31,9 @@ import {
   getSwapRequestsByEmployee,
   functionsUrl
 } from './firebase';
+
+// Standard start- og sluttid for nye vakter (endre her)
+export const DEFAULT_SHIFT_TIMES = { start: "08:45", end: "16:00" };
 
 // Skoleferier for Norge
 const VACATIONS = {
@@ -102,6 +106,7 @@ function App() {
     updateEmployee: updateEmployeeFirebase,
     deleteEmployee: deleteEmployeeFirebase,
     addShift: addShiftFirebase,
+    updateShift: updateShiftFirebase,
     deleteShift: deleteShiftFirebase,
     addDepartment: addDepartmentFirebase,
     updateDepartment: updateDepartmentFirebase,
@@ -116,6 +121,7 @@ function App() {
   const [employeeSort, setEmployeeSort] = useState('name');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
+  const [shiftToEdit, setShiftToEdit] = useState(null);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
   const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] = useState(false);
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
@@ -134,8 +140,8 @@ function App() {
     employeeId: "",
     departmentId: "",
     date: new Date().toISOString().split('T')[0],
-    startTime: "08:00",
-    endTime: "16:00",
+    startTime: DEFAULT_SHIFT_TIMES.start,
+    endTime: DEFAULT_SHIFT_TIMES.end,
     comment: ""
   });
 
@@ -252,8 +258,8 @@ function App() {
         employeeId: "",
         departmentId: selectedDepartment || "",
         date: new Date().toISOString().split('T')[0],
-        startTime: "08:00",
-        endTime: "16:00",
+        startTime: DEFAULT_SHIFT_TIMES.start,
+        endTime: DEFAULT_SHIFT_TIMES.end,
         comment: ""
       });
       setSelectedDates([]);
@@ -337,8 +343,8 @@ function App() {
         ...prev,
         employeeId: "",
         date: new Date().toISOString().split('T')[0],
-        startTime: "08:00",
-        endTime: "16:00",
+        startTime: DEFAULT_SHIFT_TIMES.start,
+        endTime: DEFAULT_SHIFT_TIMES.end,
         comment: ""
       }));
       if (warnings.length > 0) {
@@ -409,13 +415,36 @@ function App() {
       if (requestType === 'swap') {
         await approveSwapRequest(requestId, adminId);
       } else {
+        const request = leaveRequests.find(req => req.id === requestId);
         await updateLeaveRequestStatus(requestId, "approved", adminId);
+
+        if (request && request.date) {
+          const start = new Date(request.date + 'T00:00:00');
+          const end = new Date((request.endDate || request.date) + 'T00:00:00');
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const hasExistingShift = shifts.some(shift =>
+              shift.date === dateStr &&
+              String(shift.employeeId) === String(request.employeeId)
+            );
+            if (hasExistingShift) continue;
+            await addShiftFirebase({
+              employeeId: request.employeeId,
+              departmentId: "dept-6",
+              date: dateStr,
+              startTime: DEFAULT_SHIFT_TIMES.start,
+              endTime: DEFAULT_SHIFT_TIMES.end,
+              comment: "Fridag (godkjent forespørsel)",
+              breaks: []
+            });
+          }
+        }
       }
       loadRequests();
     } catch (error) {
       alert("Feil: " + error.message);
     }
-  }, [loadRequests]);
+  }, [loadRequests, leaveRequests, shifts, addShiftFirebase]);
 
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
@@ -457,8 +486,8 @@ function App() {
       employeeId: employeeId,
       departmentId: deptId || selectedDepartment || "",
       date: date,
-      startTime: "08:00",
-      endTime: "16:00"
+      startTime: DEFAULT_SHIFT_TIMES.start,
+      endTime: DEFAULT_SHIFT_TIMES.end
     });
     setShowAddShiftModal(true);
   }, [currentUser?.isAdmin, selectedDepartment, validate]);
@@ -472,6 +501,20 @@ function App() {
       alert('Feil ved sletting av vakt: ' + error.message);
     }
   }, [deleteShiftFirebase]);
+
+  const handleSaveShiftEdit = useCallback(async (shiftId, updates) => {
+    try {
+      await updateShiftFirebase(shiftId, {
+        startTime: updates.startTime,
+        endTime: updates.endTime,
+        comment: updates.comment || ""
+      });
+      setShiftToEdit(null);
+    } catch (error) {
+      console.error('Error updating shift:', error);
+      alert('Feil ved lagring av vakt: ' + error.message);
+    }
+  }, [updateShiftFirebase]);
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
@@ -660,8 +703,8 @@ function App() {
                         employeeId: "",
                         departmentId: selectedDepartment || "",
                         date: new Date().toISOString().split('T')[0],
-                        startTime: "08:00",
-                        endTime: "16:00"
+                        startTime: DEFAULT_SHIFT_TIMES.start,
+                        endTime: DEFAULT_SHIFT_TIMES.end
                       });
                     }
                     setShowAddShiftModal(true);
@@ -726,6 +769,7 @@ function App() {
               onClearSelection={handleClearSelection}
               onAddShift={handleSingleShiftFromCalendar}
               onDeleteShift={handleDeleteShift}
+              onEditShift={(shift, employeeName) => setShiftToEdit({ shift, employeeName })}
               onNavigateWeek={(action) => {
                 const newDate = new Date(currentDate);
                 if (action === 'today') {
@@ -909,6 +953,15 @@ function App() {
           employee={currentUser}
           onClose={() => setShowLeaveRequestModal(false)}
           onSubmit={handleSubmitRequest}
+        />
+      )}
+
+      {shiftToEdit && (
+        <EditShiftModal
+          shift={shiftToEdit.shift}
+          employeeName={shiftToEdit.employeeName}
+          onSave={handleSaveShiftEdit}
+          onClose={() => setShiftToEdit(null)}
         />
       )}
 
