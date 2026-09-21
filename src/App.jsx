@@ -401,13 +401,36 @@ function App() {
       if (requestType === 'swap') {
         await approveSwapRequest(requestId, adminId);
       } else {
+        const request = leaveRequests.find(req => req.id === requestId);
         await updateLeaveRequestStatus(requestId, "approved", adminId);
+
+        if (request && request.date) {
+          const start = new Date(request.date + 'T00:00:00');
+          const end = new Date((request.endDate || request.date) + 'T00:00:00');
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const hasExistingShift = shifts.some(shift =>
+              shift.date === dateStr &&
+              String(shift.employeeId) === String(request.employeeId)
+            );
+            if (hasExistingShift) continue;
+            await addShiftFirebase({
+              employeeId: request.employeeId,
+              departmentId: "dept-6",
+              date: dateStr,
+              startTime: DEFAULT_SHIFT_TIMES.start,
+              endTime: DEFAULT_SHIFT_TIMES.end,
+              comment: "Fridag (godkjent forespørsel)",
+              breaks: []
+            });
+          }
+        }
       }
       loadRequests();
     } catch (error) {
       alert("Feil: " + error.message);
     }
-  }, [loadRequests]);
+  }, [loadRequests, leaveRequests, shifts, addShiftFirebase]);
 
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
