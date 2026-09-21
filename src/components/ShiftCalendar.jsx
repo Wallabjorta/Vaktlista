@@ -22,7 +22,8 @@ function ShiftCalendar({
   const shortenComment = (comment, maxWords = 2) => {
     if (!comment) return '';
     const words = comment.trim().split(/\s+/);
-    return words.slice(0, maxWords).join(' ');
+    if (words.length <= maxWords) return words.join(' ');
+    return words.slice(0, maxWords).join(' ') + '...';
   };
 
   const getDates = () => {
