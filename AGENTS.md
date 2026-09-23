@@ -45,7 +45,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 ## Aktuellt läge
 *(Senast uppdaterad av agent: skriv över den här sektionen i slutet av varje session.)*
 
-- `main`-tips: `a603ccb` (merge av PR #3). PR #2 (AGENTS.md) och PR #3 (periodval i adminstatistiken, `AdminStats.jsx`) är mergade och deployade till produktion.
+- `main`-tips: `0ec7db9` (merge av PR #4). PR #2–#4 är mergade: AGENTS.md, periodval i adminstatistiken (`AdminStats.jsx`) och testflödesdokumentation.
 - Äldre branches på remote (från tidigare sessioner, ej mergade): `vibe/fix-ical-tidssone-f804ba` (iCal-tidszonsfix + OverviewCalendar-förbättringar), `vibe/test-miljo-245bff` (fixar för PR-preview/firebase.json/iCal), `test` (staging-branch). Kontrollera med användaren innan dessa raderas.
 - Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester.
 
