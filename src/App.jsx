@@ -927,6 +927,16 @@ function App() {
       )}
       </div>
 
+      {currentUser && (
+        <LeaveRequestList
+          requests={[...leaveRequests, ...swapRequests]}
+          onApprove={handleApproveLeaveRequest}
+          onReject={handleRejectLeaveRequest}
+          onDelete={handleDeleteLeaveRequest}
+          currentUser={currentUser}
+        />
+      )}
+
       {currentUser?.isAdmin && (
         <div className="mt-6">
           <AdminStats
@@ -1036,16 +1046,6 @@ function App() {
           employeeName={shiftToEdit.employeeName}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
-        />
-      )}
-
-      {currentUser && (
-        <LeaveRequestList
-          requests={[...leaveRequests, ...swapRequests]}
-          onApprove={handleApproveLeaveRequest}
-          onReject={handleRejectLeaveRequest}
-          onDelete={handleDeleteLeaveRequest}
-          currentUser={currentUser}
         />
       )}
 
