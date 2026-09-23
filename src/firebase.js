@@ -41,8 +41,47 @@ const usersCollection = collection(db, "users");
 const notificationsCollection = collection(db, "notifications");
 const leaveRequestsCollection = collection(db, "leaveRequests");
 const swapRequestsCollection = collection(db, "swapRequests");
+const auditLogsCollection = collection(db, "auditLogs");
 
 // ============ FIREBASE SERVICE FUNCTIONS ============
+
+// ===== AUDIT LOG =====
+/**
+ * Logg en adminhandling i auditLogs-samlingen. Best-effort: feil logges kun til konsollen.
+ * @param {Object} admin - Innlogget admin (krever id og name)
+ * @param {string} action - Handling: 'shift_add' | 'shift_update' | 'shift_delete' | 'employee_add' | 'employee_update' | 'employee_delete' | 'department_add' | 'department_update' | 'department_delete' | 'leave_status' | 'swap_status'
+ * @param {Object} details - Fritekstdetaljer om handlingen
+ */
+export const logAdminAction = async (admin, action, details = {}) => {
+  if (!admin || !admin.isAdmin) return;
+  try {
+    await addDoc(auditLogsCollection, {
+      adminId: admin.id,
+      adminName: admin.name,
+      action,
+      details,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Error writing audit log:", error);
+  }
+};
+
+/**
+ * Hent alle adminhendelser (nyeste først)
+ * @returns {Promise<Array>} Array av loggobjekter
+ */
+export const getAuditLogs = async () => {
+  try {
+    const snapshot = await getDocs(auditLogsCollection);
+    return snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+  } catch (error) {
+    console.error("Error getting audit logs:", error);
+    return [];
+  }
+};
 
 // ===== EMPLOYEES =====
 

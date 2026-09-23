@@ -29,8 +29,14 @@ import {
   addSwapRequest,
   getSwapRequests,
   getSwapRequestsByEmployee,
+  logAdminAction,
+  getAuditLogs,
   functionsUrl
 } from './firebase';
+import AuditLogView from './components/AuditLogView';
+
+// Kun denne administratoren kan se endringsloggen
+const AUDIT_LOG_VIEWER = "Bjørn Waldenstrøm";
 
 // Standard start- og sluttid for nye vakter (endre her)
 export const DEFAULT_SHIFT_TIMES = { start: "08:45", end: "16:00" };
@@ -253,6 +259,13 @@ function App() {
 
     try {
       await addShiftFirebase(shiftToSave);
+      await logAdminAction(currentUser, 'shift_add', {
+        employeeId: shiftToSave.employeeId,
+        date: shiftToSave.date,
+        startTime: shiftToSave.startTime,
+        endTime: shiftToSave.endTime,
+        departmentId: shiftToSave.departmentId
+      });
       setShowAddShiftModal(false);
       setNewShift({
         employeeId: "",
@@ -268,7 +281,7 @@ function App() {
       console.error('Error saving shift:', error);
       alert('Feil ved lagring av vakt: ' + error.message);
     }
-  }, [newShift, selectedDepartment, addShiftFirebase, validate]);
+  }, [newShift, selectedDepartment, addShiftFirebase, validate, currentUser]);
 
   const handleBulkAddShift = useCallback(async () => {
     if (!selectedEmployeeForBulk) {
@@ -336,6 +349,12 @@ function App() {
       for (const shift of shiftsToSave) {
         await addShiftFirebase(shift);
       }
+      await logAdminAction(currentUser, 'shift_add', {
+        bulk: true,
+        count: shiftsToSave.length,
+        employeeId: selectedEmployeeForBulk,
+        dates: shiftsToSave.map(s => s.date)
+      });
       setShowAddShiftModal(false);
       setSelectedDates([]);
       setSelectedEmployeeForBulk(null);
@@ -356,7 +375,7 @@ function App() {
       console.error('Error saving bulk shifts:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
     }
-  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate]);
+  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate, currentUser]);
 
   const handleDateSelection = useCallback((newDates) => {
     // newDates is now an array of { date: string, employeeId: string } objects
@@ -414,9 +433,20 @@ function App() {
     try {
       if (requestType === 'swap') {
         await approveSwapRequest(requestId, adminId);
+        await logAdminAction(currentUser, 'swap_status', {
+          requestId,
+          status: 'approved'
+        });
       } else {
         const request = leaveRequests.find(req => req.id === requestId);
         await updateLeaveRequestStatus(requestId, "approved", adminId);
+        await logAdminAction(currentUser, 'leave_status', {
+          requestId,
+          status: 'approved',
+          employeeId: request?.employeeId,
+          date: request?.date,
+          endDate: request?.endDate
+        });
 
         if (request && request.date) {
           const start = new Date(request.date + 'T00:00:00');
@@ -444,14 +474,22 @@ function App() {
     } catch (error) {
       alert("Feil: " + error.message);
     }
-  }, [loadRequests, leaveRequests, shifts, addShiftFirebase]);
+  }, [loadRequests, leaveRequests, shifts, addShiftFirebase, currentUser]);
 
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
       if (requestType === 'swap') {
         await rejectSwapRequest(requestId, adminId);
+        await logAdminAction(currentUser, 'swap_status', {
+          requestId,
+          status: 'rejected'
+        });
       } else {
         await updateLeaveRequestStatus(requestId, "rejected", adminId);
+        await logAdminAction(currentUser, 'leave_status', {
+          requestId,
+          status: 'rejected'
+        });
       }
       loadRequests();
     } catch (error) {
@@ -494,17 +532,30 @@ function App() {
 
   const handleDeleteShift = useCallback(async (shiftId) => {
     if (!confirm('Slett vakt?')) return;
+    const shift = shifts.find(s => s.id === shiftId);
     try {
       await deleteShiftFirebase(shiftId);
+      await logAdminAction(currentUser, 'shift_delete', {
+        employeeId: shift?.employeeId,
+        date: shift?.date,
+        startTime: shift?.startTime,
+        endTime: shift?.endTime
+      });
     } catch (error) {
       console.error('Error deleting shift:', error);
       alert('Feil ved sletting av vakt: ' + error.message);
     }
-  }, [deleteShiftFirebase]);
+  }, [deleteShiftFirebase, shifts, currentUser]);
 
   const handleSaveShiftEdit = useCallback(async (shiftId, updates) => {
     try {
       await updateShiftFirebase(shiftId, {
+        startTime: updates.startTime,
+        endTime: updates.endTime,
+        comment: updates.comment || ""
+      });
+      await logAdminAction(currentUser, 'shift_update', {
+        shiftId,
         startTime: updates.startTime,
         endTime: updates.endTime,
         comment: updates.comment || ""
@@ -514,29 +565,37 @@ function App() {
       console.error('Error updating shift:', error);
       alert('Feil ved lagring av vakt: ' + error.message);
     }
-  }, [updateShiftFirebase]);
+  }, [updateShiftFirebase, currentUser]);
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
       await updateEmployeeFirebase(updatedEmployee.id, updatedEmployee);
+      await logAdminAction(currentUser, 'employee_update', {
+        employeeId: updatedEmployee.id,
+        name: updatedEmployee.name
+      });
       setShowEditEmployeeModal(false);
       alert('Ansatt oppdatert!');
     } catch (error) {
       console.error('Error updating employee:', error);
       alert('Feil ved oppdatering av ansatt: ' + error.message);
     }
-  }, [updateEmployeeFirebase]);
+  }, [updateEmployeeFirebase, currentUser]);
 
   const handleAddEmployee = useCallback(async (newEmployee) => {
     try {
       await addEmployeeFirebase(newEmployee);
+      await logAdminAction(currentUser, 'employee_add', {
+        employeeId: newEmployee.id,
+        name: newEmployee.name
+      });
       setShowAddEmployeeModal(false);
       alert('Ny ansatt lagt til!');
     } catch (error) {
       console.error('Error adding employee:', error);
       alert('Feil ved oppretting av ansatt: ' + error.message);
     }
-  }, [addEmployeeFirebase]);
+  }, [addEmployeeFirebase, currentUser]);
 
   const handleDeleteEmployee = useCallback(async () => {
     if (!employeeToDelete) return;
@@ -558,6 +617,10 @@ function App() {
 
     try {
       await deleteEmployeeFirebase(employeeToDelete.id);
+      await logAdminAction(currentUser, 'employee_delete', {
+        employeeId: employeeToDelete.id,
+        name: employeeToDelete.name
+      });
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
       alert('Ansatt slettet!');
@@ -583,10 +646,17 @@ function App() {
       if (department.id) {
         // Update existing department
         await updateDepartmentFirebase(department.id, department);
+        await logAdminAction(currentUser, 'department_update', {
+          departmentId: department.id,
+          name: department.name
+        });
         alert('Avdeling oppdatert!');
       } else {
         // Add new department
         await addDepartmentFirebase(department);
+        await logAdminAction(currentUser, 'department_add', {
+          name: department.name
+        });
         alert('Ny avdeling lagt til!');
       }
       setShowDepartmentModal(false);
@@ -594,11 +664,14 @@ function App() {
       console.error('Error saving department:', error);
       alert('Feil ved lagring av avdeling: ' + error.message);
     }
-  }, [addDepartmentFirebase, updateDepartmentFirebase]);
+  }, [addDepartmentFirebase, updateDepartmentFirebase, currentUser]);
 
   const handleDeleteDepartment = useCallback(async (departmentId) => {
     try {
       await deleteDepartmentFirebase(departmentId);
+      await logAdminAction(currentUser, 'department_delete', {
+        departmentId
+      });
       alert('Avdeling slettet!');
     } catch (error) {
       console.error('Error deleting department:', error);
@@ -854,6 +927,16 @@ function App() {
       )}
       </div>
 
+      {currentUser && (
+        <LeaveRequestList
+          requests={[...leaveRequests, ...swapRequests]}
+          onApprove={handleApproveLeaveRequest}
+          onReject={handleRejectLeaveRequest}
+          onDelete={handleDeleteLeaveRequest}
+          currentUser={currentUser}
+        />
+      )}
+
       {currentUser?.isAdmin && (
         <div className="mt-6">
           <AdminStats
@@ -864,6 +947,7 @@ function App() {
           />
         </div>
       )}
+
 
       {showLoginModal && (
         <LoginModal
@@ -965,14 +1049,8 @@ function App() {
         />
       )}
 
-      {currentUser && (
-        <LeaveRequestList
-          requests={[...leaveRequests, ...swapRequests]}
-          onApprove={handleApproveLeaveRequest}
-          onReject={handleRejectLeaveRequest}
-          onDelete={handleDeleteLeaveRequest}
-          currentUser={currentUser}
-        />
+      {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
+        <AuditLogView employees={employees} />
       )}
 
       {showDepartmentModal && (
