@@ -1,9 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+const toISODate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const monthBounds = (offset) => {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+  return { start: toISODate(first), end: toISODate(last) };
+};
+
+const MONTH_NAMES = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 
 function AdminStats({ employees, shifts, holidays, departments }) {
+  const [periodMode, setPeriodMode] = useState('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const getRange = () => {
+    if (periodMode === 'month') return monthBounds(0);
+    if (periodMode === 'lastMonth') return monthBounds(-1);
+    if (periodMode === 'custom') return { start: customStart, end: customEnd };
+    return null;
+  };
+
+  const range = getRange();
+  const hasRange = Boolean(range && range.start && range.end);
+  const periodShifts = hasRange
+    ? shifts.filter(shift => shift.date >= range.start && shift.date <= range.end)
+    : shifts;
+
+  const periodLabel = (() => {
+    if (periodMode === 'all') return 'Alle vakter';
+    if (periodMode === 'month') {
+      const now = new Date();
+      return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    }
+    if (periodMode === 'lastMonth') {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - 1);
+      return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    if (hasRange) {
+      const fmt = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('no-NO', { day: 'numeric', month: 'short', year: 'numeric' });
+      return `${fmt(range.start)} – ${fmt(range.end)}`;
+    }
+    return 'Egendefinert (velg datoer)';
+  })();
+
   // Beregn statistikk for hver ansatt
   const calculateEmployeeStats = (employee) => {
-    const employeeShifts = shifts.filter(shift => shift.employeeId === employee.id);
+    const employeeShifts = periodShifts.filter(shift => shift.employeeId === employee.id);
     
     // Totalt antall vakter
     const totalShifts = employeeShifts.length;
@@ -75,6 +123,45 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-800">Administrator Statistikk</h2>
         <p className="text-gray-600">Oversikt over arbeidstimer og spesialdager</p>
+
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-600">Periode:</span>
+          <select
+            value={periodMode}
+            onChange={(e) => setPeriodMode(e.target.value)}
+            className="px-2 py-1 border rounded text-sm bg-white"
+          >
+            <option value="all">Alle vakter</option>
+            <option value="month">Denne måneden</option>
+            <option value="lastMonth">Forrige måned</option>
+            <option value="custom">Egendefinert</option>
+          </select>
+          {periodMode === 'custom' && (
+            <>
+              <label className="text-sm text-gray-600">
+                Fra
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="ml-1 px-2 py-1 border rounded text-sm"
+                />
+              </label>
+              <label className="text-sm text-gray-600">
+                Til
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="ml-1 px-2 py-1 border rounded text-sm"
+                />
+              </label>
+            </>
+          )}
+          <span className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+            {periodLabel}
+          </span>
+        </div>
       </div>
 
       {/* Total oversikt */}
