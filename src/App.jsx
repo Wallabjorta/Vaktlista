@@ -938,9 +938,6 @@ function App() {
         </div>
       )}
 
-      {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
-        <AuditLogView employees={employees} />
-      )}
 
       {showLoginModal && (
         <LoginModal
@@ -1050,6 +1047,10 @@ function App() {
           onDelete={handleDeleteLeaveRequest}
           currentUser={currentUser}
         />
+      )}
+
+      {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
+        <AuditLogView employees={employees} />
       )}
 
       {showDepartmentModal && (
