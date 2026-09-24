@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 
 function ShiftCalendar({
   employees = [],
@@ -134,6 +134,15 @@ function ShiftCalendar({
     lastClickedRef.current = dateStr;
   }, [selectedDates, onDateSelection, currentUser]);
 
+  const [shiftDetail, setShiftDetail] = useState(null);
+
+  const formatDetailDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('no-NO', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+  };
+
   const sundayColor = '#FCA5A5';
   const holidayColor = '#F87171';
   const vacationColor = '#FEF3C7';
@@ -235,9 +244,11 @@ function ShiftCalendar({
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       e.preventDefault();
-                                      if (currentUser?.isAdmin) {
-                                        onDeleteShift(shift.id);
-                                      }
+                                      setShiftDetail({
+                                        shift,
+                                        employeeName: employee.name,
+                                        dateStr
+                                      });
                                     }}
                                   >
                                     {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
@@ -320,6 +331,72 @@ function ShiftCalendar({
             ))}
           </tbody>
         </table>
+
+      {shiftDetail && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"
+          onClick={() => setShiftDetail(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-bold text-gray-800">Vaktdetaljer</h3>
+              <button
+                onClick={() => setShiftDetail(null)}
+                className="text-gray-500 hover:text-gray-700 text-lg leading-none"
+                title="Lukk"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-1 text-sm text-gray-700">
+              <p><span className="font-medium">Ansatt:</span> {shiftDetail.employeeName}</p>
+              <p><span className="font-medium">Dato:</span> {formatDetailDate(shiftDetail.dateStr)}</p>
+              <p><span className="font-medium">Tid:</span> {shiftDetail.shift.startTime}–{shiftDetail.shift.endTime}</p>
+              <p>
+                <span className="font-medium">Avdeling:</span>{' '}
+                <span
+                  className="inline-block px-2 py-0.5 rounded text-white text-xs"
+                  style={{ backgroundColor: (departments || []).find(d => d && d.id === shiftDetail.shift.departmentId)?.color || '#3B82F6' }}
+                >
+                  {(departments || []).find(d => d && d.id === shiftDetail.shift.departmentId)?.name || shiftDetail.shift.departmentId}
+                </span>
+              </p>
+              {shiftDetail.shift.comment ? (
+                <p className="whitespace-pre-wrap"><span className="font-medium">Kommentar:</span> {shiftDetail.shift.comment}</p>
+              ) : (
+                <p className="text-gray-400 italic">Ingen kommentar</p>
+              )}
+            </div>
+
+            {currentUser?.isAdmin && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    onEditShift(shiftDetail.shift, shiftDetail.employeeName);
+                    setShiftDetail(null);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  Rediger
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteShift(shiftDetail.shift.id);
+                    setShiftDetail(null);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded text-sm hover:bg-red-200"
+                >
+                  Slett
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
