@@ -45,9 +45,10 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 ## Aktuellt läge
 *(Senast uppdaterad av agent: skriv över den här sektionen i slutet av varje session.)*
 
-- `main`-tips: `0ec7db9` (merge av PR #4). PR #2–#4 är mergade: AGENTS.md, periodval i adminstatistiken (`AdminStats.jsx`) och testflödesdokumentation.
+- `main`-tips: `74e4b14` (merge av PR #6). PR #2–#6 är mergade: AGENTS.md, periodval i adminstatistiken, testflödesdokumentation, skift-detalj-popup m.m.
+- Backup-lösning tillagd (`functions/backup.js`): `nightlyBackup` (schedule 03:00 Europe/Oslo) exporterar alla samlingar som JSON + läsbar CSV till Firebase Storage (`backups/<datum>/...`), 90 dagars retention, loggar till `backups`-samlingen och `auditLogs`. `backupNow` = samma backup på begäran via HTTP, skyddad med `X-Backup-Token` mot env-variabeln `BACKUP_TOKEN` (måste sättas som hemlighet i Firebase-projektet, annars svarar endpointen 503).
 - Äldre branches på remote (från tidigare sessioner, ej mergade): `vibe/fix-ical-tidssone-f804ba` (iCal-tidszonsfix + OverviewCalendar-förbättringar), `vibe/test-miljo-245bff` (fixar för PR-preview/firebase.json/iCal), `test` (staging-branch). Kontrollera med användaren innan dessa raderas.
-- Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester.
+- Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester (utom ad-hoc CSV-test för `toCsv`).
 
 ## Nästa steg
 - Lägg till README.
