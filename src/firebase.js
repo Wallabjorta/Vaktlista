@@ -304,16 +304,44 @@ export const normalizeDepartments = async () => {
     const snapshot = await getDocs(departmentsCollection);
     const all = snapshot.docs.map(d => ({ docId: d.id, data: d.data() }));
     const docIds = new Set(all.map(x => x.docId));
+    const keep = new Set();
     let changed = false;
     for (const { docId, data } of all) {
       const stableId = data.id || docId;
-      if (docId === stableId) continue;
-      if (!docIds.has(stableId)) {
-        await setDoc(doc(db, "departments", stableId), data, { merge: true });
-        docIds.add(stableId);
+      const name = (data.name || '').trim();
+      // Ta bort dokument utan namn (skräp från misslyckade försök)
+      if (!name) {
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+        continue;
       }
-      await deleteDoc(doc(db, "departments", docId));
-      changed = true;
+      // Flytta auto-ID-dokument till stabilt ID
+      if (docId !== stableId) {
+        if (!docIds.has(stableId) && !keep.has(stableId)) {
+          await setDoc(doc(db, "departments", stableId), data, { merge: true });
+          docIds.add(stableId);
+          keep.add(stableId);
+        }
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+        continue;
+      }
+      keep.add(stableId);
+    }
+    // Ta bort dubbletter: samma stabila ID behålls bara en gång (först träffad behålls)
+    const seenIds = new Set();
+    for (const { docId, data } of all) {
+      const stableId = data.id || docId;
+      if (!keep.has(stableId)) continue;
+      if (seenIds.has(stableId)) {
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+      } else {
+        seenIds.add(stableId);
+      }
     }
     return changed;
   } catch (error) {
