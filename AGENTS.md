@@ -48,7 +48,8 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - `main`-tips: `74e4b14` (merge av PR #6). PR #2–#6 är mergade: AGENTS.md, periodval i adminstatistiken, testflödesdokumentation, skift-detalj-popup m.m.
 - Backup-lösning tillagd (`functions/backup.js`): `nightlyBackup` (schedule 03:00 Europe/Oslo) exporterar alla samlingar som JSON + läsbar CSV till Firebase Storage (`backups/<datum>/...`), 90 dagars retention, loggar till `backups`-samlingen och `auditLogs`. `backupNow` = samma backup på begäran via HTTP, skyddad med `X-Backup-Token` mot env-variabeln `BACKUP_TOKEN` (måste sättas som hemlighet i Firebase-projektet, annars svarar endpointen 503).
 - Äldre branches på remote (från tidigare sessioner, ej mergade): `vibe/fix-ical-tidssone-f804ba` (iCal-tidszonsfix + OverviewCalendar-förbättringar), `vibe/test-miljo-245bff` (fixar för PR-preview/firebase.json/iCal), `test` (staging-branch). Kontrollera med användaren innan dessa raderas.
-- Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester (utom ad-hoc CSV-test för `toCsv`).
+- Lösenord hashade (PBKDF2/SHA-256, 100k iterationer) via `src/utils/passwords.js` (`passwordSalt` + `passwordHash` i `employees`). Ny ansatt-modalen har obligatoriskt lösenordsfält; inloggning migrerar gamla klartextlösenord till hash automatiskt vid första lyckade inloggning. Admin-fallbacken i `App.jsx` skapar fortfarande konto med klartext `admin123` (migreras vid första inloggning).
+- Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester (utom ad-hoc CSV-test för `toCsv` och hash-test för `passwords.js`).
 
 ## Nästa steg
 - Lägg till README.
