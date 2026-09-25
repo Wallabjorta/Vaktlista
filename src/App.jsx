@@ -302,10 +302,6 @@ function App() {
   }, [newShift, selectedDepartment, addShiftFirebase, validate, currentUser]);
 
   const handleBulkAddShift = useCallback(async () => {
-    if (!selectedEmployeeForBulk) {
-      alert('Velg en ansatt!');
-      return;
-    }
     if (!newShift.departmentId) {
       alert('Velg en avdeling!');
       return;
@@ -362,8 +358,8 @@ function App() {
       await logAdminAction(currentUser, 'shift_add', {
         bulk: true,
         count: shiftsToSave.length,
-        employeeId: selectedEmployeeForBulk,
-        dates: shiftsToSave.map(s => s.date)
+        employeeIds: [...new Set(shiftsToSave.map(s => s.employeeId))],
+        dates: [...new Set(shiftsToSave.map(s => s.date))]
       });
       setShowAddShiftModal(false);
       setSelectedDates([]);
