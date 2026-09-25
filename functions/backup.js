@@ -152,6 +152,7 @@ export const nightlyBackup = onSchedule(
 export const backupNow = onRequest(
   {
     region: 'us-central1',
+    secrets: ['BACKUP_TOKEN'],
     cors: {
       origin: '*',
       methods: ['GET', 'OPTIONS'],
