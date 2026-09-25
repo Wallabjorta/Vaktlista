@@ -9,8 +9,14 @@ function AddShiftModal({
   onClose,
   isBulkMode = false,
   bulkCount = 0,
-  selectedEmployeeForBulk = null
+  selectedEmployeeForBulk = null,
+  bulkCells = []
 }) {
+  const bulkByEmployee = {};
+  (bulkCells || []).forEach(cell => {
+    bulkByEmployee[cell.employeeId] = (bulkByEmployee[cell.employeeId] || 0) + 1;
+  });
+  const bulkEmployeeIds = Object.keys(bulkByEmployee);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
@@ -33,6 +39,29 @@ function AddShiftModal({
         )}
         
         <div className="space-y-4">
+          {isBulkMode ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Valgte ansatte ({bulkEmployeeIds.length})
+              </label>
+              <div className="p-2 border rounded bg-gray-50 space-y-1 max-h-32 overflow-y-auto">
+                {bulkEmployeeIds.length === 0 ? (
+                  <p className="text-sm text-gray-500">Ingen valgt</p>
+                ) : bulkEmployeeIds.map(id => {
+                  const emp = employees.find(e => e.id === id);
+                  return (
+                    <div key={id} className="flex justify-between text-sm">
+                      <span>{emp?.name || id}</span>
+                      <span className="text-gray-500">{bulkByEmployee[id]} dag{bulkByEmployee[id] !== 1 ? 'er' : ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Valgte ansatte og dager settes i kalenderen. Klikk celler der for å endre.
+              </p>
+            </div>
+          ) : (
           <div>
             <label className="block text-sm font-medium mb-1">Ansatt</label>
             <select
@@ -48,6 +77,7 @@ function AddShiftModal({
               ))}
             </select>
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Avdeling</label>

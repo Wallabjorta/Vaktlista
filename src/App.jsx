@@ -1040,6 +1040,7 @@ function App() {
           }}
           isBulkMode={selectedDates.length > 0}
           bulkCount={selectedDates.length}
+          bulkCells={selectedDates}
           selectedEmployeeForBulk={selectedEmployeeForBulk}
         />
       )}
