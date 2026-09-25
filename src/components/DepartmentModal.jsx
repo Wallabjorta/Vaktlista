@@ -16,6 +16,7 @@ function DepartmentModal({
   });
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // If editing, populate the form
   useEffect(() => {
@@ -25,6 +26,7 @@ function DepartmentModal({
         color: editingDepartment.color || '#FF0000'
       });
       setSelectedDepartment(editingDepartment);
+      setEditingId(editingDepartment.id);
     }
   }, [editingDepartment]);
 
@@ -45,7 +47,7 @@ function DepartmentModal({
     // Check if department name already exists (case insensitive)
     const existingDept = departments.find(
       dept => dept.name.toLowerCase() === newDepartment.name.toLowerCase() && 
-             (!editingDepartment || dept.id !== editingDepartment.id)
+             dept.id !== (editingId || (editingDepartment ? editingDepartment.id : null))
     );
     
     if (existingDept) {
@@ -60,8 +62,8 @@ function DepartmentModal({
     };
     
     // If editing, include the ID
-    if (editingDepartment) {
-      departmentData.id = editingDepartment.id;
+    if (editingId || editingDepartment) {
+      departmentData.id = editingId || editingDepartment.id;
     }
     
     onSave(departmentData);
@@ -71,6 +73,7 @@ function DepartmentModal({
   const resetForm = () => {
     setNewDepartment({ name: '', color: '#FF0000' });
     setSelectedDepartment(null);
+    setEditingId(null);
   };
 
   const handleDeleteClick = (dept) => {
@@ -154,9 +157,9 @@ function DepartmentModal({
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700"
               >
-                {editingDepartment ? 'Lagre endringer' : '+ Legg til avdeling'}
+                {(editingId || editingDepartment) ? 'Lagre endringer' : '+ Legg til avdeling'}
               </button>
-              {editingDepartment && (
+              {(editingId || editingDepartment) && (
                 <button
                   type="button"
                   onClick={resetForm}
@@ -196,6 +199,7 @@ function DepartmentModal({
                       onClick={() => {
                         setNewDepartment({ name: dept.name, color: dept.color });
                         setSelectedDepartment(dept);
+                        setEditingId(dept.id);
                         // Scroll to top
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
