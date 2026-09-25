@@ -8,6 +8,7 @@ function OverviewCalendar({
   departments = [],
   holidays = [],
   vacations = {},
+  onBulkAddShifts,
   onClose
 }) {
   const getDates = () => {
@@ -78,11 +79,59 @@ function OverviewCalendar({
 
   // Local date state for navigation
   const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
+  // Utvalg for bulkvakter: array av { date, employeeId }
+  const [selectedCells, setSelectedCells] = useState([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    departmentId: '',
+    startTime: '08:45',
+    endTime: '16:00',
+    comment: ''
+  });
 
   // Filter employees by department if needed
   const filteredEmployees = selectedDepartment 
     ? employees.filter(emp => emp.deptIds?.includes(selectedDepartment))
     : employees;
+
+  const toggleCell = (dateStr, employeeId, isCtrlOrMeta) => {
+    setSelectedCells(prev => {
+      const exists = prev.some(c => c.date === dateStr && c.employeeId === employeeId);
+      if (exists) {
+        return prev.filter(c => !(c.date === dateStr && c.employeeId === employeeId));
+      }
+      if (isCtrlOrMeta) {
+        return [...prev, { date: dateStr, employeeId }];
+      }
+      // Uten Ctrl: velg alle ansatte i filtrert liste som mangler vakt denne dagen
+      const wasDaySelected = prev.some(c => c.date === dateStr);
+      const otherDays = prev.filter(c => c.date !== dateStr);
+      if (wasDaySelected) {
+        return otherDays;
+      }
+      const daySelection = filteredEmployees
+        .filter(emp => !shifts.some(s => s.date === dateStr && s.employeeId === emp.id))
+        .map(emp => ({ date: dateStr, employeeId: emp.id }));
+      return [...otherDays, ...daySelection];
+    });
+  };
+
+  const uniqueSelectedDates = [...new Set(selectedCells.map(c => c.date))];
+  const uniqueSelectedEmployees = [...new Set(selectedCells.map(c => c.employeeId))];
+
+  const handleBulkSave = () => {
+    if (!onBulkAddShifts) return;
+    onBulkAddShifts(selectedCells, bulkForm);
+    setSelectedCells([]);
+    setShowBulkModal(false);
+  };
+
+  const formatDateNo = (dateStr) => {
+    const [y, m, d] = dateStr.split('-');
+    const days = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+    const dt = new Date(Number(y), Number(m) - 1, Number(d));
+    return `${d}.${m} (${days[dt.getDay()]})`;
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -93,7 +142,25 @@ function OverviewCalendar({
               ? `Oversikt (${departments.find(d => d.id === selectedDepartment)?.name || 'Ukjent'})` 
               : 'Oversiktskalender (Alle)'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+          <div className="flex items-center gap-2">
+            {selectedCells.length > 0 && (
+              <button
+                onClick={() => setShowBulkModal(true)}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
+              >
+                Ny vakt ({uniqueSelectedEmployees.length} ansatte, {uniqueSelectedDates.length} dager)
+              </button>
+            )}
+            {selectedCells.length > 0 && (
+              <button
+                onClick={() => setSelectedCells([])}
+                className="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300"
+              >
+                Nullstill
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+          </div>
         </div>
         
         <div className="overflow-x-auto max-h-[calc(90vh-60px)] overflow-y-auto">
@@ -167,11 +234,14 @@ function OverviewCalendar({
                       bgStyle = { ...bgStyle, backgroundColor: vacationColor };
                     }
 
+                    const isCellSelected = selectedCells.some(c => c.date === dateStr && c.employeeId === employee.id);
+                    const cellStyle = isCellSelected ? { ...bgStyle, backgroundColor: '#86efac' } : bgStyle;
                     return (
                       <td
                         key={dateIndex}
-                        className="p-0.5 border-r border-b h-auto relative text-[10px]"
-                        style={bgStyle}
+                        className="p-0.5 border-r border-b h-auto relative text-[10px] cursor-pointer"
+                        style={cellStyle}
+                        onClick={(e) => toggleCell(dateStr, employee.id, e.ctrlKey || e.metaKey)}
                       >
                         {shiftsForDay.length > 0 && (
                           <div className="flex flex-wrap gap-0.5">
@@ -200,6 +270,88 @@ function OverviewCalendar({
             </tbody>
           </table>
         </div>
+        {showBulkModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border max-h-[85vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 className="text-xl font-semibold">
+                  Ny vakt ({uniqueSelectedEmployees.length} ansatte × {uniqueSelectedDates.length} {uniqueSelectedDates.length === 1 ? 'dag' : 'dager'})
+                </h2>
+                <button onClick={() => setShowBulkModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <div className="space-y-4">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>{selectedCells.length} vakter</strong> vil bli opprettet:
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {[...uniqueSelectedDates].sort().map(d => formatDateNo(d)).join(', ')}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Celler der ansatte allerede har vakt hoppes over.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Avdeling</label>
+                  <select
+                    value={bulkForm.departmentId}
+                    onChange={(e) => setBulkForm(prev => ({ ...prev, departmentId: e.target.value }))}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">Velg avdeling</option>
+                    {(departments || []).filter(dept => dept).map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Starttid</label>
+                    <input
+                      type="time"
+                      value={bulkForm.startTime}
+                      onChange={(e) => setBulkForm(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Sluttid</label>
+                    <input
+                      type="time"
+                      value={bulkForm.endTime}
+                      onChange={(e) => setBulkForm(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Kommentar / Arbeidsoppgave</label>
+                  <textarea
+                    value={bulkForm.comment}
+                    onChange={(e) => setBulkForm(prev => ({ ...prev, comment: e.target.value }))}
+                    className="w-full p-2 border rounded"
+                    placeholder="Skriv en kommentar om arbeidsoppgaven..."
+                    rows={2}
+                  />
+                </div>
+                <div className="flex gap-2 pt-4 border-t">
+                  <button
+                    onClick={handleBulkSave}
+                    className="px-4 py-2 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700 flex-1"
+                  >
+                    Lagre {selectedCells.length} vakter
+                  </button>
+                  <button
+                    onClick={() => setShowBulkModal(false)}
+                    className="px-4 py-2 bg-gray-200 rounded border hover:bg-gray-300 flex-1"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

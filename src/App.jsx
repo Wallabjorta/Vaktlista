@@ -395,6 +395,73 @@ function App() {
     }
   }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate, currentUser]);
 
+  // Bulkvakter fra oversiktskalenderen: flera ansatte × valda datum
+  const handleBulkAddShiftsFromOverview = useCallback(async (selectedCells, bulkForm) => {
+    if (!bulkForm.departmentId) {
+      alert('Velg en avdeling!');
+      return;
+    }
+    if (!bulkForm.startTime || !bulkForm.endTime) {
+      alert('Fyll ut start- og sluttid!');
+      return;
+    }
+    if (bulkForm.startTime >= bulkForm.endTime) {
+      alert('Sluttid må være etter starttid!');
+      return;
+    }
+    if (selectedCells.length === 0) {
+      alert('Velg minst en dato!');
+      return;
+    }
+    // Hopp over celler der ansatte allerede har vakt
+    const cellsToCreate = selectedCells.filter(cell =>
+      !shifts.some(s => s.date === cell.date && s.employeeId === cell.employeeId)
+    );
+    if (cellsToCreate.length === 0) {
+      alert('Alle valgte kombinasjoner har allerede vakter. Ingen vakter opprettet.');
+      return;
+    }
+    const shiftsToSave = cellsToCreate.map(cell => ({
+      employeeId: cell.employeeId,
+      departmentId: bulkForm.departmentId,
+      date: cell.date,
+      startTime: bulkForm.startTime,
+      endTime: bulkForm.endTime,
+      comment: bulkForm.comment || '',
+      breaks: []
+    }));
+    try {
+      const warnings = [];
+      const validatedSoFar = [...shifts];
+      const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
+      for (const shift of sortedShifts) {
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        if (!validation.isValid) {
+          warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
+        }
+        validatedSoFar.push(shift);
+      }
+      for (const shift of shiftsToSave) {
+        await addShiftFirebase(shift);
+      }
+      const uniqueDates = [...new Set(shiftsToSave.map(s => s.date))];
+      await logAdminAction(currentUser, 'shift_add', {
+        bulk: true,
+        count: shiftsToSave.length,
+        employeeIds: [...new Set(shiftsToSave.map(s => s.employeeId))],
+        dates: uniqueDates
+      });
+      if (warnings.length > 0) {
+        alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+      } else {
+        alert(`\u2705 ${shiftsToSave.length} vakter opprettet på ${uniqueDates.length} dag${uniqueDates.length !== 1 ? 'er' : ''}!`);
+      }
+    } catch (error) {
+      console.error('Error saving bulk shifts from overview:', error);
+      alert('Feil ved lagring av vakter: ' + error.message);
+    }
+  }, [shifts, holidaysObj, addShiftFirebase, currentUser]);
+
   const handleDateSelection = useCallback((newDates) => {
     // newDates is now an array of { date: string, employeeId: string } objects
     setSelectedDates(newDates);
@@ -1034,6 +1101,7 @@ function App() {
           vacations={VACATIONS}
           selectedDepartment={selectedDepartment}
           currentDate={currentDate}
+          onBulkAddShifts={handleBulkAddShiftsFromOverview}
           onClose={() => setShowOverviewCalendar(false)}
         />
       )}
