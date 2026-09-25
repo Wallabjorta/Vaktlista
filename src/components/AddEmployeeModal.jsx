@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { hashPassword } from '../utils/passwords';
 
 function AddEmployeeModal({ departments, onSave, onClose }) {
   const [newEmployee, setNewEmployee] = useState({
@@ -6,7 +7,8 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     deptIds: [],
     email: '',
     phone: '',
-    isAdmin: false
+    isAdmin: false,
+    password: ''
   });
 
   const handleSubmit = async (e) => {
