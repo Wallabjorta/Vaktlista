@@ -3,6 +3,8 @@ import * as logger from 'firebase-functions/logger';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+export { nightlyBackup, backupNow } from './backup.js';
+
 // Initialize Firebase Admin SDK
 initializeApp();
 
