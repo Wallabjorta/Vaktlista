@@ -9,7 +9,7 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     isAdmin: false
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
@@ -23,9 +23,18 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
       return;
     }
 
-    // Generate ID - let Firebase handle it
+        if (!newEmployee.password || newEmployee.password.length < 4) {
+      alert('Passord må være minst 4 tegn!');
+      return;
+    }
+
+    const { salt, hash } = await hashPassword(newEmployee.password);
+
     const employeeToSave = {
-      ...newEmployee
+      ...newEmployee,
+      passwordSalt: salt,
+      passwordHash: hash,
+      password: ''
     };
 
     onSave(employeeToSave);
@@ -91,6 +100,18 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
               />
             </div>
 
+            {/* Passord */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Passord *</label>
+              <input
+                type="password"
+                value={newEmployee.password}
+                onChange={(e) => setNewEmployee(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full p-2 border rounded"
+                placeholder="Minst 4 tegn"
+                required
+              />
+            </div>
             {/* Avdelinger */}
             <div>
               <label className="block text-sm font-medium mb-1">Avdelinger *</label>

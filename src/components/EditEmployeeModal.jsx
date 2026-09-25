@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hashPassword } from '../utils/passwords';
 
 function EditEmployeeModal({ employee, departments, onSave, onClose }) {
   const [editedEmployee, setEditedEmployee] = useState({
@@ -26,9 +27,23 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
     }
   }, [employee]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(editedEmployee);
+    let employeeToSave = editedEmployee;
+    if (editedEmployee.password && editedEmployee.password.length > 0) {
+      if (editedEmployee.password.length < 4) {
+        alert('Passord må være minst 4 tegn!');
+        return;
+      }
+      const { salt, hash } = await hashPassword(editedEmployee.password);
+      employeeToSave = {
+        ...editedEmployee,
+        passwordSalt: salt,
+        passwordHash: hash,
+        password: ''
+      };
+    }
+    onSave(employeeToSave);
   };
 
   const handleDeptToggle = (deptId) => {

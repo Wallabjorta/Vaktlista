@@ -34,6 +34,7 @@ import {
   functionsUrl
 } from './firebase';
 import AuditLogView from './components/AuditLogView';
+import { hashPassword, verifyPassword } from './utils/passwords';
 
 // Kun denne administratoren kan se endringsloggen
 const AUDIT_LOG_VIEWER = "Bjørn Waldenstrøm";
@@ -198,7 +199,7 @@ function App() {
     }
   }, [loading, employees.length, addEmployeeFirebase]);
 
-  const handleLogin = useCallback((email, password) => {
+  const handleLogin = useCallback(async (email, password) => {
     // Find user in employees list
     const user = employees.find(emp => emp.id === email || emp.email === email);
     if (!user) {
@@ -212,16 +213,33 @@ function App() {
       return false;
     }
     
-    if (user.password !== password) {
-      alert('Feil passord!');
+    if (user.passwordHash && user.passwordSalt) {
+      const valid = await verifyPassword(password, user.passwordSalt, user.passwordHash);
+      if (!valid) {
+        alert('Feil passord!');
+        return false;
+      }
+    } else if (user.password) {
+      if (user.password !== password) {
+        alert('Feil passord!');
+        return false;
+      }
+      try {
+        const { salt, hash } = await hashPassword(password);
+        await updateEmployeeFirebase(user.id, { passwordSalt: salt, passwordHash: hash, password: '' });
+      } catch (e) {
+        console.log('Klarte ikke å hashe eksisterende passord:', e.message);
+      }
+    } else {
+      alert('Ingen passord satt for denne ansatte. Be admin sette passord.');
       return false;
     }
-    
+
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
     setShowLoginModal(false);
     return true;
-  }, [employees]);
+  }, [employees, updateEmployeeFirebase]);
 
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
