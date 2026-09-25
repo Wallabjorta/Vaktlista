@@ -168,7 +168,7 @@ function OverviewCalendar({
           </div>
         </div>
         
-        <div className="overflow-x-auto max-h-[calc(90vh-60px)] overflow-y-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
           <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
             <thead>
               <tr className="border-b">
