@@ -145,7 +145,12 @@ function OverviewCalendar({
           <div className="flex items-center gap-2">
             {selectedCells.length > 0 && (
               <button
-                onClick={() => setShowBulkModal(true)}
+                onClick={() => {
+                  setBulkForm(prev => prev.departmentId
+                    ? prev
+                    : { ...prev, departmentId: selectedDepartment || '' });
+                  setShowBulkModal(true);
+                }}
                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
               >
                 Ny vakt ({uniqueSelectedEmployees.length} ansatte, {uniqueSelectedDates.length} dager)
