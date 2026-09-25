@@ -263,9 +263,9 @@ export const getDepartmentById = async (id) => {
  */
 export const addDepartment = async (department) => {
   try {
-    const docRef = doc(departmentsCollection);
-    await setDoc(docRef, department);
-    return { id: docRef.id, ...department };
+    const id = department.id || doc(departmentsCollection).id;
+    await setDoc(doc(db, "departments", id), { ...department, id });
+    return { id, ...department };
   } catch (error) {
     console.error("Error adding department:", error);
     throw error;
@@ -291,6 +291,34 @@ export const updateDepartment = async (id, updates) => {
   } catch (error) {
     console.error("Error updating department:", error);
     throw error;
+  }
+};
+
+/**
+ * Delete a department
+ * @param {string} id - Department ID
+ * @returns {Promise<boolean>} Success status
+ */
+export const normalizeDepartments = async () => {
+  try {
+    const snapshot = await getDocs(departmentsCollection);
+    const all = snapshot.docs.map(d => ({ docId: d.id, data: d.data() }));
+    const docIds = new Set(all.map(x => x.docId));
+    let changed = false;
+    for (const { docId, data } of all) {
+      const stableId = data.id || docId;
+      if (docId === stableId) continue;
+      if (!docIds.has(stableId)) {
+        await setDoc(doc(db, "departments", stableId), data, { merge: true });
+        docIds.add(stableId);
+      }
+      await deleteDoc(doc(db, "departments", docId));
+      changed = true;
+    }
+    return changed;
+  } catch (error) {
+    console.error("Error normalizing departments:", error);
+    return false;
   }
 };
 

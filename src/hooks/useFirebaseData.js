@@ -18,7 +18,8 @@ import {
   subscribeToEmployees,
   subscribeToShifts,
   subscribeToDepartments,
-  migrateFromLocalStorage
+  migrateFromLocalStorage,
+  normalizeDepartments
 } from '../firebase';
 
 // Default departments for initial setup
@@ -59,6 +60,12 @@ export default function useFirebaseData() {
       setShifts(shfts);
       setDepartments(depts);
       
+      // Migrera avdelingar med auto-genererat dokument-ID till stabilt ID
+      const changed = await normalizeDepartments();
+      if (changed) {
+        depts = await getDepartments();
+        setDepartments(depts);
+      }
       // If no departments in Firebase, add defaults
       if (!depts || depts.length === 0) {
         for (const dept of DEFAULT_DEPARTMENTS) {
