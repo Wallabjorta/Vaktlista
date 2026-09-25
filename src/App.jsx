@@ -452,9 +452,9 @@ function App() {
         dates: uniqueDates
       });
       if (warnings.length > 0) {
-        alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+        alert(`⚠️ ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
       } else {
-        alert(`\u2705 ${shiftsToSave.length} vakter opprettet på ${uniqueDates.length} dag${uniqueDates.length !== 1 ? 'er' : ''}!`);
+        alert(`✅ ${shiftsToSave.length} vakter opprettet på ${uniqueDates.length} dag${uniqueDates.length !== 1 ? 'er' : ''}!`);
       }
     } catch (error) {
       console.error('Error saving bulk shifts from overview:', error);
