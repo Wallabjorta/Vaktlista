@@ -102,13 +102,6 @@ function ShiftCalendar({
       if (alreadySelected) {
         onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
-        // Check if this date is already selected for ANY employee (prevent duplicate dates)
-        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
-        if (dateAlreadySelectedForAny) {
-          // Can't select same date for multiple employees in bulk mode
-          alert('Du kan ikke velge samme dag for flere ansatte samtidig i bulk-modus.');
-          return;
-        }
         onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     } else {
@@ -117,17 +110,7 @@ function ShiftCalendar({
         // Clicking an already selected date - remove it
         onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
-        // Check if this date is already selected for ANY employee
-        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
-        if (dateAlreadySelectedForAny) {
-          // Replace all selections for this date with the new employee
-          const newSelection = selectedDates.filter(d => d.date !== dateStr);
-          newSelection.push({ date: dateStr, employeeId });
-          onDateSelection(newSelection);
-        } else {
-          // Add to selection
-          onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
-        }
+        onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     }
 
@@ -295,14 +278,7 @@ function ShiftCalendar({
                             <div
                               className="w-full h-full relative"
                               onClick={(e) => {
-                                if (isBulkMode && !isForSelectedEmployee) {
-                                  if (confirm(`Vil du bytte til ${employee.name}?`)) {
-                                    onClearSelection();
-                                    onDateSelection([{ date: dateStr, employeeId }]);
-                                  }
-                                } else {
-                                  handleDateClick(dateStr, employee.id, e);
-                                }
+                                handleDateClick(dateStr, employee.id, e);
                               }}
                               title={isSelected ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato"}
                             >

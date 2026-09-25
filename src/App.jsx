@@ -323,28 +323,20 @@ function App() {
       return;
     }
 
-    // Hoppe over dager som allerede har vakter for denne ansatte
-    // selectedDates is now array of { date: string, employeeId: string }
-    const datesToCreate = selectedDates.filter(dateObj => {
-      const hasExistingShift = shifts.some(shift => 
-        shift.date === dateObj.date && 
-        shift.employeeId === selectedEmployeeForBulk
-      );
-      return !hasExistingShift;
-    }).map(dateObj => dateObj.date);
-
-    if (datesToCreate.length === 0) {
-      alert('Alle valgte dager har allerede vakter for denne ansatte. Ingen vakter opprettet.');
+    // Hoppe over celler som allerede har vakt (vald kombinasjon ansatt x dag)
+    const cellsToCreate = selectedDates.filter(cell =>
+      !shifts.some(shift => shift.date === cell.date && shift.employeeId === cell.employeeId)
+    );
+    if (cellsToCreate.length === 0) {
+      alert('Alle valgte kombinasjoner har allerede vakter. Ingen vakter opprettet.');
       return;
     }
 
-    
-
-    // Opprett vakter for alle valgte dager
-    const shiftsToSave = datesToCreate.map(dateStr => ({
-      employeeId: selectedEmployeeForBulk,
+    // Opprett vakter for alle valgte kombinasjoner
+    const shiftsToSave = cellsToCreate.map(cell => ({
+      employeeId: cell.employeeId,
       departmentId: newShift.departmentId,
-      date: dateStr,
+      date: cell.date,
       startTime: newShift.startTime,
       endTime: newShift.endTime,
       comment: newShift.comment || "",
@@ -387,13 +379,13 @@ function App() {
       if (warnings.length > 0) {
         alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
       } else {
-        alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
+        alert(`✅ ${shiftsToSave.length} vakter opprettet!`);
       }
     } catch (error) {
       console.error('Error saving bulk shifts:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
     }
-  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate, currentUser]);
+  }, [selectedDates, newShift, shifts, holidaysObj, addShiftFirebase, validate, currentUser]);
 
   // Bulkvakter fra oversiktskalenderen: flera ansatte × valda datum
   const handleBulkAddShiftsFromOverview = useCallback(async (selectedCells, bulkForm) => {
@@ -466,16 +458,8 @@ function App() {
     // newDates is now an array of { date: string, employeeId: string } objects
     setSelectedDates(newDates);
     
-    // Extract unique employeeId if there are selected dates
-    if (newDates.length > 0) {
-      // If all dates are for the same employee, set as bulk employee
-      const uniqueEmployees = [...new Set(newDates.map(d => d.employeeId))];
-      if (uniqueEmployees.length === 1) {
-        setSelectedEmployeeForBulk(uniqueEmployees[0]);
-      } else {
-        // Multiple employees selected - clear bulk employee
-        setSelectedEmployeeForBulk(null);
-      }
+    if (newDates.length === 1) {
+      setSelectedEmployeeForBulk(newDates[0].employeeId);
     } else {
       setSelectedEmployeeForBulk(null);
     }
@@ -849,7 +833,7 @@ function App() {
               {currentUser?.isAdmin && (
                 <button
                   onClick={() => {
-                    if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+                    if (selectedDates.length > 0) {
                       setNewShift(prev => ({
                         ...prev,
                         employeeId: selectedEmployeeForBulk,
@@ -870,7 +854,7 @@ function App() {
                   className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
                   disabled={false}
                 >
-                  {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
+                  {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} valgte)` : '+ Legg til vakt'}
                 </button>
               )}
               {currentUser?.isAdmin && (
@@ -1048,13 +1032,13 @@ function App() {
           departments={departments}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
-          onSave={selectedDates.length > 0 && selectedEmployeeForBulk ? handleBulkAddShift : handleAddShift}
+          onSave={selectedDates.length > 0 ? handleBulkAddShift : handleAddShift}
           onClose={() => {
             setShowAddShiftModal(false);
             setSelectedDates([]);
             setSelectedEmployeeForBulk(null);
           }}
-          isBulkMode={selectedDates.length > 0 && selectedEmployeeForBulk}
+          isBulkMode={selectedDates.length > 0}
           bulkCount={selectedDates.length}
           selectedEmployeeForBulk={selectedEmployeeForBulk}
         />

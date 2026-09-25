@@ -16,21 +16,18 @@ function AddShiftModal({
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">
-            {isBulkMode ? `Legg til vakt (${bulkCount} dager)` : 'Legg til vakt'}
+            {isBulkMode ? `Legg til vakt (${bulkCount} valgte)` : 'Legg til vakt'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">\u2715</button>
         </div>
         
-        {isBulkMode && selectedEmployeeForBulk && (
+        {isBulkMode && (
           <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
-              <strong>Bulk-modus:</strong> Vakten vil bli opprettet p\u00e5 {bulkCount} dag{bulkCount !== 1 ? 'er' : ''} for:
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              {employees.find(e => e.id === selectedEmployeeForBulk)?.name || selectedEmployeeForBulk}
+              <strong>Bulk-modus:</strong> {bulkCount} vakt{bulkCount !== 1 ? 'er' : ''} vil bli opprettet for de valgte ansatte og dagene.
             </p>
             <p className="text-xs text-gray-600 mt-1">
-              Dager som allerede har vakter vil bli hoppet over.
+              Kombinasjoner som allerede har vakt vil bli hoppet over.
             </p>
           </div>
         )}
