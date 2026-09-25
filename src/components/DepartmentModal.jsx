@@ -98,7 +98,19 @@ function DepartmentModal({
     { value: '#8B5CF6', label: 'Lilla', name: 'Skolegrupper' },
     { value: '#6B7280', label: 'Grå', name: 'Fri' },
     { value: '#000000', label: 'Sort' },
-    { value: '#FFFFFF', label: 'Hvit', border: '1px solid #ccc' }
+    { value: '#FFFFFF', label: 'Hvit', border: '1px solid #ccc' },
+    { value: '#06B6D4', label: 'Cyan' },
+    { value: '#0EA5E9', label: 'Lyseblå' },
+    { value: '#1D4ED8', label: 'Mørkeblå' },
+    { value: '#84CC16', label: 'Lime' },
+    { value: '#65A30D', label: 'Olivengrønn' },
+    { value: '#14B8A6', label: 'Teal' },
+    { value: '#EC4899', label: 'Rosa' },
+    { value: '#DB2777', label: 'Mørkerosa' },
+    { value: '#F97316', label: 'Dyp oransje' },
+    { value: '#A16207', label: 'Brun' },
+    { value: '#7C3AED', label: 'Indigo' },
+    { value: '#334155', label: 'Skifergrå' }
   ];
 
   return (
@@ -146,6 +158,15 @@ function DepartmentModal({
                     title={color.label}
                   />
                 ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs text-gray-600">Egendefinert farge:</label>
+                <input
+                  type="color"
+                  value={newDepartment.color}
+                  onChange={(e) => setNewDepartment(prev => ({ ...prev, color: e.target.value }))}
+                  className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                />
               </div>
               <div className="mt-2 text-xs text-gray-600">
                 Valgt farge: <strong style={{ color: newDepartment.color }}>{newDepartment.color}</strong>
