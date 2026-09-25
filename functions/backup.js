@@ -20,7 +20,7 @@ const BACKUP_COLLECTIONS = [
 const csvEscape = (value) => {
   if (value === null || value === undefined) return '';
   const str = String(value);
-  if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
+  if (str.includes('"') || str.includes(';') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
@@ -29,9 +29,9 @@ const csvEscape = (value) => {
 export const toCsv = (rows) => {
   if (!rows.length) return '';
   const headers = Object.keys(rows[0]);
-  const lines = [headers.join(',')];
+  const lines = [headers.join(';')];
   for (const row of rows) {
-    lines.push(headers.map(h => csvEscape(row[h])).join(','));
+    lines.push(headers.map(h => csvEscape(row[h])).join(';'));
   }
   return lines.join('\r\n');
 };
