@@ -43,11 +43,15 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
-*(Senast uppdaterad av agent: skriv över den här sektionen i slutet av varje session.)*
+*(Senast uppdaterad av agent: 2026-09-28, session om Firestore-regler, dubletter, kategorier, backup/restore.)*
 
-- `main`-tips: `74e4b14` (merge av PR #6). PR #2–#6 är mergade: AGENTS.md, periodval i adminstatistiken, testflödesdokumentation, skift-detalj-popup m.m.
-- Backup-lösning tillagd (`functions/backup.js`): `nightlyBackup` (schedule 03:00 Europe/Oslo) exporterar alla samlingar som JSON + läsbar CSV till Firebase Storage (`backups/<datum>/...`), 90 dagars retention, loggar till `backups`-samlingen och `auditLogs`. `backupNow` = samma backup på begäran via HTTP, skyddad med `X-Backup-Token` mot env-variabeln `BACKUP_TOKEN` (måste sättas som hemlighet i Firebase-projektet, annars svarar endpointen 503).
-- Äldre branches på remote (från tidigare sessioner, ej mergade): `vibe/fix-ical-tidssone-f804ba` (iCal-tidszonsfix + OverviewCalendar-förbättringar), `vibe/test-miljo-245bff` (fixar för PR-preview/firebase.json/iCal), `test` (staging-branch). Kontrollera med användaren innan dessa raderas.
+- `main` innehåller nu PR #15–#21 (+ #22 om den mergas): Firestore-säkerhetsregler (Test Mode hade upphört och blockerade ALLÅT – därför försvann data i appen), ID-mapping-fiks (`{ ...doc.data(), id: doc.id }` i `src/firebase.js`, tidigare skrev gamla id-fältet över dokument-ID:t vilket skapade «osläppna» dubletter), idempotent localStorage-migrering (`setDoc` med ursprungligt id), sticky-rubrik + scrollfönster i `ShiftCalendar`, anställdkategorier (`EMPLOYEE_CATEGORIES` = Skiutleie/Butikk/Skiskole i `ShiftCalendar.jsx`, mörk separatorrad per kategori, dropdown i Ny/Redigera ansatt; befintliga utan kategori härleds från deptIds).
+- Cloud Functions (alla token-skyddade med `BACKUP_TOKEN` om de är HTTP, triggas annars via Firestore-dokument – INGEN curl behövs): `dedupShifts` (rensar dubletter i shifts+employees), `reassignShifts`/`reassignOnJob` (flytta vakter mellan anställd-ID – skapa dokument i `reassignJobs` med fromEmployeeId/toEmployeeId), `restoreOnJob` (återställ samling från Storage-backup – skapa dokument i `restoreJobs` med date/collection/confirm="JA"/dryRun).
+- VIKTIGT: dryRun-buggen – torrkörningskoden saknades i mergad version (PR #21) vilket gjorde att en «test»-restore kördes på riktigt. PR #22 fixar det (accepterar true/"true"/1). Rutin: ALLTID dryRun först och kontrollera `wouldDeleteFromCurrent` innan riktig restore.
+- Backup-lösning (`functions/backup.js`): `nightlyBackup` (03:00 Europe/Oslo) exporterar alla samlingar som JSON + CSV till Storage (`backups/<datum>/...`), 90 dagars retention. `backupNow` = samma på begäran via HTTP med `X-Backup-Token`.
+- Eventarc Service Agent-rollen behövdes läggas till i GCP IAM för Firestore-triggers (reassignOnJob/restoreOnJob) – done, deploy går grönt.
+- BACKUP_TOKEN har råkat exponeras i chatt – bör roteras (`firebase functions:secrets:set BACKUP_TOKEN` + omdeploy).
+- Äldre branches på remote (från tidigare sessioner, ej mergade): `vibe/fix-ical-tidssone-f804ba`, `vibe/test-miljo-245bff`, `test` (staging-branch). Kontrollera med användaren innan dessa raderas.
 - Lösenord hashade (PBKDF2/SHA-256, 100k iterationer) via `src/utils/passwords.js` (`passwordSalt` + `passwordHash` i `employees`). Ny ansatt-modalen har obligatoriskt lösenordsfält; inloggning migrerar gamla klartextlösenord till hash automatiskt vid första lyckade inloggning. Admin-fallbacken i `App.jsx` skapar fortfarande konto med klartext `admin123` (migreras vid första inloggning).
 - Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester (utom ad-hoc CSV-test för `toCsv` och hash-test för `passwords.js`).
 
