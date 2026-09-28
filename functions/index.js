@@ -4,6 +4,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 export { dedupShifts } from './dedupShifts.js';
 export { reassignShifts } from './reassignShifts.js';
+export { restoreOnJob } from './restoreBackup.js';
 
 export { nightlyBackup, backupNow } from './backup.js';
 
