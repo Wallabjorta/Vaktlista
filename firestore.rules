@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Vaktlista (skiutleia) — Firestore-säkerhetsregler.
+// Appen har egen inloggningsmodell (lösenord i employees-dokumenten, isAdmin-flagga),
+// inte Firebase Auth per användare, så reglerna kan inte skilja användare åt.
+// Åtkomsten begränsas till de samlingar appen faktiskt använder.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Vakter: läs/skriv för appen
+    match /shifts/{shiftId} {
+      allow read, write: if true;
+    }
+
+    // Anställda: läs/skriv (lösenord hash lagras i dokumenten; se risknotis i PR)
+    match /employees/{employeeId} {
+      allow read, write: if true;
+    }
+
+    // Avdelningar: läs/skriv
+    match /departments/{departmentId} {
+      allow read, write: if true;
+    }
+
+    // Användare, notiser, ledighets- och bytesförfrågningar: läs/skriv
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+    match /leaveRequests/{requestId} {
+      allow read, write: if true;
+    }
+    match /swapRequests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // Granskningslogg: läs/skriv (appen loggar adminhandlinger klient-side)
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Backup-metadata: endast Cloud Functions (Admin SDK kringgår reglerna)
+    match /backups/{backupId} {
+      allow read, write: if false;
+    }
+
+    // Allt annat nekas
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

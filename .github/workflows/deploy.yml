@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to Firebase
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
-          firebase deploy --only hosting,functions --token "$FIREBASE_DEPLOY_TOKEN"
+          firebase deploy --only hosting,functions,firestore:rules --token "$FIREBASE_DEPLOY_TOKEN"
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VAKTLISTA_D0EFD }}
           FIREBASE_DEPLOY_TOKEN: ${{ secrets.FIREBASE_DEPLOY_TOKEN }}
