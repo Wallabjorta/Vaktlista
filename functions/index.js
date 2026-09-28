@@ -2,6 +2,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+export { dedupShifts } from './dedupShifts.js';
 
 export { nightlyBackup, backupNow } from './backup.js';
 
