@@ -3,6 +3,7 @@ import * as logger from 'firebase-functions/logger';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 export { dedupShifts } from './dedupShifts.js';
+export { reassignShifts } from './reassignShifts.js';
 
 export { nightlyBackup, backupNow } from './backup.js';
 
