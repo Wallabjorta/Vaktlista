@@ -92,10 +92,10 @@ export const getAuditLogs = async () => {
 export const getEmployees = async () => {
   try {
     const snapshot = await getDocs(employeesCollection);
-    return snapshot.docs.map(doc => {
-      const { id, ...rest } = doc.data();
-      return { id: doc.id, ...rest };
-    });
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    }));
   } catch (error) {
     console.error("Error getting employees:", error);
     return [];
@@ -182,10 +182,10 @@ export const deleteEmployee = async (id) => {
 export const getShifts = async () => {
   try {
     const snapshot = await getDocs(shiftsCollection);
-    return snapshot.docs.map(doc => {
-      const { id, ...rest } = doc.data();
-      return { id: doc.id, ...rest };
-    });
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    }));
   } catch (error) {
     console.error("Error getting shifts:", error);
     return [];
@@ -201,7 +201,7 @@ export const getShiftsByEmployee = async (employeeId) => {
   try {
     const q = query(shiftsCollection, where("employeeId", "==", employeeId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting shifts by employee:", error);
     return [];
@@ -217,7 +217,7 @@ export const getShiftsByDepartment = async (departmentId) => {
   try {
     const q = query(shiftsCollection, where("departmentId", "==", departmentId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting shifts by department:", error);
     return [];
@@ -233,7 +233,7 @@ export const getShiftsByDepartment = async (departmentId) => {
 export const getDepartments = async () => {
   try {
     const snapshot = await getDocs(departmentsCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting departments:", error);
     return [];
@@ -492,7 +492,7 @@ export const onAuthChange = (callback) => {
  */
 export const subscribeToEmployees = (callback) => {
   return onSnapshot(employeesCollection, (snapshot) => {
-    const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const employees = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(employees);
   });
 };
@@ -504,7 +504,7 @@ export const subscribeToEmployees = (callback) => {
  */
 export const subscribeToShifts = (callback) => {
   return onSnapshot(shiftsCollection, (snapshot) => {
-    const shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const shifts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(shifts);
   });
 };
@@ -516,7 +516,7 @@ export const subscribeToShifts = (callback) => {
  */
 export const subscribeToDepartments = (callback) => {
   return onSnapshot(departmentsCollection, (snapshot) => {
-    const departments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const departments = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(departments);
   });
 };
@@ -537,7 +537,9 @@ export const migrateFromLocalStorage = async () => {
       const employees = JSON.parse(localEmployees);
       for (const emp of employees) {
         try {
-          await addEmployee(emp);
+          const { id, ...data } = emp;
+          if (!id) continue;
+          await setDoc(doc(db, "employees", String(id)), data, { merge: true });
           result.employees++;
         } catch (error) {
           result.errors.push(`Failed to migrate employee ${emp.id}: ${error.message}`);
@@ -551,7 +553,9 @@ export const migrateFromLocalStorage = async () => {
       const shifts = JSON.parse(localShifts);
       for (const shift of shifts) {
         try {
-          await addShift(shift);
+          const { id, ...data } = shift;
+          if (!id) continue;
+          await setDoc(doc(db, "shifts", String(id)), data, { merge: true });
           result.shifts++;
         } catch (error) {
           result.errors.push(`Failed to migrate shift ${shift.id}: ${error.message}`);
@@ -590,7 +594,7 @@ export const addLeaveRequest = async (request) => {
 export const getLeaveRequests = async () => {
   try {
     const snapshot = await getDocs(leaveRequestsCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting leave requests:", error);
     return [];
@@ -601,7 +605,7 @@ export const getLeaveRequestsByEmployee = async (employeeId) => {
   try {
     const q = query(leaveRequestsCollection, where("employeeId", "==", employeeId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting leave requests by employee:", error);
     return [];
@@ -655,7 +659,7 @@ export const addSwapRequest = async (request) => {
 export const getSwapRequests = async () => {
   try {
     const snapshot = await getDocs(swapRequestsCollection);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting swap requests:", error);
     return [];
@@ -666,7 +670,7 @@ export const getSwapRequestsByEmployee = async (employeeId) => {
   try {
     const q = query(swapRequestsCollection, where("employeeId", "==", employeeId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
   } catch (error) {
     console.error("Error getting swap requests by employee:", error);
     return [];
