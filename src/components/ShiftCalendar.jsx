@@ -131,11 +131,11 @@ function ShiftCalendar({
   const vacationColor = '#FEF3C7';
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto">
+    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-160px)]">
       <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
           <thead>
             <tr className="border-b">
-              <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
+              <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => onNavigateWeek(-7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
@@ -149,7 +149,7 @@ function ShiftCalendar({
                 return (
                   <th
                     key={index}
-                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                   >
                     <div className="font-medium text-gray-700 truncate">
                       {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
