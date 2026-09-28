@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { hashPassword } from '../utils/passwords';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
 function EditEmployeeModal({ employee, departments, onSave, onClose }) {
   const [editedEmployee, setEditedEmployee] = useState({
     id: employee?.id || '',
     name: employee?.name || '',
     deptIds: employee?.deptIds || [],
+    category: employee?.category || 'Skiutleie',
     email: employee?.email || '',
     phone: employee?.phone || '',
     isAdmin: employee?.isAdmin || false,
@@ -19,6 +21,7 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
         id: employee.id,
         name: employee.name,
         deptIds: employee.deptIds || [],
+        category: employee.category || 'Skiutleie',
         email: employee.email || '',
         phone: employee.phone || '',
         isAdmin: employee.isAdmin || false,
@@ -105,6 +108,19 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
               />
             </div>
 
+            {/* Kategori */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Kategori *</label>
+              <select
+                value={editedEmployee.category}
+                onChange={(e) => setEditedEmployee(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full p-2 border rounded"
+              >
+                {EMPLOYEE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
             {/* Avdelinger */}
             <div>
               <label className="block text-sm font-medium mb-1">Avdelinger *</label>

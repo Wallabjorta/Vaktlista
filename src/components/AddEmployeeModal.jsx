@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { hashPassword } from '../utils/passwords';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
 function AddEmployeeModal({ departments, onSave, onClose }) {
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     deptIds: [],
+    category: 'Skiutleie',
     email: '',
     phone: '',
     isAdmin: false,
@@ -113,6 +115,19 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
                 placeholder="Minst 4 tegn"
                 required
               />
+            </div>
+            {/* Kategori */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Kategori *</label>
+              <select
+                value={newEmployee.category}
+                onChange={(e) => setNewEmployee(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full p-2 border rounded"
+              >
+                {EMPLOYEE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
             {/* Avdelinger */}
             <div>
