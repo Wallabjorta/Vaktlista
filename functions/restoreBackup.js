@@ -37,6 +37,7 @@ export const restoreOnJob = onDocumentCreated(
     if (confirm !== 'JA') {
       return fail('Bekräftelse saknas: sätt fältet confirm till strängen "JA" för att köra återställningen.');
     }
+    const dryRun = data.dryRun === true || data.dryRun === 'true' || data.dryRun === 1;
     if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return fail('Fältet date måste vara ett backup-datum på formen YYYY-MM-DD.');
     }
@@ -56,6 +57,27 @@ export const restoreOnJob = onDocumentCreated(
       const docs = JSON.parse(content.toString('utf8'));
       if (!Array.isArray(docs)) {
         return fail('Backupfilen har oväntat format (väntade en JSON-array).');
+      }
+
+      if (dryRun) {
+        const currentSnapshot = await firestore.collection(collection).get();
+        const currentIds = new Set(currentSnapshot.docs.map(d => d.id));
+        const backupIds = docs.map(d => String(d.id)).filter(Boolean);
+        const inBackupOnly = backupIds.filter(id => !currentIds.has(id));
+        const inCurrentOnly = [...currentIds].filter(id => !backupIds.includes(id));
+        await ref.set({
+          status: 'dryRun',
+          backupDocuments: docs.length,
+          currentDocuments: currentIds.size,
+          wouldRestore: backupIds.length,
+          newFromBackup: inBackupOnly.length,
+          wouldDeleteFromCurrent: inCurrentOnly.length,
+          backupIdsOnlySample: inBackupOnly.slice(0, 20),
+          currentIdsOnlySample: inCurrentOnly.slice(0, 20),
+          completedAt: Timestamp.now()
+        }, { merge: true });
+        logger.info('Torrkörning klar (inget ändrades)');
+        return;
       }
 
       // Töm nuvarande samling innan återställning
