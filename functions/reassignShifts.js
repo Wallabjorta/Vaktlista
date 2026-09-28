@@ -1,4 +1,5 @@
 import { onRequest } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import * as logger from 'firebase-functions/logger';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
@@ -81,5 +82,53 @@ export const reassignShifts = onRequest(
 
     logger.info(`Flyttade ${matching.length} vakter från ${fromId} till ${toId}`);
     return res.status(200).json({ updated: matching.length, fromEmployeeId: fromId, toEmployeeId: toId });
+  }
+);
+
+// Enklaste sättet att köra omflyttningen: skapa ett dokument i samlingen
+// reassignJobs med fälten fromEmployeeId och toEmployeeId (i Firebase-konsollen
+// eller appen) så körs den automatiskt. Dokumentet uppdateras med status.
+export const reassignOnJob = onDocumentCreated(
+  { region: 'us-central1', document: 'reassignJobs/{jobId}' },
+  async (event) => {
+    const data = event.data?.data();
+    if (!data?.fromEmployeeId || !data?.toEmployeeId) {
+      logger.error('reassignJob saknar fromEmployeeId/toEmployeeId');
+      return;
+    }
+    const { fromEmployeeId, toEmployeeId } = data;
+    const firestore = getFirestore();
+
+    const targetSnap = await firestore.collection('employees').doc(toEmployeeId).get();
+    if (!targetSnap.exists) {
+      await event.data.ref.set({ status: 'error', error: `Anställd ${toEmployeeId} finns inte` }, { merge: true });
+      return;
+    }
+
+    const shiftsSnap = await firestore.collection('shifts')
+      .where('employeeId', '==', fromEmployeeId)
+      .get();
+
+    const batch = firestore.batch();
+    for (const doc of shiftsSnap.docs) {
+      batch.update(doc.ref, { employeeId: toEmployeeId });
+    }
+    if (shiftsSnap.docs.length > 0) {
+      await batch.commit();
+    }
+
+    await event.data.ref.set({
+      status: 'done',
+      updated: shiftsSnap.docs.length,
+      completedAt: Timestamp.now()
+    }, { merge: true });
+
+    await firestore.collection('auditLogs').add({
+      action: 'reassign-shifts',
+      details: `Flyttade ${shiftsSnap.docs.length} vakter från ${fromEmployeeId} till ${toEmployeeId}`,
+      timestamp: Timestamp.now()
+    });
+
+    logger.info(`Flyttade ${shiftsSnap.docs.length} vakter från ${fromEmployeeId} till ${toEmployeeId}`);
   }
 );
