@@ -192,7 +192,7 @@ function ShiftCalendar({
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
                   colSpan={1 + dates.length}
-                  className="p-1.5 px-3 font-semibold text-sm uppercase tracking-wide sticky left-0"
+                  className="p-1 px-3 font-semibold text-sm uppercase tracking-wide sticky left-0"
                   style={{ backgroundColor: '#374151' }}
                 >
                   {category}
