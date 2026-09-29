@@ -1083,6 +1083,7 @@ function App() {
           selectedDepartment={selectedDepartment}
           currentDate={currentDate}
           onBulkAddShifts={handleBulkAddShiftsFromOverview}
+          onDeleteShift={handleDeleteShift}
           onClose={() => setShowOverviewCalendar(false)}
         />
       )}

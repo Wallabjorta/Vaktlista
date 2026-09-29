@@ -33,6 +33,7 @@ function OverviewCalendar({
   holidays = [],
   vacations = {},
   onBulkAddShifts,
+  onDeleteShift,
   onClose
 }) {
   const getDates = () => {
@@ -124,19 +125,7 @@ function OverviewCalendar({
       if (exists) {
         return prev.filter(c => !(c.date === dateStr && c.employeeId === employeeId));
       }
-      if (isCtrlOrMeta) {
-        return [...prev, { date: dateStr, employeeId }];
-      }
-      // Uten Ctrl: velg alle ansatte i filtrert liste som mangler vakt denne dagen
-      const wasDaySelected = prev.some(c => c.date === dateStr);
-      const otherDays = prev.filter(c => c.date !== dateStr);
-      if (wasDaySelected) {
-        return otherDays;
-      }
-      const daySelection = filteredEmployees
-        .filter(emp => !shifts.some(s => s.date === dateStr && s.employeeId === emp.id))
-        .map(emp => ({ date: dateStr, employeeId: emp.id }));
-      return [...otherDays, ...daySelection];
+      return [...prev, { date: dateStr, employeeId }];
     });
   };
 
@@ -148,6 +137,17 @@ function OverviewCalendar({
     onBulkAddShifts(selectedCells, bulkForm);
     setSelectedCells([]);
     setShowBulkModal(false);
+  };
+
+  const shiftsInSelectedCells = shifts.filter(s =>
+    selectedCells.some(c => c.date === s.date && c.employeeId === s.employeeId)
+  );
+
+  const handleBulkDelete = () => {
+    if (!onDeleteShift || shiftsInSelectedCells.length === 0) return;
+    if (!confirm('Slett ' + shiftsInSelectedCells.length + ' vakter?')) return;
+    shiftsInSelectedCells.forEach(shift => onDeleteShift(shift.id));
+    setSelectedCells([]);
   };
 
   const formatDateNo = (dateStr) => {
@@ -178,6 +178,14 @@ function OverviewCalendar({
                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
               >
                 Ny vakt ({uniqueSelectedEmployees.length} ansatte, {uniqueSelectedDates.length} dager)
+              </button>
+            )}
+            {shiftsInSelectedCells.length > 0 && (
+              <button
+                onClick={handleBulkDelete}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 whitespace-nowrap"
+              >
+                Slett vakter ({shiftsInSelectedCells.length})
               </button>
             )}
             {selectedCells.length > 0 && (
