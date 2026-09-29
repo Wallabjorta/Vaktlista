@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useRef } from 'react';
 
-export const EMPLOYEE_CATEGORIES = ['Skiutleie', 'Butikk', 'Skiskole', 'Ekstra', 'Admin'];
+export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
 
 const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
     return employee.category;
   }
   const deptIds = employee.deptIds || [];
-  if (deptIds.includes('dept-4')) return 'Butikk';
+  if (deptIds.includes('dept-4')) return 'Butikk Vest';
   if (deptIds.includes('dept-3')) return 'Skiskole';
-  return 'Skiutleie';
+  return 'Skiutleie Vest';
 };
 
 const groupByCategory = (employeeList) => {
