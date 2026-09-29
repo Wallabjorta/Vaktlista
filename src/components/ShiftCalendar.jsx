@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 
-export const EMPLOYEE_CATEGORIES = ['Skiutleie', 'Butikk', 'Skiskole'];
+export const EMPLOYEE_CATEGORIES = ['Skiutleie', 'Butikk', 'Skiskole', 'Ekstra'];
 
 const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
