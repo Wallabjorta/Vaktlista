@@ -1,4 +1,28 @@
 import React, { useState, useCallback } from 'react';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
+
+const inferCategory = (employee) => {
+  if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
+    return employee.category;
+  }
+  const deptIds = employee.deptIds || [];
+  if (deptIds.includes('dept-4')) return 'Butikk';
+  if (deptIds.includes('dept-3')) return 'Skiskole';
+  return 'Skiutleie';
+};
+
+const groupByCategory = (employeeList) => {
+  const groups = new Map();
+  for (const category of EMPLOYEE_CATEGORIES) {
+    groups.set(category, []);
+  }
+  for (const employee of employeeList) {
+    const category = inferCategory(employee);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(employee);
+  }
+  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
+};
 
 function OverviewCalendar({
   employees = [],
@@ -209,7 +233,17 @@ function OverviewCalendar({
               </tr>
             </thead>
             <tbody>
-              {(filteredEmployees || []).map((employee) => (
+              {groupByCategory(filteredEmployees || []).flatMap(([category, categoryEmployees]) => [
+                <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
+                  <td
+                    colSpan={1 + dates.length}
+                    className="p-1.5 px-3 font-semibold text-sm uppercase tracking-wide sticky left-0"
+                    style={{ backgroundColor: '#374151' }}
+                  >
+                    {category}
+                  </td>
+                </tr>,
+                ...categoryEmployees.map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">
                   <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
@@ -271,7 +305,8 @@ function OverviewCalendar({
                     );
                   })}
                 </tr>
-              ))}
+                ))
+              ])}
             </tbody>
           </table>
         </div>
