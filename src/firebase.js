@@ -83,8 +83,21 @@ export const getAuditLogs = async () => {
   try {
     const snapshot = await getDocs(auditLogsCollection);
     return snapshot.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+      .map(d => {
+        const data = d.data();
+        let ts = data.timestamp;
+        if (ts && typeof ts.toDate === "function") {
+          ts = ts.toDate().toISOString();
+        }
+        if (ts instanceof Date) {
+          ts = ts.toISOString();
+        }
+        if (ts && !String(ts).includes("T")) {
+          ts = new Date(ts).toISOString();
+        }
+        return { id: d.id, ...data, timestamp: ts };
+      })
+      .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")));
   } catch (error) {
     console.error("Error getting audit logs:", error);
     return [];
