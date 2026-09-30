@@ -1,4 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
+import GroupBarsRow from './GroupBarsRow';
+import { subscribeToGroupEvents } from '../firebase';
+
 
 export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
 
@@ -42,7 +45,10 @@ function ShiftCalendar({
   selectedEmployeeForBulk = null,
   onDateSelection,
   onClearSelection,
-  onNavigateWeek
+  onNavigateWeek,
+  onAddGroupEvent,
+  onEditGroupEvent,
+  onDeleteGroupEvent
 }) {
   const shortenComment = (comment, maxWords = 2) => {
     if (!comment) return '';
@@ -188,6 +194,13 @@ function ShiftCalendar({
             </tr>
           </thead>
           <tbody>
+          <GroupBarsRow
+            dates={dates}
+            currentUser={currentUser}
+            onAddEvent={onAddGroupEvent}
+            onEditEvent={onEditGroupEvent}
+            onDeleteEvent={onDeleteGroupEvent}
+          />
             {groupByCategory(employees || []).flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td

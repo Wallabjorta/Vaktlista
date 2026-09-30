@@ -41,6 +41,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Grupperevent (hämtning/leverans av grupper): läs/skriv
+    match /groupEvents/{eventId} {
+      allow read, write: if true;
+    }
+
     // Backup-metadata: endast Cloud Functions (Admin SDK kringgår reglerna)
     match /backups/{backupId} {
       allow read, write: if false;
