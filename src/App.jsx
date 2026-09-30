@@ -34,6 +34,9 @@ import {
   functionsUrl
 } from './firebase';
 import AuditLogView from './components/AuditLogView';
+import GroupEventsCalendar from './components/GroupEventsCalendar';
+import GroupEventModal from './components/GroupEventModal';
+import { addGroupEvent, updateGroupEvent, deleteGroupEvent } from './firebase';
 import { hashPassword, verifyPassword } from './utils/passwords';
 
 // Kun denne administratoren kan se endringsloggen
@@ -135,6 +138,8 @@ function App() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [showGroupEventModal, setShowGroupEventModal] = useState(false);
+  const [groupEventToEdit, setGroupEventToEdit] = useState(null);
   const [showOverviewCalendar, setShowOverviewCalendar] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
@@ -240,6 +245,42 @@ function App() {
     setShowLoginModal(false);
     return true;
   }, [employees, updateEmployeeFirebase]);
+
+  const handleSaveGroupEvent = useCallback(async (data) => {
+    try {
+      if (groupEventToEdit) {
+        await updateGroupEvent(groupEventToEdit.id, data);
+        await logAdminAction(currentUser, 'group_event_update', {
+          groupEventId: groupEventToEdit.id,
+          name: data.groupName,
+          pickupDate: data.pickupDate,
+          dropoffDate: data.dropoffDate
+        });
+      } else {
+        await addGroupEvent(data);
+        await logAdminAction(currentUser, 'group_event_add', {
+          name: data.groupName,
+          pickupDate: data.pickupDate,
+          dropoffDate: data.dropoffDate
+        });
+      }
+      setShowGroupEventModal(false);
+      setGroupEventToEdit(null);
+    } catch (error) {
+      console.error('Error saving group event:', error);
+      alert('Feil ved lagring av grupperevent: ' + error.message);
+    }
+  }, [groupEventToEdit, currentUser]);
+
+  const handleDeleteGroupEvent = useCallback(async (id) => {
+    try {
+      await deleteGroupEvent(id);
+      await logAdminAction(currentUser, 'group_event_delete', { groupEventId: id });
+    } catch (error) {
+      console.error('Error deleting group event:', error);
+      alert('Feil ved sletting av grupperevent: ' + error.message);
+    }
+  }, [currentUser]);
 
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
@@ -1117,10 +1158,25 @@ function App() {
         />
       )}
 
+      {currentUser && (
+        <GroupEventsCalendar
+          currentUser={currentUser}
+          onAddEvent={() => setShowGroupEventModal(true)}
+          onEditEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+          onDeleteEvent={handleDeleteGroupEvent}
+        />
+      )}
       {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
         <AuditLogView employees={employees} />
       )}
 
+      {showGroupEventModal && (
+        <GroupEventModal
+          event={groupEventToEdit}
+          onSave={handleSaveGroupEvent}
+          onClose={() => { setShowGroupEventModal(false); setGroupEventToEdit(null); }}
+        />
+      )}
       {showDepartmentModal && (
         <DepartmentModal
           departments={departments}

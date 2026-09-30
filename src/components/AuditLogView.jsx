@@ -12,7 +12,10 @@ const ACTION_LABELS = {
   department_update: 'Endret avdeling',
   department_delete: 'Slettet avdeling',
   leave_status: 'Håndterte fraværsforespørsel',
-  swap_status: 'Håndterte bytteforespørsel'
+  swap_status: 'Håndterte bytteforespørsel',
+  group_event_add: 'La til grupperevent',
+  group_event_update: 'Endret grupperevent',
+  group_event_delete: 'Slettet grupperevent'
 };
 
 const formatTimestamp = (iso) => {

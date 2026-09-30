@@ -42,6 +42,66 @@ const notificationsCollection = collection(db, "notifications");
 const leaveRequestsCollection = collection(db, "leaveRequests");
 const swapRequestsCollection = collection(db, "swapRequests");
 const auditLogsCollection = collection(db, "auditLogs");
+const groupEventsCollection = collection(db, "groupEvents");
+
+// ===== GROUP EVENTS =====
+
+/**
+ * Subscribe to realtime updates for group events (hente/levere-datoer per gruppe)
+ * @param {Function} callback - Callback function with array of group events
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToGroupEvents = (callback) => {
+  return onSnapshot(groupEventsCollection, (snapshot) => {
+    const events = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    callback(events);
+  });
+};
+
+/**
+ * Legg til et nytt grupperevent
+ * @param {Object} event - { groupName, pickupDate, dropoffDate, contact, participants, notes, color }
+ * @returns {Promise<Object>} Det lagrede eventet med id
+ */
+export const addGroupEvent = async (event) => {
+  try {
+    const docRef = await addDoc(groupEventsCollection, event);
+    return { ...event, id: docRef.id };
+  } catch (error) {
+    console.error("Error adding group event:", error);
+    throw error;
+  }
+};
+
+/**
+ * Oppdater et grupperevent
+ * @param {string} id - Dokument-ID
+ * @param {Object} updates - Felt som skal oppdateres
+ * @returns {Promise<boolean>} Success status
+ */
+export const updateGroupEvent = async (id, updates) => {
+  try {
+    const docRef = doc(db, "groupEvents", id);
+    await setDoc(docRef, updates, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error updating group event:", error);
+    throw error;
+  }
+};
+
+/**
+ * Slett et grupperevent
+ * @param {string} id - Dokument-ID
+ */
+export const deleteGroupEvent = async (id) => {
+  try {
+    await deleteDoc(doc(db, "groupEvents", id));
+  } catch (error) {
+    console.error("Error deleting group event:", error);
+    throw error;
+  }
+};
 
 // ============ FIREBASE SERVICE FUNCTIONS ============
 
