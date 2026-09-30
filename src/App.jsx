@@ -34,7 +34,6 @@ import {
   functionsUrl
 } from './firebase';
 import AuditLogView from './components/AuditLogView';
-import GroupEventsCalendar from './components/GroupEventsCalendar';
 import GroupEventModal from './components/GroupEventModal';
 import { addGroupEvent, updateGroupEvent, deleteGroupEvent } from './firebase';
 import { hashPassword, verifyPassword } from './utils/passwords';
@@ -958,6 +957,9 @@ function App() {
                   setCurrentDate(newDate);
                 }
               }}
+              onAddGroupEvent={() => setShowGroupEventModal(true)}
+              onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+              onDeleteGroupEvent={handleDeleteGroupEvent}
             />
             <div className="flex items-center gap-2 my-2 flex-wrap">
               <button
@@ -1158,14 +1160,6 @@ function App() {
         />
       )}
 
-      {currentUser && (
-        <GroupEventsCalendar
-          currentUser={currentUser}
-          onAddEvent={() => setShowGroupEventModal(true)}
-          onEditEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
-          onDeleteEvent={handleDeleteGroupEvent}
-        />
-      )}
       {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
         <AuditLogView employees={employees} />
       )}
