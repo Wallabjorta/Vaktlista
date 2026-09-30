@@ -5,7 +5,9 @@ const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#06B6D4'
 const EMPTY_FORM = {
   groupName: '',
   pickupDate: '',
+  pickupTime: '',
   dropoffDate: '',
+  dropoffTime: '',
   contact: '',
   participants: '',
   notes: '',
@@ -18,7 +20,9 @@ function GroupEventModal({ event, onSave, onClose }) {
     return {
       groupName: event.groupName || '',
       pickupDate: event.pickupDate || '',
+      pickupTime: event.pickupTime || '',
       dropoffDate: event.dropoffDate || '',
+      dropoffTime: event.dropoffTime || '',
       contact: event.contact || '',
       participants: event.participants != null ? String(event.participants) : '',
       notes: event.notes || '',
@@ -41,7 +45,9 @@ function GroupEventModal({ event, onSave, onClose }) {
     onSave({
       groupName: form.groupName.trim(),
       pickupDate: form.pickupDate || null,
+      pickupTime: form.pickupDate && form.pickupTime ? form.pickupTime : null,
       dropoffDate: form.dropoffDate || null,
+      dropoffTime: form.dropoffDate && form.dropoffTime ? form.dropoffTime : null,
       contact: form.contact.trim() || null,
       participants: form.participants ? Number(form.participants) : null,
       notes: form.notes.trim() || null,
@@ -77,6 +83,13 @@ function GroupEventModal({ event, onSave, onClose }) {
                 onChange={handleChange('pickupDate')}
                 className="w-full p-2 border rounded"
               />
+              <input
+                type="time"
+                value={form.pickupTime}
+                onChange={handleChange('pickupTime')}
+                className="w-full p-2 border rounded mt-1"
+                placeholder="Klokkeslett"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Leveringsdato</label>
@@ -85,6 +98,13 @@ function GroupEventModal({ event, onSave, onClose }) {
                 value={form.dropoffDate}
                 onChange={handleChange('dropoffDate')}
                 className="w-full p-2 border rounded"
+              />
+              <input
+                type="time"
+                value={form.dropoffTime}
+                onChange={handleChange('dropoffTime')}
+                className="w-full p-2 border rounded mt-1"
+                placeholder="Klokkeslett"
               />
             </div>
           </div>
