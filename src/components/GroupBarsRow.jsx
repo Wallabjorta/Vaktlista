@@ -103,13 +103,15 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
                     }}
                     title={`${event.groupName}: henter ${formatDateTime(event.pickupDate, event.pickupTime)}, leverer ${formatDateTime(event.dropoffDate, event.dropoffTime)}`}
                   >
-                    <span className="truncate shrink-0">
+                    {event.pickupTime ? (
+                      <span className="font-semibold shrink-0">ut {event.pickupTime}</span>
+                    ) : <span className="shrink-0" />}
+                    <span className="truncate flex-1 text-center">
                       {event.groupName}
-                      {event.pickupTime && <span className="font-semibold"> · ut {event.pickupTime}</span>}
                     </span>
-                    {event.dropoffTime && (
-                      <span className="ml-auto pl-1 font-semibold shrink-0">inn {event.dropoffTime}</span>
-                    )}
+                    {event.dropoffTime ? (
+                      <span className="font-semibold shrink-0">inn {event.dropoffTime}</span>
+                    ) : <span className="shrink-0" />}
                   </button>
                 ))}
               </div>
