@@ -52,16 +52,24 @@ const auditLogsCollection = collection(db, "auditLogs");
  * @param {string} action - Handling: 'shift_add' | 'shift_update' | 'shift_delete' | 'employee_add' | 'employee_update' | 'employee_delete' | 'department_add' | 'department_update' | 'department_delete' | 'leave_status' | 'swap_status'
  * @param {Object} details - Fritekstdetaljer om handlingen
  */
+const removeUndefined = (obj) => {
+  const out = {};
+  for (const [key, value] of Object.entries(obj || {})) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+};
+
 export const logAdminAction = async (admin, action, details = {}) => {
   if (!admin || !admin.isAdmin) return;
   try {
-    await addDoc(auditLogsCollection, {
+    await addDoc(auditLogsCollection, removeUndefined({
       adminId: admin.id,
       adminName: admin.name,
       action,
-      details,
+      details: removeUndefined(details),
       timestamp: new Date().toISOString()
-    });
+    }));
   } catch (error) {
     console.error("Error writing audit log:", error);
   }
@@ -75,8 +83,21 @@ export const getAuditLogs = async () => {
   try {
     const snapshot = await getDocs(auditLogsCollection);
     return snapshot.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.timestamp || "").localeCompare(a.timestamp || ""));
+      .map(d => {
+        const data = d.data();
+        let ts = data.timestamp;
+        if (ts && typeof ts.toDate === "function") {
+          ts = ts.toDate().toISOString();
+        }
+        if (ts instanceof Date) {
+          ts = ts.toISOString();
+        }
+        if (ts && !String(ts).includes("T")) {
+          ts = new Date(ts).toISOString();
+        }
+        return { id: d.id, ...data, timestamp: ts };
+      })
+      .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")));
   } catch (error) {
     console.error("Error getting audit logs:", error);
     return [];

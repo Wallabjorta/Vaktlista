@@ -40,7 +40,7 @@ jobs:
                 continue;
               }
 
-              const { data: checks } = await github.rest.checkSuites.forRef({
+              const { data: checks } = await github.rest.checks.listSuitesForRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: pr.head.sha
