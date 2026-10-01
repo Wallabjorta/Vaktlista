@@ -1128,6 +1128,10 @@ function App() {
           onBulkAddShifts={handleBulkAddShiftsFromOverview}
           onDeleteShift={handleDeleteShift}
           onClose={() => setShowOverviewCalendar(false)}
+          currentUser={currentUser}
+          onAddGroupEvent={() => setShowGroupEventModal(true)}
+          onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+          onDeleteGroupEvent={handleDeleteGroupEvent}
         />
       )}
 

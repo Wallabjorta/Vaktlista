@@ -45,12 +45,24 @@ jobs:
                 repo: context.repo.repo,
                 ref: pr.head.sha
               });
-              const pending = checks.check_suites.filter(c => c.status !== 'completed');
-              if (pending.length > 0) {
+              const STALE_MS = 30 * 60 * 1000;
+              const now = Date.now();
+              const active = checks.check_suites.filter(c =>
+                c.status !== 'completed' &&
+                now - Date.parse(c.created_at) < STALE_MS
+              );
+              if (active.length > 0) {
                 console.log(`PR #${pr.number} has pending checks, skipping`);
                 continue;
               }
-              const failed = checks.check_suites.filter(c => c.conclusion !== 'success' && c.conclusion !== 'neutral' && c.conclusion !== 'skipped');
+              const stale = checks.check_suites.filter(c =>
+                c.status !== 'completed' &&
+                now - Date.parse(c.created_at) >= STALE_MS
+              );
+              if (stale.length > 0) {
+                console.log(`PR #${pr.number} has ${stale.length} stale queued check suite(s) older than 30 min, ignoring`);
+              }
+              const failed = checks.check_suites.filter(c => c.conclusion && c.conclusion !== 'success' && c.conclusion !== 'neutral' && c.conclusion !== 'skipped');
               if (failed.length > 0) {
                 console.log(`PR #${pr.number} has failed checks, skipping`);
                 continue;
