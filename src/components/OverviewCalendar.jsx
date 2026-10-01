@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
+import GroupBarsRow from './GroupBarsRow';
 
 const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
@@ -34,7 +35,11 @@ function OverviewCalendar({
   vacations = {},
   onBulkAddShifts,
   onDeleteShift,
-  onClose
+  onClose,
+  currentUser,
+  onAddGroupEvent,
+  onEditGroupEvent,
+  onDeleteGroupEvent
 }) {
   const getDates = () => {
     const dates = [];
@@ -241,6 +246,14 @@ function OverviewCalendar({
               </tr>
             </thead>
             <tbody>
+              <GroupBarsRow
+                compact
+                dates={dates}
+                currentUser={currentUser}
+                onAddEvent={onAddGroupEvent}
+                onEditEvent={onEditGroupEvent}
+                onDeleteEvent={onDeleteGroupEvent}
+              />
               {groupByCategory(filteredEmployees || []).flatMap(([category, categoryEmployees]) => [
                 <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                   <td

@@ -43,6 +43,139 @@ const leaveRequestsCollection = collection(db, "leaveRequests");
 const swapRequestsCollection = collection(db, "swapRequests");
 const auditLogsCollection = collection(db, "auditLogs");
 const groupEventsCollection = collection(db, "groupEvents");
+const revenueCollection = collection(db, "revenues");
+
+// ===== STAFFING CONFIG =====
+
+const STAFFING_CONFIG_DOC = "staffingConfig";
+
+/**
+ * Hämta bemanningskonfiguration (formel + trösklar)
+ * @returns {Promise<Object>} { peoplePerAmount, minimumStaff, thresholds: [{ minRevenue, staff, label }] }
+ */
+export const getStaffingConfig = async () => {
+  try {
+    const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
+    if (!snap.exists()) {
+      return {
+        peoplePerAmount: 15000,
+        minimumStaff: 2,
+        thresholds: [
+          { minRevenue: 0, staff: 2, label: 'Lav' },
+          { minRevenue: 25000, staff: 4, label: 'Middels' },
+          { minRevenue: 40000, staff: 6, label: 'Høy' }
+        ]
+      };
+    }
+    return snap.data();
+  } catch (error) {
+    console.error("Error getting staffing config:", error);
+    return null;
+  }
+};
+
+/**
+ * Spara bemanningskonfiguration
+ * @param {Object} config
+ */
+export const saveStaffingConfig = async (config) => {
+  try {
+    await setDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), config);
+    return true;
+  } catch (error) {
+    console.error("Error saving staffing config:", error);
+    throw error;
+  }
+};
+
+/**
+ * Prenumerera på bemanningskonfiguration i realtid
+ */
+export const subscribeToStaffingConfig = (callback) => {
+  return onSnapshot(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+};
+
+// ===== REVENUE (omsättning per dag) =====
+
+/**
+ * Importera daglig omsättning (ersätter befintliga poster för samma datum)
+ * @param {Array} entries - [{ date: 'YYYY-MM-DD', amount: number }]
+ */
+export const importRevenues = async (entries) => {
+  const batch = writeBatch(db);
+  for (const entry of entries) {
+    const ref = doc(db, "revenues", entry.date);
+    batch.set(ref, { date: entry.date, amount: entry.amount }, { merge: true });
+  }
+  await batch.commit();
+  return entries.length;
+};
+
+/**
+ * Spara/uppdatera en enskild dags omsättning
+ */
+export const saveRevenue = async (date, amount) => {
+  try {
+    await setDoc(doc(db, "revenues", date), { date, amount: Number(amount) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error saving revenue:", error);
+    throw error;
+  }
+};
+
+/**
+ * Ta bort en dags omsättning
+ */
+export const deleteRevenue = async (date) => {
+  try {
+    await deleteDoc(doc(db, "revenues", date));
+  } catch (error) {
+    console.error("Error deleting revenue:", error);
+    throw error;
+  }
+};
+
+/**
+ * Prenumerera på all omsättningsdata i realtid
+ */
+export const subscribeToRevenues = (callback) => {
+  return onSnapshot(revenueCollection, (snapshot) => {
+    const revenues = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(revenues);
+  });
+};
+
+/**
+ * Räkna fram rekommenderad bemanning utifrån konfiguration
+ * @param {number} amount
+ * @param {Object} config
+ * @returns {Object} { staff, label, source }
+ */
+export const recommendStaffing = (amount, config) => {
+  if (amount == null || isNaN(amount)) return { staff: null, label: '', source: null };
+  if (!config) return { staff: null, label: '', source: null };
+
+  let byFormula = Math.ceil(amount / Math.max(1, config.peoplePerAmount || 1));
+  byFormula = Math.max(byFormula, config.minimumStaff || 0);
+
+  let byThreshold = null;
+  let thresholdLabel = '';
+  if (Array.isArray(config.thresholds) && config.thresholds.length > 0) {
+    const sorted = [...config.thresholds].sort((a, b) => (a.minRevenue || 0) - (b.minRevenue || 0));
+    for (const t of sorted) {
+      if (amount >= (t.minRevenue || 0)) {
+        byThreshold = t.staff;
+        thresholdLabel = t.label || '';
+      }
+    }
+  }
+
+  if (byThreshold == null) return { staff: byFormula, label: 'formel', source: 'formula' };
+  return { staff: Math.max(byFormula, byThreshold), label: thresholdLabel, source: 'max' };
+};
 
 // ===== GROUP EVENTS =====
 

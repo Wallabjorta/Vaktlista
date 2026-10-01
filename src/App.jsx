@@ -9,6 +9,7 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
+import StaffingPlanner from './components/StaffingPlanner';
 import LeaveRequestModal from './components/LeaveRequestModal';
 import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
@@ -1055,6 +1056,9 @@ function App() {
           />
         </div>
       )}
+      {currentUser?.isAdmin && (
+        <StaffingPlanner employees={employees} shifts={shifts} currentUser={currentUser} />
+      )}
 
 
       {showLoginModal && (
@@ -1128,6 +1132,10 @@ function App() {
           onBulkAddShifts={handleBulkAddShiftsFromOverview}
           onDeleteShift={handleDeleteShift}
           onClose={() => setShowOverviewCalendar(false)}
+          currentUser={currentUser}
+          onAddGroupEvent={() => setShowGroupEventModal(true)}
+          onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+          onDeleteGroupEvent={handleDeleteGroupEvent}
         />
       )}
 

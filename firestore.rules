@@ -46,6 +46,15 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Omsättning per dag och bemanningskonfiguration: läs/skriv
+    match /revenues/{dateId} {
+      allow read, write: if true;
+    }
+
+    match /staffingConfig/{docId} {
+      allow read, write: if true;
+    }
+
     // Backup-metadata: endast Cloud Functions (Admin SDK kringgår reglerna)
     match /backups/{backupId} {
       allow read, write: if false;
