@@ -103,7 +103,6 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     });
   }, [revenues, location]);
 
-  const [clearing, setClearing] = useState(false);
 
   const locationLabel = location === 'total' ? 'total (ingen plats)' : location === 'st' ? 'Skiutleie Vest' : 'Skiutleie Øst';
 
