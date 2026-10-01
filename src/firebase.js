@@ -103,11 +103,14 @@ export const subscribeToStaffingConfig = (callback) => {
  * Importera daglig omsättning (ersätter befintliga poster för samma datum)
  * @param {Array} entries - [{ date: 'YYYY-MM-DD', amount: number }]
  */
-export const importRevenues = async (entries) => {
+export const importRevenues = async (entries, location = null) => {
   const batch = writeBatch(db);
   for (const entry of entries) {
-    const ref = doc(db, "revenues", entry.date);
-    batch.set(ref, { date: entry.date, amount: entry.amount }, { merge: true });
+    const docId = location ? `${location}_${entry.date}` : entry.date;
+    const ref = doc(db, "revenues", docId);
+    const data = { date: entry.date, amount: entry.amount };
+    if (location) data.location = location;
+    batch.set(ref, data, { merge: true });
   }
   await batch.commit();
   return entries.length;
@@ -116,9 +119,12 @@ export const importRevenues = async (entries) => {
 /**
  * Spara/uppdatera en enskild dags omsättning
  */
-export const saveRevenue = async (date, amount) => {
+export const saveRevenue = async (date, amount, location = null) => {
   try {
-    await setDoc(doc(db, "revenues", date), { date, amount: Number(amount) }, { merge: true });
+    const docId = location ? `${location}_${date}` : date;
+    const data = { date, amount: Number(amount) };
+    if (location) data.location = location;
+    await setDoc(doc(db, "revenues", docId), data, { merge: true });
     return true;
   } catch (error) {
     console.error("Error saving revenue:", error);
@@ -129,9 +135,10 @@ export const saveRevenue = async (date, amount) => {
 /**
  * Ta bort en dags omsättning
  */
-export const deleteRevenue = async (date) => {
+export const deleteRevenue = async (date, location = null) => {
   try {
-    await deleteDoc(doc(db, "revenues", date));
+    const docId = location ? `${location}_${date}` : date;
+    await deleteDoc(doc(db, "revenues", docId));
   } catch (error) {
     console.error("Error deleting revenue:", error);
     throw error;

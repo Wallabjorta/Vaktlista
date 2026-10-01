@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 import {
   subscribeToRevenues,
   subscribeToStaffingConfig,
@@ -24,6 +25,12 @@ const formatKr = (n) => {
   return new Intl.NumberFormat('no-NO', { maximumFractionDigits: 0 }).format(n) + ' kr';
 };
 
+const LOCATION_CATEGORIES = {
+  total: null,
+  st: ['Skiutleie Vest', 'Butikk Vest'],
+  'øst': ['Skiutleie Øst', 'Butikk Øst']
+};
+
 const DEFAULT_CONFIG = {
   peoplePerAmount: 15000,
   minimumStaff: 2,
@@ -36,8 +43,10 @@ const DEFAULT_CONFIG = {
 
 function StaffingPlanner({ employees, shifts, currentUser }) {
   const [revenues, setRevenues] = useState([]);
-  const [config, setConfig] = useState(null);
+  const [configs, setConfigs] = useState(null);
   const [tab, setTab] = useState('compare');
+  const [location, setLocation] = useState('total');
+  const config = configs ? (configs[location] || configs.total || DEFAULT_CONFIG) : null;
   const [csvText, setCsvText] = useState('');
   const [importMsg, setImportMsg] = useState('');
   const [editingConfig, setEditingConfig] = useState(false);
@@ -45,14 +54,18 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
 
   useEffect(() => {
     const unsub1 = subscribeToRevenues(revs => setRevenues(revs));
-    const unsub2 = subscribeToStaffingConfig(cfg => setConfig(cfg || DEFAULT_CONFIG));
+    const unsub2 = subscribeToStaffingConfig(cfg => {
+      if (!cfg) { setConfigs({ total: DEFAULT_CONFIG }); return; }
+      if (cfg.locations) { setConfigs(cfg.locations); return; }
+      setConfigs({ total: cfg });
+    });
     return () => { unsub1(); unsub2(); };
   }, []);
 
   const [editConfig, setEditConfig] = useState(null);
   useEffect(() => {
     if (config) setEditConfig(JSON.parse(JSON.stringify(config)));
-  }, [config]);
+  }, [config, location]);
 
   const revenueByDate = useMemo(() => {
     const map = new Map();
@@ -60,17 +73,36 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     return map;
   }, [revenues]);
 
+  const employeeById = useMemo(() => {
+    const map = new Map();
+    for (const e of employees) map.set(String(e.id), e);
+    return map;
+  }, [employees]);
+
   const shiftsByDate = useMemo(() => {
     const map = new Map();
+    const categories = LOCATION_CATEGORIES[location];
     for (const s of shifts) {
       if (!map.has(s.date)) map.set(s.date, []);
+      if (categories) {
+        const emp = employeeById.get(String(s.employeeId));
+        const cat = emp?.category || null;
+        if (!cat || !categories.includes(cat)) continue;
+      }
       map.get(s.date).push(s);
     }
     return map;
-  }, [shifts]);
+  }, [shifts, location, employeeById]);
+
+  const filteredRevenues = useMemo(() => {
+    return revenues.filter(r => {
+      if (location === 'total') return !r.location;
+      return r.location === location;
+    });
+  }, [revenues, location]);
 
   const rows = useMemo(() => {
-    return revenues
+    return filteredRevenues
       .slice()
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
       .map(rev => {
@@ -87,7 +119,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           diff
         };
       });
-  }, [revenues, config, shiftsByDate]);
+  }, [filteredRevenues, config, shiftsByDate]);
 
   const parseCsv = (text) => {
     const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
@@ -125,8 +157,9 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       return;
     }
     try {
-      await importRevenues(entries);
-      setImportMsg(`${entries.length} dager importert${errors.length ? `, ${errors.length} rader hoppet over` : ''}.`);
+      const loc = location === 'total' ? null : location;
+      await importRevenues(entries, loc);
+      setImportMsg(`${entries.length} dager importert for ${location === 'total' ? 'total (ingen plats)' : location}${errors.length ? `, ${errors.length} rader hoppet over` : ''}.`);
       setCsvText('');
     } catch (e) {
       setImportMsg('Feil ved import: ' + e.message);
@@ -153,7 +186,16 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           label: t.label || ''
         })).sort((a, b) => a.minRevenue - b.minRevenue)
       };
-      await saveStaffingConfig(clean);
+      const existing = await getStaffingConfig();
+      let locations;
+      if (existing && existing.locations) {
+        locations = { ...existing.locations, [location]: clean };
+      } else if (existing) {
+        locations = { total: existing, [location]: clean };
+      } else {
+        locations = { total: DEFAULT_CONFIG, [location]: clean };
+      }
+      await saveStaffingConfig({ locations });
       setEditingConfig(false);
     } catch (e) {
       alert('Feil ved lagring: ' + e.message);
@@ -181,7 +223,16 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           <h2 className="text-xl font-bold text-gray-800">Bemanning från omsättning</h2>
           <p className="text-gray-600">Rekommenderad bemanning per dag utifrån sist säsongs omsättning</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="px-2 py-1 border rounded text-sm bg-white"
+          >
+            <option value="total">Total (ingen plats)</option>
+            <option value="st">Skiutleie Vest</option>
+            <option value="øst">Skiutleie Øst</option>
+          </select>
           {['compare', 'import', 'settings'].map(t => (
             <button
               key={t}
@@ -197,7 +248,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       {tab === 'compare' && (
         <div>
           {rows.length === 0 ? (
-            <p className="text-gray-500 text-sm">Ingen omsättningsdata importerad ännu — gå till Import-fliken.</p>
+            <p className="text-gray-500 text-sm">Ingen omsättningsdata för {location === 'total' ? 'total' : location} — gå till Import-fliken och välj rätt plats.</p>
           ) : (
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full border-collapse">
@@ -265,6 +316,9 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
 
       {tab === 'settings' && editConfig && (
         <div className="space-y-4 max-w-2xl">
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
+            Redigerar bemanningsinställningar för <strong>{location === 'total' ? 'Total (ingen plats)' : location === 'st' ? 'Skiutleie Vest' : 'Skiutleie Øst'}</strong> — välj plats i dropdownen ovan för att växla.
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Personer per belopp (kr)</label>
