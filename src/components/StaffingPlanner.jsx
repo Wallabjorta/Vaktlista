@@ -38,6 +38,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
   const [revenues, setRevenues] = useState([]);
   const [config, setConfig] = useState(null);
   const [tab, setTab] = useState('compare');
+  const [location, setLocation] = useState('total');
   const [csvText, setCsvText] = useState('');
   const [importMsg, setImportMsg] = useState('');
   const [editingConfig, setEditingConfig] = useState(false);
@@ -69,8 +70,15 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     return map;
   }, [shifts]);
 
+  const filteredRevenues = useMemo(() => {
+    return revenues.filter(r => {
+      if (location === 'total') return !r.location;
+      return r.location === location;
+    });
+  }, [revenues, location]);
+
   const rows = useMemo(() => {
-    return revenues
+    return filteredRevenues
       .slice()
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
       .map(rev => {
@@ -87,7 +95,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           diff
         };
       });
-  }, [revenues, config, shiftsByDate]);
+  }, [filteredRevenues, config, shiftsByDate]);
 
   const parseCsv = (text) => {
     const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
@@ -125,8 +133,9 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       return;
     }
     try {
-      await importRevenues(entries);
-      setImportMsg(`${entries.length} dager importert${errors.length ? `, ${errors.length} rader hoppet over` : ''}.`);
+      const loc = location === 'total' ? null : location;
+      await importRevenues(entries, loc);
+      setImportMsg(`${entries.length} dager importert for ${location === 'total' ? 'total (ingen plats)' : location}${errors.length ? `, ${errors.length} rader hoppet over` : ''}.`);
       setCsvText('');
     } catch (e) {
       setImportMsg('Feil ved import: ' + e.message);
@@ -181,7 +190,16 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           <h2 className="text-xl font-bold text-gray-800">Bemanning från omsättning</h2>
           <p className="text-gray-600">Rekommenderad bemanning per dag utifrån sist säsongs omsättning</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            className="px-2 py-1 border rounded text-sm bg-white"
+          >
+            <option value="total">Total (ingen plats)</option>
+            <option value="st">Skiutleie st/Vest</option>
+            <option value="øst">Skiutleie Øst</option>
+          </select>
           {['compare', 'import', 'settings'].map(t => (
             <button
               key={t}
@@ -197,7 +215,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       {tab === 'compare' && (
         <div>
           {rows.length === 0 ? (
-            <p className="text-gray-500 text-sm">Ingen omsättningsdata importerad ännu — gå till Import-fliken.</p>
+            <p className="text-gray-500 text-sm">Ingen omsättningsdata för {location === 'total' ? 'total' : location} — gå till Import-fliken och välj rätt plats.</p>
           ) : (
             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
               <table className="w-full border-collapse">
