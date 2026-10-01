@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 import {
   subscribeToRevenues,
   subscribeToStaffingConfig,
@@ -24,6 +25,12 @@ const formatKr = (n) => {
   return new Intl.NumberFormat('no-NO', { maximumFractionDigits: 0 }).format(n) + ' kr';
 };
 
+const LOCATION_CATEGORIES = {
+  total: null,
+  st: ['Skiutleie Vest', 'Butikk Vest'],
+  'øst': ['Skiutleie Øst', 'Butikk Øst']
+};
+
 const DEFAULT_CONFIG = {
   peoplePerAmount: 15000,
   minimumStaff: 2,
@@ -36,9 +43,10 @@ const DEFAULT_CONFIG = {
 
 function StaffingPlanner({ employees, shifts, currentUser }) {
   const [revenues, setRevenues] = useState([]);
-  const [config, setConfig] = useState(null);
+  const [configs, setConfigs] = useState(null);
   const [tab, setTab] = useState('compare');
   const [location, setLocation] = useState('total');
+  const config = configs ? (configs[location] || configs.total || DEFAULT_CONFIG) : null;
   const [csvText, setCsvText] = useState('');
   const [importMsg, setImportMsg] = useState('');
   const [editingConfig, setEditingConfig] = useState(false);
@@ -46,14 +54,18 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
 
   useEffect(() => {
     const unsub1 = subscribeToRevenues(revs => setRevenues(revs));
-    const unsub2 = subscribeToStaffingConfig(cfg => setConfig(cfg || DEFAULT_CONFIG));
+    const unsub2 = subscribeToStaffingConfig(cfg => {
+      if (!cfg) { setConfigs({ total: DEFAULT_CONFIG }); return; }
+      if (cfg.locations) { setConfigs(cfg.locations); return; }
+      setConfigs({ total: cfg });
+    });
     return () => { unsub1(); unsub2(); };
   }, []);
 
   const [editConfig, setEditConfig] = useState(null);
   useEffect(() => {
     if (config) setEditConfig(JSON.parse(JSON.stringify(config)));
-  }, [config]);
+  }, [config, location]);
 
   const revenueByDate = useMemo(() => {
     const map = new Map();
@@ -61,14 +73,26 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     return map;
   }, [revenues]);
 
+  const employeeById = useMemo(() => {
+    const map = new Map();
+    for (const e of employees) map.set(String(e.id), e);
+    return map;
+  }, [employees]);
+
   const shiftsByDate = useMemo(() => {
     const map = new Map();
+    const categories = LOCATION_CATEGORIES[location];
     for (const s of shifts) {
       if (!map.has(s.date)) map.set(s.date, []);
+      if (categories) {
+        const emp = employeeById.get(String(s.employeeId));
+        const cat = emp?.category || null;
+        if (!cat || !categories.includes(cat)) continue;
+      }
       map.get(s.date).push(s);
     }
     return map;
-  }, [shifts]);
+  }, [shifts, location, employeeById]);
 
   const filteredRevenues = useMemo(() => {
     return revenues.filter(r => {
@@ -162,7 +186,16 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           label: t.label || ''
         })).sort((a, b) => a.minRevenue - b.minRevenue)
       };
-      await saveStaffingConfig(clean);
+      const existing = await getStaffingConfig();
+      let locations;
+      if (existing && existing.locations) {
+        locations = { ...existing.locations, [location]: clean };
+      } else if (existing) {
+        locations = { total: existing, [location]: clean };
+      } else {
+        locations = { total: DEFAULT_CONFIG, [location]: clean };
+      }
+      await saveStaffingConfig({ locations });
       setEditingConfig(false);
     } catch (e) {
       alert('Feil ved lagring: ' + e.message);
@@ -283,6 +316,9 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
 
       {tab === 'settings' && editConfig && (
         <div className="space-y-4 max-w-2xl">
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
+            Redigerar bemanningsinställningar för <strong>{location === 'total' ? 'Total (ingen plats)' : location === 'st' ? 'Skiutleie st/Vest' : 'Skiutleie Øst'}</strong> — välj plats i dropdownen ovan för att växla.
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Personer per belopp (kr)</label>
