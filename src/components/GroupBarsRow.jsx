@@ -16,6 +16,12 @@ const formatYMD = (dateStr) => {
   return `${Number(d)}. ${MONTH_NAMES[Number(m) - 1]} ${y}`;
 };
 
+const formatDateTime = (dateStr, time) => {
+  const date = formatYMD(dateStr);
+  if (!date) return '—';
+  return time ? `${date} kl. ${time}` : date;
+};
+
 /**
  * Horisontale gruppebarer rett over datokolonnen i hovedkalenderen.
  * Hver gruppe får en farget bar som strekker seg over alle datoer
@@ -95,9 +101,17 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
                       left: `calc(${(startIdx / dates.length) * 100}% + 2px)`,
                       width: `calc(${((endIdx - startIdx + 1) / dates.length) * 100}% - 4px)`
                     }}
-                    title={`${event.groupName}: henter ${formatYMD(event.pickupDate) || '—'}, leverer ${formatYMD(event.dropoffDate) || '—'}`}
+                    title={`${event.groupName}: henter ${formatDateTime(event.pickupDate, event.pickupTime)}, leverer ${formatDateTime(event.dropoffDate, event.dropoffTime)}`}
                   >
-                    <span className="truncate">{event.groupName}</span>
+                    {event.pickupTime ? (
+                      <span className="font-semibold shrink-0">ut {event.pickupTime}</span>
+                    ) : <span className="shrink-0" />}
+                    <span className="truncate flex-1 text-center">
+                      {event.groupName}
+                    </span>
+                    {event.dropoffTime ? (
+                      <span className="font-semibold shrink-0">inn {event.dropoffTime}</span>
+                    ) : <span className="shrink-0" />}
                   </button>
                 ))}
               </div>
@@ -117,8 +131,8 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
               <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
             </div>
             <div className="space-y-2 text-sm">
-              <p><strong>Hentedato:</strong> {formatYMD(selectedEvent.pickupDate) || '—'}</p>
-              <p><strong>Leveringsdato:</strong> {formatYMD(selectedEvent.dropoffDate) || '—'}</p>
+              <p><strong>Henter:</strong> {formatDateTime(selectedEvent.pickupDate, selectedEvent.pickupTime)}</p>
+              <p><strong>Leverer:</strong> {formatDateTime(selectedEvent.dropoffDate, selectedEvent.dropoffTime)}</p>
               {selectedEvent.contact && <p><strong>Kontakt:</strong> {selectedEvent.contact}</p>}
               {selectedEvent.participants != null && <p><strong>Antall deltakere:</strong> {selectedEvent.participants}</p>}
               {selectedEvent.notes && <p className="whitespace-pre-wrap"><strong>Notater:</strong> {selectedEvent.notes}</p>}
