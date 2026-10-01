@@ -230,7 +230,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
             className="px-2 py-1 border rounded text-sm bg-white"
           >
             <option value="total">Total (ingen plats)</option>
-            <option value="st">Skiutleie st/Vest</option>
+            <option value="st">Skiutleie Vest</option>
             <option value="øst">Skiutleie Øst</option>
           </select>
           {['compare', 'import', 'settings'].map(t => (
@@ -317,7 +317,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       {tab === 'settings' && editConfig && (
         <div className="space-y-4 max-w-2xl">
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
-            Redigerar bemanningsinställningar för <strong>{location === 'total' ? 'Total (ingen plats)' : location === 'st' ? 'Skiutleie st/Vest' : 'Skiutleie Øst'}</strong> — välj plats i dropdownen ovan för att växla.
+            Redigerar bemanningsinställningar för <strong>{location === 'total' ? 'Total (ingen plats)' : location === 'st' ? 'Skiutleie Vest' : 'Skiutleie Øst'}</strong> — välj plats i dropdownen ovan för att växla.
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
