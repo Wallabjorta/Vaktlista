@@ -247,6 +247,7 @@ function OverviewCalendar({
             </thead>
             <tbody>
               <GroupBarsRow
+                compact
                 dates={dates}
                 currentUser={currentUser}
                 onAddEvent={onAddGroupEvent}
