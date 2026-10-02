@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 import {
   subscribeToRevenues,
+  clearRevenues,
   subscribeToStaffingConfig,
   importRevenues,
   saveRevenue,
@@ -49,6 +50,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
   const config = configs ? (configs[location] || configs.total || DEFAULT_CONFIG) : null;
   const [csvText, setCsvText] = useState('');
   const [importMsg, setImportMsg] = useState('');
+  const [clearing, setClearing] = useState(false);
   const [editingConfig, setEditingConfig] = useState(false);
   const fileRef = useRef(null);
 
@@ -100,6 +102,39 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       return r.location === location;
     });
   }, [revenues, location]);
+
+
+  const locationLabel = location === 'total' ? 'total (ingen plats)' : location === 'st' ? 'Skiutleie Vest' : 'Skiutleie Øst';
+
+  const handleClearLocation = async () => {
+    const count = filteredRevenues.length;
+    if (count === 0) return;
+    if (!confirm(`Rensa all omsättningsdata för ${locationLabel} (${count} dager)? Detta kan inte ångras.`)) return;
+    setClearing(true);
+    try {
+      const loc = location === 'total' ? null : location;
+      const deleted = await clearRevenues(loc === null ? undefined : loc);
+      setImportMsg(`${deleted} poster raderade för ${locationLabel}.`);
+    } catch (e) {
+      alert('Feil vid rensning: ' + e.message);
+    } finally {
+      setClearing(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (revenues.length === 0) return;
+    if (!confirm(`Rensa ALL omsättningsdata (${revenues.length} dager, alla platser)? Detta kan inte ångras.`)) return;
+    setClearing(true);
+    try {
+      const deleted = await clearRevenues();
+      setImportMsg(`${deleted} poster raderade (alla platser).`);
+    } catch (e) {
+      alert('Feil vid rensning: ' + e.message);
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const rows = useMemo(() => {
     return filteredRevenues
@@ -306,9 +341,23 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
             />
           </div>
           {importMsg && <p className="text-sm text-gray-700">{importMsg}</p>}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={handleImport} className="px-4 py-2 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700">
               Importera {csvText.trim() ? `(${parseCsv(csvText).entries.length} rader)` : ''}
+            </button>
+            <button
+              onClick={handleClearLocation}
+              disabled={clearing || filteredRevenues.length === 0}
+              className="px-4 py-2 bg-orange-500 text-white rounded border border-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Rensa {locationLabel} ({filteredRevenues.length})
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={clearing || revenues.length === 0}
+              className="px-4 py-2 bg-red-600 text-white rounded border border-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              Rensa ALLT ({revenues.length})
             </button>
           </div>
         </div>

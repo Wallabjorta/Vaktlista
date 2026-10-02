@@ -148,6 +148,27 @@ export const deleteRevenue = async (date, location = null) => {
 /**
  * Prenumerera på all omsättningsdata i realtid
  */
+/**
+ * Rensa omsättningsdata. Utan location raderas ALL data;
+ * med location raderas endast den platsens poster.
+ * @param {string|null} location - 'st' | 'øst' | null (allt)
+ * @returns {Promise<number>} Antal raderade poster
+ */
+export const clearRevenues = async (location = null) => {
+  const snapshot = await getDocs(revenueCollection);
+  const toDelete = snapshot.docs.filter(d => {
+    const data = d.data();
+    if (location) return data.location === location;
+    return true;
+  });
+  const batch = writeBatch(db);
+  for (const d of toDelete) {
+    batch.delete(d.ref);
+  }
+  await batch.commit();
+  return toDelete.length;
+};
+
 export const subscribeToRevenues = (callback) => {
   return onSnapshot(revenueCollection, (snapshot) => {
     const revenues = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
