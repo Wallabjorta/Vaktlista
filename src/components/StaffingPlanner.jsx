@@ -44,7 +44,6 @@ const LOCATION_CATEGORIES = {
 };
 
 const DEFAULT_CONFIG = {
-  peoplePerAmount: 15000,
   minimumStaff: 2,
   thresholds: [
     { minRevenue: 0, staff: 2, label: 'Lav' },
@@ -226,7 +225,6 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
   const handleSaveConfig = async () => {
     try {
       const clean = {
-        peoplePerAmount: Number(editConfig.peoplePerAmount) || 15000,
         minimumStaff: Number(editConfig.minimumStaff) || 0,
         thresholds: (editConfig.thresholds || []).map(t => ({
           minRevenue: Number(t.minRevenue) || 0,
@@ -390,28 +388,15 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm text-blue-800">
             Redigerar bemanningsinställningar för <strong>{location === 'total' ? 'Total (ingen plats)' : location === 'st' ? 'Skiutleie Vest' : 'Skiutleie Øst'}</strong> — välj plats i dropdownen ovan för att växla.
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Personer per belopp (kr)</label>
-              <input
-                type="number"
-                min="1"
-                value={editConfig.peoplePerAmount}
-                onChange={e => setEditConfig(prev => ({ ...prev, peoplePerAmount: e.target.value }))}
-                className="w-full p-2 border rounded"
-              />
-              <p className="text-xs text-gray-500 mt-1">Formel: bemanning = ceil(omsättning / detta tal)</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Minimumsbemanning</label>
-              <input
-                type="number"
-                min="0"
-                value={editConfig.minimumStaff}
-                onChange={e => setEditConfig(prev => ({ ...prev, minimumStaff: e.target.value }))}
-                className="w-full p-2 border rounded"
-              />
-            </div>
+          <div className="max-w-xs">
+            <label className="block text-sm font-medium mb-1">Minimumsbemanning</label>
+            <input
+              type="number"
+              min="0"
+              value={editConfig.minimumStaff}
+              onChange={e => setEditConfig(prev => ({ ...prev, minimumStaff: e.target.value }))}
+              className="w-full p-2 border rounded"
+            />
           </div>
           <div>
             <div className="flex justify-between items-center mb-1">
@@ -471,7 +456,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
               ))}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Rekommenderad bemanning = max(formel, högsta matchande tröskel). Trösklar sorteras automatiskt på belopp.
+              Rekommenderad bemanning = högsta matchande tröskel (minst minimumsbemanning). Trösklar sorteras automatiskt på belopp.
             </p>
           </div>
           <div className="flex gap-2 pt-4 border-t">

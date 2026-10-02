@@ -50,15 +50,14 @@ const revenueCollection = collection(db, "revenues");
 const STAFFING_CONFIG_DOC = "staffingConfig";
 
 /**
- * Hämta bemanningskonfiguration (formel + trösklar)
- * @returns {Promise<Object>} { peoplePerAmount, minimumStaff, thresholds: [{ minRevenue, staff, label }] }
+ * Hämta bemanningskonfiguration (trösklar)
+ * @returns {Promise<Object>} { minimumStaff, thresholds: [{ minRevenue, staff, label }] }
  */
 export const getStaffingConfig = async () => {
   try {
     const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
     if (!snap.exists()) {
       return {
-        peoplePerAmount: 15000,
         minimumStaff: 2,
         thresholds: [
           { minRevenue: 0, staff: 2, label: 'Lav' },
@@ -186,23 +185,19 @@ export const recommendStaffing = (amount, config) => {
   if (amount == null || isNaN(amount)) return { staff: null, label: '', source: null };
   if (!config) return { staff: null, label: '', source: null };
 
-  let byFormula = Math.ceil(amount / Math.max(1, config.peoplePerAmount || 1));
-  byFormula = Math.max(byFormula, config.minimumStaff || 0);
-
-  let byThreshold = null;
-  let thresholdLabel = '';
+  let staff = config.minimumStaff || 0;
+  let label = '';
   if (Array.isArray(config.thresholds) && config.thresholds.length > 0) {
     const sorted = [...config.thresholds].sort((a, b) => (a.minRevenue || 0) - (b.minRevenue || 0));
     for (const t of sorted) {
-      if (amount >= (t.minRevenue || 0)) {
-        byThreshold = t.staff;
-        thresholdLabel = t.label || '';
+      if (amount >= (t.minRevenue || 0) && (t.staff || 0) >= staff) {
+        staff = t.staff;
+        label = t.label || '';
       }
     }
   }
 
-  if (byThreshold == null) return { staff: byFormula, label: 'formel', source: 'formula' };
-  return { staff: Math.max(byFormula, byThreshold), label: thresholdLabel, source: 'max' };
+  return { staff, label, source: 'threshold' };
 };
 
 // ===== GROUP EVENTS =====
