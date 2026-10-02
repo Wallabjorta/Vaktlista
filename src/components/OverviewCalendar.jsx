@@ -1,6 +1,23 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 import GroupBarsRow from './GroupBarsRow';
+import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
+
+const DEFAULT_STAFFING_CONFIG = {
+  minimumStaff: 2,
+  thresholds: [
+    { minRevenue: 0, staff: 2, label: 'Lav' },
+    { minRevenue: 25000, staff: 4, label: 'Middels' },
+    { minRevenue: 40000, staff: 6, label: 'Høy' }
+  ]
+};
+
+const toDateStr = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
@@ -106,6 +123,53 @@ function OverviewCalendar({
   const sundayColor = '#FCA5A5';
   const holidayColor = '#F87171';
   const vacationColor = '#FEF3C7';
+
+  const [revenues, setRevenues] = useState([]);
+  const [staffingConfigs, setStaffingConfigs] = useState(null);
+
+  useEffect(() => {
+    const unsub1 = subscribeToRevenues(revs => setRevenues(revs));
+    const unsub2 = subscribeToStaffingConfig(cfg => {
+      if (!cfg) { setStaffingConfigs({ total: DEFAULT_STAFFING_CONFIG }); return; }
+      if (cfg.locations) { setStaffingConfigs(cfg.locations); return; }
+      setStaffingConfigs({ total: cfg });
+    });
+    return () => { unsub1(); unsub2(); };
+  }, []);
+
+  // Omsättningsdatum är från sist säsong — mappa framåt hela säsonger
+  // (364 dagar = samma veckodag) så datumen täcker aktuell kalender.
+  const revenueByDateAndLocation = useMemo(() => {
+    const map = new Map();
+    for (const rev of revenues) {
+      if (!rev.date) continue;
+      const [y, m, d] = rev.date.split('-').map(Number);
+      const base = new Date(y, m - 1, d);
+      for (let offset = 0; offset <= 3; offset++) {
+        const dt = new Date(base);
+        dt.setDate(dt.getDate() + offset * 364);
+        map.set(`${rev.location || 'total'}_${toDateStr(dt)}`, rev.amount);
+      }
+    }
+    return map;
+  }, [revenues]);
+
+  const getRecommended = useCallback((dateStr) => {
+    const configFor = (loc) => {
+      const cfgs = staffingConfigs || {};
+      return cfgs[loc] || cfgs.total || DEFAULT_STAFFING_CONFIG;
+    };
+    const result = {};
+    let hasData = false;
+    for (const loc of ['st', 'øst']) {
+      const amount = revenueByDateAndLocation.get(`${loc}_${dateStr}`);
+      if (amount == null) continue;
+      hasData = true;
+      const rec = recommendStaffing(amount, configFor(loc));
+      result[loc] = { amount, staff: rec.staff, label: rec.label };
+    }
+    return hasData ? result : null;
+  }, [revenueByDateAndLocation, staffingConfigs]);
 
   // Local date state for navigation
   const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
@@ -254,6 +318,34 @@ function OverviewCalendar({
                 onEditEvent={onEditGroupEvent}
                 onDeleteEvent={onDeleteGroupEvent}
               />
+              {currentUser?.isAdmin && (
+                <tr className="border-b bg-blue-50">
+                  <td className="p-1 border-r text-xs font-medium text-gray-700 bg-blue-50 sticky left-0 z-10" style={{ minWidth: '70px' }}>
+                    Bemanning V/Ø
+                  </td>
+                  {dates.map((date, dateIndex) => {
+                    const dateStr = toDateStr(date);
+                    const rec = getRecommended(dateStr);
+                    const v = rec?.st;
+                    const o = rec?.['øst'];
+                    const title = v || o
+                      ? `Rek. bemanning — Vest: ${v ? `${v.staff} (${new Intl.NumberFormat('no-NO').format(v.amount)} kr)` : 'ingen data'} · Øst: ${o ? `${o.staff} (${new Intl.NumberFormat('no-NO').format(o.amount)} kr)` : 'ingen data'}`
+                      : 'Ingen omsättningsdata';
+                    return (
+                      <td key={dateIndex} className="p-0.5 border-r text-center text-[10px]" title={title}>
+                        {rec ? (
+                          <span className="inline-flex gap-0.5 justify-center">
+                            <span className="px-0.5 rounded bg-indigo-100 text-indigo-800 font-medium">V{v ? v.staff : '–'}</span>
+                            <span className="px-0.5 rounded bg-teal-100 text-teal-800 font-medium">Ø{o ? o.staff : '–'}</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">·</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
               {groupByCategory(filteredEmployees || []).flatMap(([category, categoryEmployees]) => [
                 <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                   <td
