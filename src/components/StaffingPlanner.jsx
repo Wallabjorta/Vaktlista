@@ -15,6 +15,17 @@ import {
 const MONTH_NAMES = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'];
 const DAY_NAMES = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
 
+const shiftDays = (dateStr, days) => {
+  if (!dateStr || !days) return dateStr;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+};
+
 const formatYMD = (dateStr) => {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
@@ -51,6 +62,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
   const [csvText, setCsvText] = useState('');
   const [importMsg, setImportMsg] = useState('');
   const [clearing, setClearing] = useState(false);
+  const [seasonOffset, setSeasonOffset] = useState(0);
   const [editingConfig, setEditingConfig] = useState(false);
   const fileRef = useRef(null);
 
@@ -141,12 +153,13 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       .slice()
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''))
       .map(rev => {
+        const displayDate = shiftDays(rev.date, seasonOffset * 364);
         const rec = recommendStaffing(rev.amount, config);
-        const dayShifts = shiftsByDate.get(rev.date) || [];
+        const dayShifts = shiftsByDate.get(displayDate) || [];
         const actual = dayShifts.length;
         const diff = rec.staff != null && actual != null ? actual - rec.staff : null;
         return {
-          date: rev.date,
+          date: displayDate,
           amount: rev.amount,
           recommended: rec.staff,
           label: rec.label,
@@ -154,7 +167,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           diff
         };
       });
-  }, [filteredRevenues, config, shiftsByDate]);
+  }, [filteredRevenues, config, shiftsByDate, seasonOffset]);
 
   const parseCsv = (text) => {
     const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
@@ -259,6 +272,15 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
           <p className="text-gray-600">Rekommenderad bemanning per dag utifrån sist säsongs omsättning</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={seasonOffset}
+            onChange={(e) => setSeasonOffset(Number(e.target.value))}
+            className="px-2 py-1 border rounded text-sm bg-white"
+            title="Förskjut omsättningsdatumen till aktuell säsong (bevarar veckodag)"
+          >
+            <option value={0}>Ursprungliga datum</option>
+            <option value={1}>+1 säsong (+1 år, samma veckodag)</option>
+          </select>
           <select
             value={location}
             onChange={(e) => setLocation(e.target.value)}
