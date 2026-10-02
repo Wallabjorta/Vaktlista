@@ -375,10 +375,10 @@ function OverviewCalendar({
                     const v = rec?.st;
                     const o = rec?.['øst'];
                     const badgeClass = (r) => {
-                      if (!r) return 'px-0.5 rounded bg-gray-100 text-gray-400 font-medium';
-                      if (r.actual === r.staff) return 'px-0.5 rounded bg-green-100 text-green-800 font-semibold';
-                      if (r.actual < r.staff) return 'px-0.5 rounded bg-red-100 text-red-800 font-semibold';
-                      return 'px-0.5 rounded bg-orange-100 text-orange-800 font-semibold';
+                      if (!r) return 'px-0.5 rounded bg-gray-200 text-gray-500 font-medium';
+                      if (r.actual === r.staff) return 'px-1 rounded bg-green-500 text-white font-bold';
+                      if (r.actual < r.staff) return 'px-1 rounded bg-red-600 text-white font-bold';
+                      return 'px-1 rounded bg-orange-500 text-white font-bold';
                     };
                     const partTitle = (name, r) => r
                       ? `${name}: rek. ${r.staff}, faktisk ${r.actual} (${new Intl.NumberFormat('no-NO').format(r.amount)} kr)${r.actual === r.staff ? ' — riktig' : r.actual < r.staff ? ` — ${r.staff - r.actual} under` : ` — ${r.actual - r.staff} over`}`
