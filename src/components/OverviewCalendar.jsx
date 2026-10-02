@@ -165,21 +165,36 @@ function OverviewCalendar({
     return map;
   }, [employees]);
 
+  const deptNameById = useMemo(() => {
+    const map = new Map();
+    for (const d of departments || []) {
+      if (d && d.id) map.set(d.id, d.name || '');
+    }
+    return map;
+  }, [departments]);
+
   const actualByDateAndLocation = useMemo(() => {
     const map = new Map();
     for (const shift of shifts) {
       if (!shift.date) continue;
+      const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
+      if (deptName === 'fri') continue;
       const emp = employeeById.get(String(shift.employeeId));
       const cat = emp ? inferCategory(emp) : null;
-      for (const [loc, cats] of Object.entries(LOCATION_CATEGORIES)) {
-        if (cat && cats.includes(cat)) {
-          const key = `${loc}_${shift.date}`;
-          map.set(key, (map.get(key) || 0) + 1);
-        }
+      const deptIsVest = deptName.includes('vest');
+      const deptIsOst = deptName.includes('øst') || deptName.includes('ost');
+      let loc = null;
+      if (deptIsVest) loc = 'st';
+      else if (deptIsOst) loc = 'øst';
+      else if (cat && LOCATION_CATEGORIES.st.includes(cat)) loc = 'st';
+      else if (cat && LOCATION_CATEGORIES['øst'].includes(cat)) loc = 'øst';
+      if (loc) {
+        const key = `${loc}_${shift.date}`;
+        map.set(key, (map.get(key) || 0) + 1);
       }
     }
     return map;
-  }, [shifts, employeeById]);
+  }, [shifts, employeeById, deptNameById]);
 
   const getRecommended = useCallback((dateStr) => {
     const configFor = (loc) => {
