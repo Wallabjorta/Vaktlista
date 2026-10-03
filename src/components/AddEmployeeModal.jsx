@@ -12,6 +12,7 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     isAdmin: false,
     password: '',
     contractHours: '',
+    contractPercent: '',
     contractStart: '',
     contractEnd: ''
   });
@@ -155,7 +156,22 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
             </div>
 
             {/* Kontrakt */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktsprosent</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="200"
+                  step="5"
+                  value={newEmployee.contractPercent}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractPercent: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="F.eks. 80"
+                />
+                <p className="text-xs text-gray-500 mt-1">100 % = 37,5 t/uke</p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-1">Kontraktstimer</label>
                 <input

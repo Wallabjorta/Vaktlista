@@ -164,7 +164,16 @@ function AdminStats({ employees, shifts, holidays, departments }) {
   const totalStats = calculateTotalStats();
 
   const contractInfo = (employee) => {
-    const contractHours = Number(employee.contractHours) || 0;
+    let contractHours = Number(employee.contractHours) || 0;
+    const percent = Number(employee.contractPercent) || 0;
+    if (percent && employee.contractStart && employee.contractEnd) {
+      const start = new Date(employee.contractStart + 'T00:00:00');
+      const end = new Date(employee.contractEnd + 'T00:00:00');
+      if (!isNaN(start) && !isNaN(end) && end >= start) {
+        const days = Math.round((end - start) / 86400000) + 1;
+        contractHours = Math.round((days / 7) * 37.5 * (percent / 100) * 2) / 2;
+      }
+    }
     if (!contractHours) return null;
     const stats = calculateEmployeeStats(employee);
     const usedMinutes = stats.totalMinutes + stats.friMinutes;
