@@ -15,6 +15,44 @@ const inferCategory = (employee) => {
   return 'Skiutleie Vest';
 };
 
+const deptNameToCategory = (deptName) => {
+  const n = (deptName || '').toLowerCase();
+  if (!n || n === 'fri' || n === 'ferie' || n.includes('skolegrupper')) return null;
+  if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
+  if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
+  if (n.includes('vest')) return 'Skiutleie Vest';
+  if (n.includes('skiskole')) return 'Skiskole';
+  return null;
+};
+
+const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
+  const deptNameById = new Map((allDepartments || []).filter(Boolean).map(d => [d.id, d.name || d.id]));
+  const employeeById = new Map(employeeList.map(e => [String(e.id), e]));
+  const categoriesByEmployee = new Map();
+  for (const shift of allShifts || []) {
+    if (!shift.date || shift.date < firstDate || shift.date > lastDate) continue;
+    const emp = employeeById.get(String(shift.employeeId));
+    if (!emp) continue;
+    const cat = deptNameToCategory(deptNameById.get(shift.departmentId));
+    if (!cat) continue;
+    if (!categoriesByEmployee.has(String(emp.id))) categoriesByEmployee.set(String(emp.id), new Set());
+    categoriesByEmployee.get(String(emp.id)).add(cat);
+  }
+  const groups = new Map();
+  for (const category of EMPLOYEE_CATEGORIES) groups.set(category, []);
+  for (const employee of employeeList) {
+    const cats = categoriesByEmployee.get(String(employee.id));
+    if (cats && cats.size > 0) {
+      for (const cat of cats) groups.get(cat).push(employee);
+    } else {
+      const base = inferCategory(employee);
+      if (!groups.has(base)) groups.set(base, []);
+      groups.get(base).push(employee);
+    }
+  }
+  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
+};
+
 const groupByCategory = (employeeList) => {
   const groups = new Map();
   for (const category of EMPLOYEE_CATEGORIES) {
@@ -80,6 +118,8 @@ function ShiftCalendar({
   };
 
   const dates = getDates();
+  const firstDateStr = dates.length ? `${dates[0].getFullYear()}-${String(dates[0].getMonth() + 1).padStart(2, '0')}-${String(dates[0].getDate()).padStart(2, '0')}` : '';
+  const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
 
   const getWeekNumber = (date) => {
     const d = new Date(date);
@@ -201,7 +241,7 @@ function ShiftCalendar({
             onEditEvent={onEditGroupEvent}
             onDeleteEvent={onDeleteGroupEvent}
           />
-            {groupByCategory(employees || []).flatMap(([category, categoryEmployees]) => [
+            {groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr).flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
                   colSpan={1 + dates.length}
@@ -212,7 +252,7 @@ function ShiftCalendar({
                 </td>
               </tr>,
               ...categoryEmployees.map((employee) => (
-              <tr key={employee.id} className="border-b last:border-b-0">
+              <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
                 <td className="p-1 md:p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]">
                   <div className="flex items-center gap-1 text-sm truncate">
                     <span className="truncate">{employee.name}</span>
