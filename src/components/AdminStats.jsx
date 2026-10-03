@@ -11,6 +11,34 @@ const inferCategory = (employee) => {
   return 'Skiutleie Vest';
 };
 
+const groupByDepartment = (employeeList, allShifts, allDepartments) => {
+  const deptNameById = new Map((allDepartments || []).filter(Boolean).map(d => [d.id, d.name || d.id]));
+  const employeesById = new Map(employeeList.map(e => [String(e.id), e]));
+  const order = [];
+  const groups = new Map();
+  for (const dept of (allDepartments || []).filter(Boolean)) {
+    if (dept.name) { order.push(dept.name); groups.set(dept.name, new Map()); }
+  }
+  for (const shift of allShifts || []) {
+    const emp = employeesById.get(String(shift.employeeId));
+    if (!emp) continue;
+    const deptName = deptNameById.get(shift.departmentId);
+    if (!deptName || !groups.has(deptName)) continue;
+    groups.get(deptName).set(String(emp.id), emp);
+  }
+  const rest = employeeList.filter(e => {
+    for (const group of groups.values()) if (group.has(String(e.id))) return false;
+    return true;
+  });
+  const result = [];
+  for (const name of order) {
+    const emps = [...groups.get(name).values()];
+    if (emps.length > 0) result.push([name, emps]);
+  }
+  if (rest.length > 0) result.push(['Ingen avdeling', rest]);
+  return result;
+};
+
 const groupByCategory = (employeeList) => {
   const groups = new Map();
   for (const category of EMPLOYEE_CATEGORIES) {
@@ -228,7 +256,16 @@ function AdminStats({ employees, shifts, holidays, departments }) {
   const exportCsv = () => {
     const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Ferie-timer', 'Kontraktstimer', 'Brukte timer (inkl. fri)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
-    const rows = groupByCategory(employees).flatMap(([, categoryEmployees]) => categoryEmployees).map(employee => {
+    const orderedEmployees = [];
+    const seen = new Set();
+    for (const [, deptEmployees] of groupByDepartment(employees, periodShifts, departments)) {
+      for (const e of deptEmployees) {
+        if (seen.has(String(e.id))) continue;
+        seen.add(String(e.id));
+        orderedEmployees.push(e);
+      }
+    }
+    const rows = orderedEmployees.map(employee => {
       const stats = calculateEmployeeStats(employee);
       const c = contractInfo(employee);
       return [
@@ -357,17 +394,17 @@ function AdminStats({ employees, shifts, holidays, departments }) {
             </tr>
           </thead>
           <tbody>
-            {groupByCategory(employees).flatMap(([category, categoryEmployees]) => [
-              <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
+            {groupByDepartment(employees, periodShifts, departments).flatMap(([deptName, deptEmployees]) => [
+              <tr key={`dept-${deptName}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
                   colSpan={11}
                   className="py-px px-3 font-semibold text-xs uppercase tracking-wide"
                   style={{ backgroundColor: '#374151' }}
                 >
-                  {category}
+                  {deptName} ({deptEmployees.length})
                 </td>
               </tr>,
-              ...categoryEmployees.map((employee) => {
+              ...deptEmployees.map((employee) => {
               const stats = calculateEmployeeStats(employee);
               return (
                 <tr key={employee.id} className="border-b last:border-b-0">
