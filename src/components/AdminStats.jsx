@@ -19,6 +19,13 @@ const seasonBounds = (offset = 0) => {
   return { start: `${startYear}-11-01`, end: `${startYear + 1}-04-30` };
 };
 
+const contractYearBounds = (offset = 0) => {
+  const now = new Date();
+  let startYear = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+  startYear += offset;
+  return { start: `${startYear}-10-01`, end: `${startYear + 1}-09-30` };
+};
+
 const minutesBetween = (start, end) => {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
@@ -46,6 +53,8 @@ function AdminStats({ employees, shifts, holidays, departments }) {
     if (periodMode === 'lastMonth') return monthBounds(-1);
     if (periodMode === 'season') return seasonBounds(0);
     if (periodMode === 'lastSeason') return seasonBounds(-1);
+    if (periodMode === 'contractYear') return contractYearBounds(0);
+    if (periodMode === 'lastContractYear') return contractYearBounds(-1);
     if (periodMode === 'custom') return { start: customStart, end: customEnd };
     return null;
   };
@@ -72,6 +81,11 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       const r = periodMode === 'season' ? seasonBounds(0) : seasonBounds(-1);
       const startYear = Number(r.start.split('-')[0]);
       return `Sesong ${startYear}/${startYear + 1} (nov–apr)`;
+    }
+    if (periodMode === 'contractYear' || periodMode === 'lastContractYear') {
+      const r = periodMode === 'contractYear' ? contractYearBounds(0) : contractYearBounds(-1);
+      const startYear = Number(r.start.split('-')[0]);
+      return `Kontraktår ${startYear}/${startYear + 1} (okt–sep)`;
     }
     if (hasRange) {
       const fmt = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('no-NO', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -242,6 +256,8 @@ function AdminStats({ employees, shifts, holidays, departments }) {
             <option value="lastMonth">Forrige måned</option>
             <option value="season">Denne sesongen (nov–apr)</option>
             <option value="lastSeason">Forrige sesong (nov–apr)</option>
+            <option value="contractYear">Kontraktår (okt–sep)</option>
+            <option value="lastContractYear">Forrige kontraktår (okt–sep)</option>
             <option value="custom">Egendefinert</option>
           </select>
           {periodMode === 'custom' && (
