@@ -1,4 +1,28 @@
 import React, { useState } from 'react';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
+
+const inferCategory = (employee) => {
+  if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
+    return employee.category;
+  }
+  const deptIds = employee.deptIds || [];
+  if (deptIds.includes('dept-4')) return 'Butikk Vest';
+  if (deptIds.includes('dept-3')) return 'Skiskole';
+  return 'Skiutleie Vest';
+};
+
+const groupByCategory = (employeeList) => {
+  const groups = new Map();
+  for (const category of EMPLOYEE_CATEGORIES) {
+    groups.set(category, []);
+  }
+  for (const employee of employeeList) {
+    const category = inferCategory(employee);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(employee);
+  }
+  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
+};
 
 const toISODate = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -204,7 +228,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
   const exportCsv = () => {
     const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Ferie-timer', 'Kontraktstimer', 'Brukte timer (inkl. fri)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
-    const rows = employees.map(employee => {
+    const rows = groupByCategory(employees).flatMap(([, categoryEmployees]) => categoryEmployees).map(employee => {
       const stats = calculateEmployeeStats(employee);
       const c = contractInfo(employee);
       return [
@@ -333,7 +357,17 @@ function AdminStats({ employees, shifts, holidays, departments }) {
             </tr>
           </thead>
           <tbody>
-            {employees.map((employee) => {
+            {groupByCategory(employees).flatMap(([category, categoryEmployees]) => [
+              <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
+                <td
+                  colSpan={11}
+                  className="py-px px-3 font-semibold text-xs uppercase tracking-wide"
+                  style={{ backgroundColor: '#374151' }}
+                >
+                  {category}
+                </td>
+              </tr>,
+              ...categoryEmployees.map((employee) => {
               const stats = calculateEmployeeStats(employee);
               return (
                 <tr key={employee.id} className="border-b last:border-b-0">
@@ -381,7 +415,8 @@ function AdminStats({ employees, shifts, holidays, departments }) {
                   </td>
                 </tr>
               );
-            })}
+              })
+            ])}
           </tbody>
         </table>
       </div>
