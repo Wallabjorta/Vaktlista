@@ -126,7 +126,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
         ferieMinutes += 8 * 60;
       } else {
         shiftsByDepartment[deptName] = (shiftsByDepartment[deptName] || 0) + 1;
-        totalMinutes += minutesBetween(shift.startTime, shift.endTime);
+        totalMinutes += minutesBetween(shift.startTime, shift.endTime) - 30;
       }
     });
     
@@ -176,7 +176,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       const end = new Date(employee.contractEnd + 'T00:00:00');
       if (!isNaN(start) && !isNaN(end) && end >= start) {
         const days = Math.round((end - start) / 86400000) + 1;
-        contractHours = Math.round((days / 7) * 40 * (percent / 100) * 2) / 2;
+        contractHours = Math.round((days / 365) * 1762.5 * (percent / 100) * 2) / 2;
       }
     }
     if (!contractHours) return null;
