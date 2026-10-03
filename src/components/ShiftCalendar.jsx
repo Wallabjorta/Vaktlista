@@ -282,7 +282,7 @@ function ShiftCalendar({
                                       });
                                     }}
                                   >
-                                    {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
+                                    {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
                                   {currentUser?.isAdmin && (
                                     <button

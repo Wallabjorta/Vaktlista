@@ -29,7 +29,8 @@ const DEFAULT_DEPARTMENTS = [
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
   { id: "dept-4", name: "Butikk", color: "#EF4444" },
   { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
-  { id: "dept-6", name: "Fri", color: "#6B7280" }
+  { id: "dept-6", name: "Fri", color: "#6B7280" },
+  { id: "dept-7", name: "Ferie", color: "#0EA5E9" }
 ];
 
 export default function useFirebaseData() {
@@ -65,6 +66,16 @@ export default function useFirebaseData() {
       if (changed) {
         depts = await getDepartments();
         setDepartments(depts);
+      }
+      // Ensure the Ferie department exists (added after initial setup)
+      if (depts && depts.length > 0 && !depts.some(d => d && d.name === 'Ferie')) {
+        try {
+          await addDepartment({ id: "dept-7", name: "Ferie", color: "#0EA5E9" });
+          depts = await getDepartments();
+          setDepartments(depts);
+        } catch (e) {
+          console.log('Could not add Ferie department:', e.message);
+        }
       }
       // If no departments in Firebase, add defaults
       if (!depts || depts.length === 0) {

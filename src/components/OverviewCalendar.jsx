@@ -463,7 +463,7 @@ function OverviewCalendar({
                                   style={{ backgroundColor: deptColor }}
                                   title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
                                 >
-                                  {deptName === 'Fri' ? 'Fri' : shift.startTime.replace(':00', '')}
+                                  {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime.replace(':00', '')}
                                 </div>
                               );
                             })}
