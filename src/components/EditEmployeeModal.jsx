@@ -11,7 +11,10 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
     email: employee?.email || '',
     phone: employee?.phone || '',
     isAdmin: employee?.isAdmin || false,
-    password: employee?.password || ''
+    password: employee?.password || '',
+    contractHours: employee?.contractHours != null ? String(employee.contractHours) : '',
+    contractStart: employee?.contractStart || '',
+    contractEnd: employee?.contractEnd || ''
   });
 
   // Update state when employee changes
@@ -25,7 +28,10 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
         email: employee.email || '',
         phone: employee.phone || '',
         isAdmin: employee.isAdmin || false,
-        password: employee.password || ''
+        password: employee.password || '',
+        contractHours: employee.contractHours != null ? String(employee.contractHours) : '',
+        contractStart: employee.contractStart || '',
+        contractEnd: employee.contractEnd || ''
       });
     }
   }, [employee]);
@@ -140,6 +146,40 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                     {dept.name}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Kontrakt */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstimer</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={editedEmployee.contractHours}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractHours: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="Timer per sesong"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstart</label>
+                <input
+                  type="date"
+                  value={editedEmployee.contractStart}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractStart: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktslutt</label>
+                <input
+                  type="date"
+                  value={editedEmployee.contractEnd}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractEnd: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
               </div>
             </div>
 

@@ -115,10 +115,13 @@ function AdminStats({ employees, shifts, holidays, departments }) {
     // Antall vakter per avdeling
     const shiftsByDepartment = {};
     let totalMinutes = 0;
+    let friMinutes = 0;
     employeeShifts.forEach(shift => {
       const deptName = departments.find(d => d.id === shift.departmentId)?.name || shift.departmentId;
       const isOff = (deptName || '').toLowerCase() === 'fri';
-      if (!isOff) {
+      if (isOff) {
+        friMinutes += minutesBetween(shift.startTime, shift.endTime);
+      } else {
         shiftsByDepartment[deptName] = (shiftsByDepartment[deptName] || 0) + 1;
         totalMinutes += minutesBetween(shift.startTime, shift.endTime);
       }
@@ -132,7 +135,9 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       specialDaysWorked,
       shiftsByDepartment,
       totalMinutes,
-      totalHours: totalMinutes / 60
+      totalHours: totalMinutes / 60,
+      friMinutes,
+      friHours: friMinutes / 60
     };
   };
 
@@ -158,16 +163,31 @@ function AdminStats({ employees, shifts, holidays, departments }) {
 
   const totalStats = calculateTotalStats();
 
+  const contractInfo = (employee) => {
+    const contractHours = Number(employee.contractHours) || 0;
+    if (!contractHours) return null;
+    const stats = calculateEmployeeStats(employee);
+    const usedMinutes = stats.totalMinutes + stats.friMinutes;
+    const usedHours = usedMinutes / 60;
+    const remainingHours = contractHours - usedHours;
+    return { contractHours, usedHours, remainingHours };
+  };
+
   const exportCsv = () => {
     const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
+    const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Kontraktstimer', 'Brukte timer (inkl. fri)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
     const rows = employees.map(employee => {
       const stats = calculateEmployeeStats(employee);
+      const c = contractInfo(employee);
       return [
         employee.name,
         stats.totalShifts,
         formatHours(stats.totalMinutes),
         stats.totalHours.toFixed(2).replace('.', ','),
+        stats.friHours.toFixed(2).replace('.', ','),
+        c ? String(c.contractHours).replace('.', ',') : '',
+        c ? c.usedHours.toFixed(2).replace('.', ',') : '',
+        c ? c.remainingHours.toFixed(2).replace('.', ',') : '',
         stats.totalDays,
         stats.sundaysWorked,
         stats.holidaysWorked,
@@ -271,6 +291,8 @@ function AdminStats({ employees, shifts, holidays, departments }) {
               <th className="p-2 text-left text-xs font-medium text-gray-700">Ansatt</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Totale vakter</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Arbeidstimer</th>
+              <th className="p-2 text-left text-xs font-medium text-gray-700">Fri (fratrekk)</th>
+              <th className="p-2 text-left text-xs font-medium text-gray-700">Kontrakt</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Totale dager</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Søndager</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Helligdager</th>
@@ -291,6 +313,19 @@ function AdminStats({ employees, shifts, holidays, departments }) {
                   </td>
                   <td className="p-2 border-r">{stats.totalShifts}</td>
                   <td className="p-2 border-r">{formatHours(stats.totalMinutes)}</td>
+                  <td className="p-2 border-r text-gray-500">{stats.friMinutes ? `-${formatHours(stats.friMinutes)}` : '0 t'}</td>
+                  <td className="p-2 border-r">
+                    {(() => {
+                      const c = contractInfo(employee);
+                      if (!c) return <span className="text-gray-400">Ingen kontrakt</span>;
+                      const cls = c.remainingHours < 0 ? 'text-red-600 font-semibold' : c.remainingHours < 10 ? 'text-yellow-700 font-semibold' : 'text-green-700';
+                      return (
+                        <span className={cls}>
+                          {c.usedHours.toFixed(1).replace('.', ',')} / {c.contractHours.toFixed(1).replace('.', ',')} t
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td className="p-2 border-r">{stats.totalDays}</td>
                   <td className="p-2 border-r">{stats.sundaysWorked}</td>
                   <td className="p-2 border-r">{stats.holidaysWorked}</td>

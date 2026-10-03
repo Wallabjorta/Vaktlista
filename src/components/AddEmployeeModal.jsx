@@ -10,7 +10,10 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     email: '',
     phone: '',
     isAdmin: false,
-    password: ''
+    password: '',
+    contractHours: '',
+    contractStart: '',
+    contractEnd: ''
   });
 
   const handleSubmit = async (e) => {
@@ -148,6 +151,40 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
                     {dept.name}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Kontrakt */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstimer</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={newEmployee.contractHours}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractHours: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="Timer per sesong"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstart</label>
+                <input
+                  type="date"
+                  value={newEmployee.contractStart}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractStart: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktslutt</label>
+                <input
+                  type="date"
+                  value={newEmployee.contractEnd}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractEnd: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
               </div>
             </div>
 

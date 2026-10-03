@@ -675,7 +675,11 @@ function App() {
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
-      await updateEmployeeFirebase(updatedEmployee.id, updatedEmployee);
+      const toSave = { ...updatedEmployee };
+      toSave.contractHours = updatedEmployee.contractHours !== '' && updatedEmployee.contractHours != null
+        ? Number(updatedEmployee.contractHours) || 0
+        : null;
+      await updateEmployeeFirebase(updatedEmployee.id, toSave);
       await logAdminAction(currentUser, 'employee_update', {
         employeeId: updatedEmployee.id,
         name: updatedEmployee.name
@@ -690,7 +694,11 @@ function App() {
 
   const handleAddEmployee = useCallback(async (newEmployee) => {
     try {
-      await addEmployeeFirebase(newEmployee);
+      const toSave = { ...newEmployee };
+      toSave.contractHours = newEmployee.contractHours !== '' && newEmployee.contractHours != null
+        ? Number(newEmployee.contractHours) || 0
+        : null;
+      await addEmployeeFirebase(toSave);
       await logAdminAction(currentUser, 'employee_add', {
         employeeId: newEmployee.id,
         name: newEmployee.name
