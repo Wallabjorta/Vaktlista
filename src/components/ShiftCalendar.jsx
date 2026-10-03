@@ -17,7 +17,8 @@ const inferCategory = (employee) => {
 
 const deptNameToCategory = (deptName) => {
   const n = (deptName || '').toLowerCase();
-  if (!n || n === 'fri' || n === 'ferie' || n.includes('skolegrupper')) return null;
+  if (!n || n === 'fri' || n === 'ferie') return null;
+  if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
   if (n.includes('vest')) return 'Skiutleie Vest';
