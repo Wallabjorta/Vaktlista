@@ -161,7 +161,7 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                   max="200"
                   step="5"
                   value={editedEmployee.contractPercent}
-                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractPercent: e.target.value }))}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractPercent: e.target.value }))}
                   className="w-full p-2 border rounded"
                   placeholder="F.eks. 80"
                 />
