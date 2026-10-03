@@ -154,6 +154,48 @@ function OverviewCalendar({
     return map;
   }, [revenues]);
 
+  const LOCATION_CATEGORIES = {
+    st: ['Skiutleie Vest', 'Butikk Vest'],
+    'øst': ['Skiutleie Øst', 'Butikk Øst']
+  };
+
+  const employeeById = useMemo(() => {
+    const map = new Map();
+    for (const e of employees) map.set(String(e.id), e);
+    return map;
+  }, [employees]);
+
+  const deptNameById = useMemo(() => {
+    const map = new Map();
+    for (const d of departments || []) {
+      if (d && d.id) map.set(d.id, d.name || '');
+    }
+    return map;
+  }, [departments]);
+
+  const actualByDateAndLocation = useMemo(() => {
+    const map = new Map();
+    for (const shift of shifts) {
+      if (!shift.date) continue;
+      const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
+      if (deptName === 'fri') continue;
+      const emp = employeeById.get(String(shift.employeeId));
+      const cat = emp ? inferCategory(emp) : null;
+      const deptIsVest = deptName.includes('vest');
+      const deptIsOst = deptName.includes('øst') || deptName.includes('ost');
+      let loc = null;
+      if (deptIsVest) loc = 'st';
+      else if (deptIsOst) loc = 'øst';
+      else if (cat && LOCATION_CATEGORIES.st.includes(cat)) loc = 'st';
+      else if (cat && LOCATION_CATEGORIES['øst'].includes(cat)) loc = 'øst';
+      if (loc) {
+        const key = `${loc}_${shift.date}`;
+        map.set(key, (map.get(key) || 0) + 1);
+      }
+    }
+    return map;
+  }, [shifts, employeeById, deptNameById]);
+
   const getRecommended = useCallback((dateStr) => {
     const configFor = (loc) => {
       const cfgs = staffingConfigs || {};
@@ -168,8 +210,12 @@ function OverviewCalendar({
       const rec = recommendStaffing(amount, configFor(loc));
       result[loc] = { amount, staff: rec.staff, label: rec.label };
     }
-    return hasData ? result : null;
-  }, [revenueByDateAndLocation, staffingConfigs]);
+    if (!hasData) return null;
+    for (const loc of Object.keys(result)) {
+      result[loc].actual = actualByDateAndLocation.get(`${loc}_${dateStr}`) || 0;
+    }
+    return result;
+  }, [revenueByDateAndLocation, staffingConfigs, actualByDateAndLocation]);
 
   // Local date state for navigation
   const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
@@ -328,15 +374,24 @@ function OverviewCalendar({
                     const rec = getRecommended(dateStr);
                     const v = rec?.st;
                     const o = rec?.['øst'];
+                    const badgeClass = (r) => {
+                      if (!r) return 'px-0.5 rounded bg-gray-200 text-gray-500 font-medium';
+                      if (r.actual === r.staff) return 'px-1 rounded bg-green-500 text-white font-bold';
+                      if (r.actual < r.staff) return 'px-1 rounded bg-red-600 text-white font-bold';
+                      return 'px-1 rounded bg-blue-500 text-white font-bold';
+                    };
+                    const partTitle = (name, r) => r
+                      ? `${name}: rek. ${r.staff}, faktisk ${r.actual} (${new Intl.NumberFormat('no-NO').format(r.amount)} kr)${r.actual === r.staff ? ' — riktig' : r.actual < r.staff ? ` — ${r.staff - r.actual} under` : ` — ${r.actual - r.staff} over`}`
+                      : `${name}: ingen data`;
                     const title = v || o
-                      ? `Rek. bemanning — Vest: ${v ? `${v.staff} (${new Intl.NumberFormat('no-NO').format(v.amount)} kr)` : 'ingen data'} · Øst: ${o ? `${o.staff} (${new Intl.NumberFormat('no-NO').format(o.amount)} kr)` : 'ingen data'}`
+                      ? `Rek. bemanning — ${partTitle('Vest', v)} · ${partTitle('Øst', o)}`
                       : 'Ingen omsättningsdata';
                     return (
                       <td key={dateIndex} className="p-0.5 border-r text-center text-[10px]" title={title}>
                         {rec ? (
                           <span className="inline-flex gap-0.5 justify-center">
-                            <span className="px-0.5 rounded bg-indigo-100 text-indigo-800 font-medium">V{v ? v.staff : '–'}</span>
-                            <span className="px-0.5 rounded bg-teal-100 text-teal-800 font-medium">Ø{o ? o.staff : '–'}</span>
+                            <span className={badgeClass(v)}>V{v ? v.staff : '–'}</span>
+                            <span className={badgeClass(o)}>Ø{o ? o.staff : '–'}</span>
                           </span>
                         ) : (
                           <span className="text-gray-300">·</span>
