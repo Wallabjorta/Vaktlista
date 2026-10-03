@@ -197,14 +197,13 @@ function AdminStats({ employees, shifts, holidays, departments }) {
     const stats = calculateEmployeeStats(employee);
     const usedMinutes = stats.totalMinutes + stats.friMinutes;
     const usedHours = usedMinutes / 60;
-    const ferieHours = stats.ferieHours;
-    const remainingHours = contractHours - usedHours - ferieHours;
-    return { contractHours, usedHours, ferieHours, remainingHours };
+    const remainingHours = contractHours - usedHours;
+    return { contractHours, usedHours, ferieHours: stats.ferieHours, remainingHours };
   };
 
   const exportCsv = () => {
     const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Ferie-timer', 'Kontraktstimer', 'Brukte timer (inkl. fri og ferie)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
+    const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Ferie-timer', 'Kontraktstimer', 'Brukte timer (inkl. fri)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
     const rows = employees.map(employee => {
       const stats = calculateEmployeeStats(employee);
       const c = contractInfo(employee);
@@ -216,7 +215,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
         stats.friHours.toFixed(2).replace('.', ','),
         stats.ferieHours.toFixed(2).replace('.', ','),
         c ? String(c.contractHours).replace('.', ',') : '',
-        c ? (c.usedHours + c.ferieHours).toFixed(2).replace('.', ',') : '',
+        c ? c.usedHours.toFixed(2).replace('.', ',') : '',
         c ? c.remainingHours.toFixed(2).replace('.', ',') : '',
         stats.totalDays,
         stats.sundaysWorked,
@@ -355,7 +354,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
                       const cls = c.remainingHours < 0 ? 'text-red-600 font-semibold' : c.remainingHours < 10 ? 'text-yellow-700 font-semibold' : 'text-green-700';
                       return (
                         <span className={cls} title={`Arbeid: ${c.usedHours.toFixed(1).replace('.', ',')} t, ferie: ${c.ferieHours.toFixed(1).replace('.', ',')} t, gjenstående: ${c.remainingHours.toFixed(1).replace('.', ',')} t`}>
-                          {(c.usedHours + c.ferieHours).toFixed(1).replace('.', ',')} / {c.contractHours.toFixed(1).replace('.', ',')} t
+                          {c.usedHours.toFixed(1).replace('.', ',')} / {c.contractHours.toFixed(1).replace('.', ',')} t
                         </span>
                       );
                     })()}
