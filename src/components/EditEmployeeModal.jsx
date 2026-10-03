@@ -165,7 +165,7 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                   className="w-full p-2 border rounded"
                   placeholder="F.eks. 80"
                 />
-                <p className="text-xs text-gray-500 mt-1">100 % = 37,5 t/uke</p>
+                <p className="text-xs text-gray-500 mt-1">100 % = 40 t/uke</p>
               </div>
 
               <div>
