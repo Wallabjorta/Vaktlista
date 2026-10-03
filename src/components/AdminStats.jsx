@@ -123,7 +123,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       if (deptLower === 'fri') {
         friMinutes += minutesBetween(shift.startTime, shift.endTime);
       } else if (deptLower === 'ferie') {
-        ferieMinutes += minutesBetween(shift.startTime, shift.endTime);
+        ferieMinutes += 8 * 60;
       } else {
         shiftsByDepartment[deptName] = (shiftsByDepartment[deptName] || 0) + 1;
         totalMinutes += minutesBetween(shift.startTime, shift.endTime);
