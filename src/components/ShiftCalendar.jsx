@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import GroupBarsRow from './GroupBarsRow';
 import { subscribeToGroupEvents } from '../firebase';
 
@@ -24,6 +24,20 @@ const deptNameToCategory = (deptName) => {
   if (n.includes('vest')) return 'Skiutleie Vest';
   if (n.includes('skiskole')) return 'Skiskole';
   return null;
+};
+
+const shiftsInCategory = (allShifts, category, deptNameById, employeeId, dateStr) => {
+  return (allShifts || []).filter(shift => {
+    if (shift.employeeId !== employeeId || shift.date !== dateStr) return false;
+    const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
+    if (deptName === 'fri' || deptName === 'ferie') return false;
+    if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
+    if (category === 'Skiutleie Øst') return deptName.includes('øst') || deptName.includes('ost');
+    if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');
+    if (category === 'Butikk Øst') return deptName.includes('butikk') && (deptName.includes('øst') || deptName.includes('ost'));
+    if (category === 'Skiskole') return deptName.includes('skiskole');
+    return false;
+  });
 };
 
 const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
@@ -119,6 +133,7 @@ function ShiftCalendar({
   };
 
   const dates = getDates();
+  const deptNameById = useMemo(() => new Map((departments || []).filter(Boolean).map(d => [d.id, (d.name || '').toLowerCase()])), [departments]);
   const firstDateStr = dates.length ? `${dates[0].getFullYear()}-${String(dates[0].getMonth() + 1).padStart(2, '0')}-${String(dates[0].getDate()).padStart(2, '0')}` : '';
   const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
 
@@ -265,7 +280,7 @@ function ShiftCalendar({
                   const month = String(date.getMonth() + 1).padStart(2, '0');
                   const day = String(date.getDate()).padStart(2, '0');
                   const dateStr = `${year}-${month}-${day}`;
-                  const shiftsForDay = getShiftsForDateAndEmployee(dateStr, employee.id);
+                  const shiftsForDay = shiftsInCategory(shifts, category, deptNameById, employee.id, dateStr);
                   const holiday = isHoliday(dateStr);
                   const vacation = isVacation(dateStr);
                   const sunday = isSunday(date);
