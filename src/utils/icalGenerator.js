@@ -13,7 +13,8 @@ export function generateICal(shifts, employees, departments) {
     { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
     { id: "dept-4", name: "Butikk", color: "#EF4444" },
     { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
-    { id: "dept-6", name: "Fri", color: "#6B7280" }
+    { id: "dept-6", name: "Fri", color: "#6B7280" },
+    { id: "dept-7", name: "Ferie", color: "#0EA5E9" }
   ];
 
   const allDepartments = departments?.length > 0 ? departments : DEFAULT_DEPARTMENTS;
@@ -67,7 +68,7 @@ END:VTIMEZONE
     const dept = allDepartments.find(d => d.id === shift.departmentId);
     
     if (!employee || !dept) return;
-    if (shift.departmentId === "dept-6" || dept.name === "Fri") return;
+    if (shift.departmentId === "dept-6" || dept.name === "Fri" || shift.departmentId === "dept-7" || dept.name === "Ferie") return;
     
     const startDate = formatICalDate(shift.date, shift.startTime);
     const endDate = formatICalDate(shift.date, shift.endTime);
