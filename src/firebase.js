@@ -742,10 +742,15 @@ export const subscribeToEmployees = (callback) => {
 /**
  * Subscribe to realtime updates for shifts
  * @param {Function} callback - Callback function with array of shifts
+ * @param {Object} options - Optional { start, end } ISO dates (YYYY-MM-DD) to limit reads to a window
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToShifts = (callback) => {
-  return onSnapshot(shiftsCollection, (snapshot) => {
+export const subscribeToShifts = (callback, options = {}) => {
+  const constraints = [];
+  if (options.start) constraints.push(where("date", ">=", options.start));
+  if (options.end) constraints.push(where("date", "<=", options.end));
+  const q = constraints.length > 0 ? query(shiftsCollection, ...constraints) : shiftsCollection;
+  return onSnapshot(q, (snapshot) => {
     const shifts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(shifts);
   });
