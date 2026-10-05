@@ -2,7 +2,7 @@
 // Install: npm install firebase
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ============ FIREBASE CONFIGURATION ============
@@ -24,7 +24,12 @@ const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG
 
 // ============ INITIALIZE FIREBASE ============
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Offline-persistence: läsningar betjänas från lokal cache när data inte
+// ändrats, vilket kraftigt minskar antalet Firestore-reads för återkommande
+// användare (viktigt för att hålla sig under gratisplanens dagliga kvot).
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 const auth = getAuth(app);
 
 // Cloud Functions URL for iCal endpoints. Derived from the active project ID so
