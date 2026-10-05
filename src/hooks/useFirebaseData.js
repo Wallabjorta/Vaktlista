@@ -4,7 +4,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   getEmployees,
-  getShifts,
   getDepartments,
   addEmployee,
   updateEmployee,
@@ -33,6 +32,20 @@ const DEFAULT_DEPARTMENTS = [
   { id: "dept-7", name: "Ferie", color: "#0EA5E9" }
 ];
 
+// Shifts lasning: rullerande fönster från kontraktsårets start (senaste ~24 mån bakåt)
+// till 92 dagar framåt. Täcker kalender, historik och AdminStats alla periodlägen,
+// utan att läsa hela shifts-samlingen vid varje klientstart.
+const shiftsWindowStart = () => {
+  const now = new Date();
+  const startYear = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${startYear}-10-01`;
+};
+const shiftsWindowEnd = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 92);
+  return d.toISOString().split('T')[0];
+};
+
 export default function useFirebaseData() {
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
@@ -51,14 +64,12 @@ export default function useFirebaseData() {
       const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
       
       // Always try to load from Firebase first
-      const [emps, shfts, depts] = await Promise.all([
+      const [emps, depts] = await Promise.all([
         getEmployees(),
-        getShifts(),
         getDepartments()
       ]);
       
       setEmployees(emps);
-      setShifts(shfts);
       setDepartments(depts);
       
       // Migrera avdelingar med auto-genererat dokument-ID till stabilt ID
@@ -127,7 +138,7 @@ export default function useFirebaseData() {
     const unsubscribeShifts = subscribeToShifts((shfts) => {
       setShifts(shfts);
       localStorage.setItem('shifts', JSON.stringify(shfts));
-    });
+    }, { start: shiftsWindowStart(), end: shiftsWindowEnd() });
     
     const unsubscribeDepartments = subscribeToDepartments((depts) => {
       setDepartments(depts);
