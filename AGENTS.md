@@ -43,7 +43,14 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
-*(Senast uppdaterad av agent: 2026-09-28, session om Firestore-regler, dubletter, kategorier, backup/restore.)*
+*(Senast uppdaterad av agent: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
+
+- **PR #48 (mergat):** Firestore offline-persistence aktiverat i `src/firebase.js` (`persistentLocalCache` + `persistentMultipleTabManager`). Återkommande användare betjänas från lokal cache; väntas minska reads 50–80 %.
+- **PR #49 (draft, väntar på granskning):** `subscribeToShifts` stöder `{ start, end }`-fönster (Firestore `where` på `date`); `useFirebaseData` prenumererar rullande från kontraktsårets start till +92 dagar (täcker kalender, historikvy, AdminStats alla periodlägen). Redundant `getShifts()`-initialläsning bortagen – halverar start-reads. Realtime-uppdateringar behålls; ingen påverkan på användarnas historikvisning.
+- **PR #50 (draft):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
+- Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
+
+### Sammanfattning tidigare session (2026-09-28, Firestore-regler, dubletter, kategorier, backup/restore)
 
 - `main` innehåller nu PR #15–#21 (+ #22 om den mergas): Firestore-säkerhetsregler (Test Mode hade upphört och blockerade ALLÅT – därför försvann data i appen), ID-mapping-fiks (`{ ...doc.data(), id: doc.id }` i `src/firebase.js`, tidigare skrev gamla id-fältet över dokument-ID:t vilket skapade «osläppna» dubletter), idempotent localStorage-migrering (`setDoc` med ursprungligt id), sticky-rubrik + scrollfönster i `ShiftCalendar`, anställdkategorier (`EMPLOYEE_CATEGORIES` = Skiutleie/Butikk/Skiskole i `ShiftCalendar.jsx`, mörk separatorrad per kategori, dropdown i Ny/Redigera ansatt; befintliga utan kategori härleds från deptIds).
 - Cloud Functions (alla token-skyddade med `BACKUP_TOKEN` om de är HTTP, triggas annars via Firestore-dokument – INGEN curl behövs): `dedupShifts` (rensar dubletter i shifts+employees), `reassignShifts`/`reassignOnJob` (flytta vakter mellan anställd-ID – skapa dokument i `reassignJobs` med fromEmployeeId/toEmployeeId), `restoreOnJob` (återställ samling från Storage-backup – skapa dokument i `restoreJobs` med date/collection/confirm="JA"/dryRun).
@@ -56,6 +63,9 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - Kända observationer: ingen README ännu; skolferier hårdkodade i `src/App.jsx` (2026); inga tester (utom ad-hoc CSV-test för `toCsv` och hash-test för `passwords.js`).
 
 ## Nästa steg
+- Kolla reads/dag i Firebase Console → Firestore → Usage när PR #49 mergeats och varit live några dagar; avgör om mer optimering behövs.
+- Konsolidera extra revenues-lyssnare (`OverviewCalendar`, `StaffingPlanner`) till delad hook.
+- Ev. arkivering av pass äldre än kontraktståret (on-demand-visning av arkiv) om reads fortfarande är höga.
 - Lägg till README.
 - Flytta hårdkodade ferier/högtidsdatum till konfiguration.
 - Överväg testsvit för `useWorkLawValidation`.
