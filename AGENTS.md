@@ -73,3 +73,4 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 ### Sammanfattning session (2026-10-12, egen kategori högst upp i kalendern)
 - `sortCategoriesForUser` tillagd i `ShiftCalendar.jsx` och `OverviewCalendar.jsx`: icke-admin-inloggade användare ser sin egen kategori (via `inferCategory`) först i kalenderns kategorigrupper; admin ser standardordning.
 - Verifierad med `npm run build` (godkänt).
+- Passordbytte för anställda: `ChangePasswordModal.jsx` (ny komponent) + `handleChangePassword` i `App.jsx`. Verifierar nuvarande lösenord, hashar nya med PBKDF2 och sparar `passwordSalt`/`passwordHash` via `updateEmployeeFirebase`; localStorage-sessionen uppdateras. Knapp "Endre passord" i headern för inloggade användare.

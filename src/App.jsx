@@ -11,6 +11,7 @@ import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
 import StaffingPlanner from './components/StaffingPlanner';
 import LeaveRequestModal from './components/LeaveRequestModal';
+import ChangePasswordModal from './components/ChangePasswordModal';
 import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
 
@@ -130,6 +131,7 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [employeeSort, setEmployeeSort] = useState('name');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [shiftToEdit, setShiftToEdit] = useState(null);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
@@ -281,6 +283,30 @@ function App() {
       alert('Feil ved sletting av grupperevent: ' + error.message);
     }
   }, [currentUser]);
+
+  const handleChangePassword = useCallback(async (currentPassword, newPassword) => {
+    const user = employees.find(emp => emp.id === currentUser.id);
+    if (!user) {
+      alert('Fant ikke brukeren!');
+      return false;
+    }
+    const valid = await verifyPassword(currentPassword, user.passwordSalt, user.passwordHash);
+    if (!valid) {
+      alert('Feil nåværende passord!');
+      return false;
+    }
+    try {
+      const { salt, hash } = await hashPassword(newPassword);
+      await updateEmployeeFirebase(user.id, { passwordSalt: salt, passwordHash: hash, password: '' });
+      const updated = { ...currentUser, passwordSalt: salt, passwordHash: hash, password: '' };
+      setCurrentUser(updated);
+      localStorage.setItem('currentUser', JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      alert('Klarte ikke å lagre det nye passordet: ' + e.message);
+      return false;
+    }
+  }, [employees, currentUser, updateEmployeeFirebase]);
 
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
@@ -810,6 +836,9 @@ function App() {
                 Innlogget som: <strong>{currentUser.name}</strong>
                 {currentUser.isAdmin && <span className="ml-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Admin</span>}
               </span>
+              <button onClick={() => setShowChangePasswordModal(true)} className="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">
+                Endre passord
+              </button>
               <button onClick={handleLogout} className="px-3 py-1 bg-red-100 text-red-700 rounded border border-red-200 hover:bg-red-200">
                 Logg ut
               </button>
@@ -1075,6 +1104,13 @@ function App() {
       )}
 
 
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          currentUser={currentUser}
+          onSubmit={handleChangePassword}
+          onClose={() => setShowChangePasswordModal(false)}
+        />
+      )}
       {showLoginModal && (
         <LoginModal
           employees={employees}
