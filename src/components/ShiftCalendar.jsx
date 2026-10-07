@@ -40,6 +40,18 @@ const shiftsInCategory = (allShifts, category, deptNameById, employeeId, dateStr
   });
 };
 
+const sortCategoriesForUser = (groups, currentUser) => {
+  const entries = [...groups];
+  if (!currentUser || currentUser.isAdmin) return entries;
+  const userCategory = inferCategory(currentUser);
+  const index = entries.findIndex(([category]) => category === userCategory);
+  if (index > 0) {
+    const [entry] = entries.splice(index, 1);
+    entries.unshift(entry);
+  }
+  return entries;
+};
+
 const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
   const deptNameById = new Map((allDepartments || []).filter(Boolean).map(d => [d.id, d.name || d.id]));
   const employeeById = new Map(employeeList.map(e => [String(e.id), e]));
@@ -257,7 +269,7 @@ function ShiftCalendar({
             onEditEvent={onEditGroupEvent}
             onDeleteEvent={onDeleteGroupEvent}
           />
-            {groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr).flatMap(([category, categoryEmployees]) => [
+            {sortCategoriesForUser(groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr), currentUser).flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
                   colSpan={1 + dates.length}

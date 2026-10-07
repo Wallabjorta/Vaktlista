@@ -69,3 +69,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - Lägg till README.
 - Flytta hårdkodade ferier/högtidsdatum till konfiguration.
 - Överväg testsvit för `useWorkLawValidation`.
+
+### Sammanfattning session (2026-10-12, egen kategori högst upp i kalendern)
+- `sortCategoriesForUser` tillagd i `ShiftCalendar.jsx` och `OverviewCalendar.jsx`: icke-admin-inloggade användare ser sin egen kategori (via `inferCategory`) först i kalenderns kategorigrupper; admin ser standardordning.
+- Verifierad med `npm run build` (godkänt).
