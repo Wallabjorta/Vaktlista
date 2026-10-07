@@ -42,6 +42,18 @@ const groupByCategory = (employeeList) => {
   return [...groups.entries()].filter(([, emps]) => emps.length > 0);
 };
 
+const sortCategoriesForUser = (groups, currentUser) => {
+  const entries = [...groups];
+  if (!currentUser || currentUser.isAdmin) return entries;
+  const userCategory = inferCategory(currentUser);
+  const index = entries.findIndex(([category]) => category === userCategory);
+  if (index > 0) {
+    const [entry] = entries.splice(index, 1);
+    entries.unshift(entry);
+  }
+  return entries;
+};
+
 function OverviewCalendar({
   employees = [],
   shifts = [],
@@ -401,7 +413,7 @@ function OverviewCalendar({
                   })}
                 </tr>
               )}
-              {groupByCategory(filteredEmployees || []).flatMap(([category, categoryEmployees]) => [
+              {sortCategoriesForUser(groupByCategory(filteredEmployees || []), currentUser).flatMap(([category, categoryEmployees]) => [
                 <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                   <td
                     colSpan={1 + dates.length}
