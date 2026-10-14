@@ -30,7 +30,7 @@ const shiftsInCategory = (allShifts, category, deptNameById, employeeId, dateStr
   return (allShifts || []).filter(shift => {
     if (shift.employeeId !== employeeId || shift.date !== dateStr) return false;
     const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
-    if (deptName === 'fri' || deptName === 'ferie') return false;
+    if (deptName === 'fri' || deptName === 'ferie') return true;
     if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
     if (category === 'Skiutleie Øst') return deptName.includes('øst') || deptName.includes('ost');
     if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');
