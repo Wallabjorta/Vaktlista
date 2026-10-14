@@ -26,9 +26,8 @@ const deptNameToCategory = (deptName) => {
   return null;
 };
 
-const shiftsInCategory = (allShifts, category, deptNameById, employeeId, dateStr) => {
+const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
   return (allShifts || []).filter(shift => {
-    if (shift.employeeId !== employeeId || shift.date !== dateStr) return false;
     const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
     if (deptName === 'fri' || deptName === 'ferie') return true;
     if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
@@ -38,6 +37,19 @@ const shiftsInCategory = (allShifts, category, deptNameById, employeeId, dateStr
     if (category === 'Skiskole') return deptName.includes('skiskole');
     return false;
   });
+};
+
+const EMPTY_SHIFTS = [];
+
+const buildShiftIndex = (allShifts) => {
+  const map = new Map();
+  for (const shift of allShifts || []) {
+    if (!shift || !shift.date) continue;
+    const key = `${String(shift.employeeId)}|${shift.date}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(shift);
+  }
+  return map;
 };
 
 const sortCategoriesForUser = (groups, currentUser) => {
@@ -122,8 +134,8 @@ function ShiftCalendar({
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  const getDates = () => {
-    const dates = [];
+  const dates = useMemo(() => {
+    const result = [];
     const startDate = new Date(currentDate);
     startDate.setHours(0, 0, 0, 0);
 
@@ -138,16 +150,24 @@ function ShiftCalendar({
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + week * 7 + day);
         date.setHours(0, 0, 0, 0);
-        dates.push(date);
+        result.push(date);
       }
     }
-    return dates;
-  };
-
-  const dates = getDates();
+    return result;
+  }, [currentDate, showHistory]);
   const deptNameById = useMemo(() => new Map((departments || []).filter(Boolean).map(d => [d.id, (d.name || '').toLowerCase()])), [departments]);
   const firstDateStr = dates.length ? `${dates[0].getFullYear()}-${String(dates[0].getMonth() + 1).padStart(2, '0')}-${String(dates[0].getDate()).padStart(2, '0')}` : '';
   const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
+  const shiftIndex = useMemo(() => buildShiftIndex(shifts), [shifts]);
+  const categoryGroups = useMemo(() => {
+    const groups = groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr);
+    return sortCategoriesForUser(groups, currentUser);
+  }, [employees, shifts, departments, firstDateStr, lastDateStr, currentUser]);
+  const shiftsForCell = useCallback((category, employeeId, dateStr) => {
+    const forCell = shiftIndex.get(`${String(employeeId)}|${dateStr}`) || EMPTY_SHIFTS;
+    if (forCell.length === 0) return forCell;
+    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById);
+  }, [shiftIndex, deptNameById]);
 
   const getWeekNumber = (date) => {
     const d = new Date(date);
@@ -269,7 +289,7 @@ function ShiftCalendar({
             onEditEvent={onEditGroupEvent}
             onDeleteEvent={onDeleteGroupEvent}
           />
-            {sortCategoriesForUser(groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr), currentUser).flatMap(([category, categoryEmployees]) => [
+            {categoryGroups.flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
                   colSpan={1 + dates.length}
@@ -292,7 +312,7 @@ function ShiftCalendar({
                   const month = String(date.getMonth() + 1).padStart(2, '0');
                   const day = String(date.getDate()).padStart(2, '0');
                   const dateStr = `${year}-${month}-${day}`;
-                  const shiftsForDay = shiftsInCategory(shifts, category, deptNameById, employee.id, dateStr);
+                  const shiftsForDay = shiftsForCell(category, employee.id, dateStr);
                   const holiday = isHoliday(dateStr);
                   const vacation = isVacation(dateStr);
                   const sunday = isSunday(date);
