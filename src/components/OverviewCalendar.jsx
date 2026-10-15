@@ -331,7 +331,7 @@ function OverviewCalendar({
           <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
+                <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
@@ -351,9 +351,9 @@ function OverviewCalendar({
                   return (
                     <th
                       key={index}
-                      className={`p-0.5 text-center border-r last:border-r-0 text-xs ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                      className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                       style={{ minWidth: '30px' }}
-                    >
+                   >
                       <div className="font-medium text-gray-700 truncate">
                         {date.getDate()}
                       </div>
