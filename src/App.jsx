@@ -105,8 +105,19 @@ const VACATIONS = {
   "2027-08-15": "Sommerferie"
 };
 
+const calendarShiftsUntil = (currentDate) => {
+  const end = new Date(currentDate || new Date());
+  end.setHours(0, 0, 0, 0);
+  // Kalendern visar 32 veckor från aktuellt datum; lägg till en veckas marginal
+  end.setDate(end.getDate() + 33 * 7);
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+};
+
 function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   // Firebase data hook - now includes departments
+  // Dynamiskt lasningsfönster så vakt/fri långt fram i tid syns i kalendern
   const {
     employees,
     shifts,
@@ -123,10 +134,9 @@ function App() {
     updateDepartment: updateDepartmentFirebase,
     deleteDepartment: deleteDepartmentFirebase,
     migrateData
-  } = useFirebaseData();
+  } = useFirebaseData({ shiftsUntil: calendarShiftsUntil(currentDate) });
 
   const [selectedDepartment, setSelectedDepartment] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [employeeSort, setEmployeeSort] = useState('name');
