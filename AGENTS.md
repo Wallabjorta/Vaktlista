@@ -43,12 +43,19 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
-*(Senast uppdaterad av agent: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
+*(Senast uppdaterad av agent: 2026-11-03, session om PR #60/#61 + CI-fix för Firebase Hosting PR-preview.)*
+*(Tidigare: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
 
 - **PR #48 (mergat):** Firestore offline-persistence aktiverat i `src/firebase.js` (`persistentLocalCache` + `persistentMultipleTabManager`). Återkommande användare betjänas från lokal cache; väntas minska reads 50–80 %.
-- **PR #49 (draft, väntar på granskning):** `subscribeToShifts` stöder `{ start, end }`-fönster (Firestore `where` på `date`); `useFirebaseData` prenumererar rullande från kontraktsårets start till +92 dagar (täcker kalender, historikvy, AdminStats alla periodlägen). Redundant `getShifts()`-initialläsning bortagen – halverar start-reads. Realtime-uppdateringar behålls; ingen påverkan på användarnas historikvisning.
-- **PR #50 (draft):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
+- **PR #49 (mergat):** `subscribeToShifts` stöder `{ start, end }`-fönster (Firestore `where` på `date`); `useFirebaseData` prenumererar rullande från kontraktsårets start till +92 dagar (täcker kalender, historikvy, AdminStats alla periodlägen). Redundant `getShifts()`-initialläsning bortagen – halverar start-reads. Realtime-uppdateringar behålls; ingen påverkan på användarnas historikvisning.
+- **PR #50 (stängd utan merge):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
 - Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
+
+### Sammanfattning session (2026-11-03, PR #60 + #61 mergade, CI-fix)
+- **PR #61 (mergat):** `const [emps, depts]` → `let` i `src/hooks/useFirebaseData.js:67` – const-reassignering bröt `npm run dev` (vite dep-scan: "Cannot assign to 'depts' because it is a constant", npx exit 1). `npm run build` hade gått bra hela tiden. Verifierat: dev + build OK.
+- **PR #60 (mergat):** sticky kategorirader vid horisontell scroll (se 2026-10-15 nedan).
+- **PR #57 och #59 (mergade):** sessionslogg + dynamiskt lasningsfönster för skift.
+- **CI:** Firebase Hosting PR-preview (`firebase-hosting-pull-request.yml`) failade 2026-11-03 med 403 `serviceusage.services.get` på projekt `vaktlista-d0efd` (senast grön 2026-10-15). Token var giltig (testIamPermissions 200) men service account saknade behörighet. Löst i GCP IAM/API – workflowen är grön igen. Vercel-preview var grön hela tiden.
 
 ### Sammanfattning session (2026-10-15, sticky kategorirader vid horisontell scroll)
 - Kategoriraderna i `ShiftCalendar.jsx` och `OverviewCalendar.jsx` hade en enda `<td>` med `colSpan` över hela raden; en fullbred sticky-celle kan inte fästa vid horisontell scroll, så kategoriet försvann åt vänster. Raden delas nu upp i en sticky första cell (samma min-bredd/z-index som namnkolumnen, mörk bakgrund `#374151`) + en utfyllnadscell med `colSpan={dates.length}`. Verifierad med `npm run build` (godkänd).
