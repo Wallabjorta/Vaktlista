@@ -117,7 +117,7 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
                       <span className="font-semibold shrink-0">ut {event.pickupTime}</span>
                     ) : <span className="shrink-0" />}
                     <span className="truncate flex-1 text-center">
-                      {event.groupName}
+                      {event.groupName}{event.participants != null && ` (${event.participants})`}
                     </span>
                     {event.dropoffTime ? (
                       <span className="font-semibold shrink-0">inn {event.dropoffTime}</span>
@@ -136,7 +136,7 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
             <div className="flex justify-between items-start mb-4 border-b pb-2">
               <h3 className="text-xl font-semibold flex items-center gap-2">
                 <span className="w-4 h-4 rounded inline-block" style={{ backgroundColor: selectedEvent.color || '#8B5CF6' }} />
-                {selectedEvent.groupName}
+                {selectedEvent.groupName}{selectedEvent.participants != null && ` (${selectedEvent.participants})`}
               </h3>
               <button onClick={() => setSelectedEvent(null)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
             </div>
