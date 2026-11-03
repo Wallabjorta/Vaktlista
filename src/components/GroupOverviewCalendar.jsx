@@ -141,7 +141,7 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
               {rows.map(({ event, startIdx, endIdx }) => (
                 <tr key={event.id} className="border-b last:border-b-0">
                   <td className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '140px' }}>
-                    <div className="text-sm font-medium truncate" title={event.groupName}>{event.groupName}</div>
+                    <div className="text-sm font-medium truncate" title={event.groupName}>{event.groupName}{event.participants != null && ` (${event.participants})`}</div>
                     <div className="text-[10px] text-gray-500 truncate">
                       {formatDateTime(event.pickupDate, event.pickupTime)} → {formatDateTime(event.dropoffDate, event.dropoffTime)}
                     </div>
@@ -158,7 +158,7 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
                       title={`${event.groupName}: henter ${formatDateTime(event.pickupDate, event.pickupTime)}, leverer ${formatDateTime(event.dropoffDate, event.dropoffTime)}`}
                     >
                       {event.pickupTime && <span className="font-semibold shrink-0">ut {event.pickupTime}</span>}
-                      <span className="truncate flex-1 text-center">{event.groupName}</span>
+                      <span className="truncate flex-1 text-center">{event.groupName}{event.participants != null && ` (${event.participants})`}</span>
                       {event.dropoffTime && <span className="font-semibold shrink-0">lev {event.dropoffTime}</span>}
                     </button>
                   </td>
