@@ -64,7 +64,7 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
       const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
       
       // Always try to load from Firebase first
-      const [emps, depts] = await Promise.all([
+      let [emps, depts] = await Promise.all([
         getEmployees(),
         getDepartments()
       ]);
