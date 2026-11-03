@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
+import { EMPLOYEE_CATEGORIES, groupByShiftCategory, SHIFTS_BY_CATEGORY } from './ShiftCalendar';
 import GroupBarsRow from './GroupBarsRow';
 import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
 
@@ -27,19 +27,6 @@ const inferCategory = (employee) => {
   if (deptIds.includes('dept-4')) return 'Butikk Vest';
   if (deptIds.includes('dept-3')) return 'Skiskole';
   return 'Skiutleie Vest';
-};
-
-const groupByCategory = (employeeList) => {
-  const groups = new Map();
-  for (const category of EMPLOYEE_CATEGORIES) {
-    groups.set(category, []);
-  }
-  for (const employee of employeeList) {
-    const category = inferCategory(employee);
-    if (!groups.has(category)) groups.set(category, []);
-    groups.get(category).push(employee);
-  }
-  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
 };
 
 const sortCategoriesForUser = (groups, currentUser) => {
@@ -246,6 +233,14 @@ function OverviewCalendar({
     ? employees.filter(emp => emp.deptIds?.includes(selectedDepartment))
     : employees;
 
+  // Gruppera efter samma kategori som vaktene i perioden (precis som huvudkalendern)
+  const firstDateStr = dates.length ? toDateStr(dates[0]) : '';
+  const lastDateStr = dates.length ? toDateStr(dates[dates.length - 1]) : '';
+  const categoryGroups = sortCategoriesForUser(
+    groupByShiftCategory(filteredEmployees || [], shifts || [], departments || [], firstDateStr, lastDateStr),
+    currentUser
+  );
+
   const toggleCell = (dateStr, employeeId, isCtrlOrMeta) => {
     setSelectedCells(prev => {
       const exists = prev.some(c => c.date === dateStr && c.employeeId === employeeId);
@@ -413,7 +408,7 @@ function OverviewCalendar({
                   })}
                 </tr>
               )}
-              {sortCategoriesForUser(groupByCategory(filteredEmployees || []), currentUser).flatMap(([category, categoryEmployees]) => [
+              {categoryGroups.flatMap(([category, categoryEmployees]) => [
                 <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                   <td
                     className="py-px px-3 border-r font-semibold text-xs uppercase tracking-wide sticky left-0 z-10"
@@ -424,7 +419,7 @@ function OverviewCalendar({
                   <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
                 </tr>,
                 ...categoryEmployees.map((employee) => (
-                <tr key={employee.id} className="border-b last:border-b-0">
+                <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
                   <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
@@ -436,7 +431,7 @@ function OverviewCalendar({
                     const month = String(date.getMonth() + 1).padStart(2, '0');
                     const day = String(date.getDate()).padStart(2, '0');
                     const dateStr = `${year}-${month}-${day}`;
-                    const shiftsForDay = getShiftsForDateAndEmployee(dateStr, employee.id);
+                    const shiftsForDay = SHIFTS_BY_CATEGORY(getShiftsForDateAndEmployee(dateStr, employee.id), category, deptNameById);
                     const holiday = isHoliday(dateStr);
                     const vacation = isVacation(dateStr);
                     const sunday = isSunday(date);
