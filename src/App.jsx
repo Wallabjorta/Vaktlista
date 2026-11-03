@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
+import GroupOverviewCalendar from './components/GroupOverviewCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
 import EditShiftModal from './components/EditShiftModal';
@@ -153,6 +154,7 @@ function App() {
   const [showGroupEventModal, setShowGroupEventModal] = useState(false);
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
   const [showOverviewCalendar, setShowOverviewCalendar] = useState(false);
+  const [showGroupOverview, setShowGroupOverview] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
 
@@ -1014,6 +1016,7 @@ function App() {
               onAddGroupEvent={() => setShowGroupEventModal(true)}
               onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
               onDeleteGroupEvent={handleDeleteGroupEvent}
+              onShowGroupOverview={() => setShowGroupOverview(true)}
             />
             <div className="flex items-center gap-2 my-2 flex-wrap">
               <button
@@ -1196,6 +1199,17 @@ function App() {
           onAddGroupEvent={() => setShowGroupEventModal(true)}
           onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
           onDeleteGroupEvent={handleDeleteGroupEvent}
+          onShowGroupOverview={() => setShowGroupOverview(true)}
+        />
+      )}
+
+      {showGroupOverview && (
+        <GroupOverviewCalendar
+          currentDate={currentDate}
+          currentUser={currentUser}
+          onClose={() => setShowGroupOverview(false)}
+          onAddEvent={() => setShowGroupEventModal(true)}
+          onEditEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
         />
       )}
 

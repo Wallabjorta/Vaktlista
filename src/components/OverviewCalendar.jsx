@@ -55,7 +55,8 @@ function OverviewCalendar({
   currentUser,
   onAddGroupEvent,
   onEditGroupEvent,
-  onDeleteGroupEvent
+  onDeleteGroupEvent,
+  onShowGroupOverview
 }) {
   const getDates = () => {
     const dates = [];
@@ -370,6 +371,7 @@ function OverviewCalendar({
                 onAddEvent={onAddGroupEvent}
                 onEditEvent={onEditGroupEvent}
                 onDeleteEvent={onDeleteGroupEvent}
+                onShowOverview={onShowGroupOverview}
               />
               {currentUser?.isAdmin && (
                 <tr className="border-b bg-blue-50">
