@@ -51,6 +51,9 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - **PR #50 (stängd utan merge):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
 - Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
 
+### Sammanfattning session (2026-11-03, kort ukedag under dato i översiktskalendern)
+- `OverviewCalendar.jsx` visar nu kort ukedag (no-NO, t.ex. «man») under dagtallet i översiktskalenderns datumrad. Verifierad med `npm run build` (godkänd).
+
 ### Sammanfattning session (2026-11-03, antall etter gruppenavn överallt)
 - `participants` (antall deltakere) visas nu efter gruppenamnet överallt där namnet visas: gruppebaren i `GroupBarsRow` (huvudkalender + översikt), detaljvinduet, och både namncell och bar i `GroupOverviewCalendar`. Format: `Navn (12)`. Verifierad med `npm run build` (godkänd).
 

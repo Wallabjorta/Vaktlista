@@ -353,6 +353,9 @@ function OverviewCalendar({
                       <div className="font-medium text-gray-700 truncate">
                         {date.getDate()}
                       </div>
+                      <div className="text-[10px] text-gray-400 leading-tight">
+                        {date.toLocaleDateString('no-NO', { weekday: 'short' })}
+                      </div>
                       {index % 7 === 0 && (
                         <div className="text-xs text-gray-500">
                           Uke {getWeekNumber(date)}
