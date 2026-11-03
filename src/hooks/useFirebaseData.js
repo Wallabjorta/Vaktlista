@@ -1,7 +1,7 @@
 // Custom hook for managing Firebase data in React components
 // Usage: const { employees, shifts, departments, loading, error, addEmployee, addShift, addDepartment, ... } = useFirebaseData();
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getEmployees,
   getDepartments,
@@ -46,7 +46,7 @@ const shiftsWindowEnd = () => {
   return d.toISOString().split('T')[0];
 };
 
-export default function useFirebaseData() {
+export default function useFirebaseData({ shiftsUntil = null } = {}) {
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -127,6 +127,15 @@ export default function useFirebaseData() {
     }
   }, [migrated]);
 
+  // Dynamiskt lasningsfönster: minst 92 dagar framåt, men alltid så långt
+  // fram som kalendern visar (32 veckor från aktuellt navigeringsdatum),
+  // så vaktposter och fri langt fram i tid alltid laddas in.
+  const windowEnd = useMemo(() => {
+    const fallback = shiftsWindowEnd();
+    if (!shiftsUntil) return fallback;
+    return shiftsUntil > fallback ? shiftsUntil : fallback;
+  }, [shiftsUntil]);
+
   // Set up realtime subscriptions
   useEffect(() => {
     // Subscribe to realtime updates
@@ -138,7 +147,7 @@ export default function useFirebaseData() {
     const unsubscribeShifts = subscribeToShifts((shfts) => {
       setShifts(shfts);
       localStorage.setItem('shifts', JSON.stringify(shfts));
-    }, { start: shiftsWindowStart(), end: shiftsWindowEnd() });
+    }, { start: shiftsWindowStart(), end: windowEnd });
     
     const unsubscribeDepartments = subscribeToDepartments((depts) => {
       setDepartments(depts);
@@ -154,7 +163,7 @@ export default function useFirebaseData() {
       unsubscribeShifts();
       unsubscribeDepartments();
     };
-  }, [loadData]);
+  }, [loadData, windowEnd]);
 
   // Migrate data from localStorage to Firebase
   const migrateData = useCallback(async () => {
