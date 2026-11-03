@@ -26,7 +26,7 @@ const deptNameToCategory = (deptName) => {
   return null;
 };
 
-const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
+export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
   return (allShifts || []).filter(shift => {
     const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
     if (deptName === 'fri' || deptName === 'ferie') return true;
@@ -64,7 +64,7 @@ const sortCategoriesForUser = (groups, currentUser) => {
   return entries;
 };
 
-const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
+export const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
   const deptNameById = new Map((allDepartments || []).filter(Boolean).map(d => [d.id, d.name || d.id]));
   const employeeById = new Map(employeeList.map(e => [String(e.id), e]));
   const categoriesByEmployee = new Map();
