@@ -53,7 +53,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 
 ### Sammanfattning session (2026-11-03, 3-månadersöversikten grupperar efter skiftkategori)
 - `OverviewCalendar.jsx` grupperar nu anställda med `groupByShiftCategory` (samma som huvudkalendern) över översiktens 12-veckorsfönster: anställda med vakter i flera avdelningar visas under varje berörd kategori, och cellerna filtreras med `SHIFTS_BY_CATEGORY` (fri/ferie visas fortfarande överallt). `groupByShiftCategory`/`SHIFTS_BY_CATEGORY` exporteras nu från `ShiftCalendar.jsx`. Kategorirader sticky vid horisontell scroll redan fixat i PR #60 (samma markup i båda kalendrarna).
-- Verifierad med `npm run build` (godkänd).
+- **PR #62 och #63 (mergade 2026-11-03, verifierade i produktion av användaren).**
 
 ### Sammanfattning session (2026-11-03, PR #60 + #61 mergade, CI-fix)
 - **PR #61 (mergat):** `const [emps, depts]` → `let` i `src/hooks/useFirebaseData.js:67` – const-reassignering bröt `npm run dev` (vite dep-scan: "Cannot assign to 'depts' because it is a constant", npx exit 1). `npm run build` hade gått bra hela tiden. Verifierat: dev + build OK.
