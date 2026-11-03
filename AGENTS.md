@@ -70,6 +70,13 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - Flytta hårdkodade ferier/högtidsdatum till konfiguration.
 - Överväg testsvit för `useWorkLawValidation`.
 
+### Sammanfattning session (2026-10-14, fri-visning i kalendern + kalenderprestanda)
+
+- **PR #55 (mergat):** `shiftsInCategory` i `ShiftCalendar.jsx` filtrerade tidigare bort `fri`/`ferie` helt, så fri-pass syntes aldrig på personen. Nu returneras fri/ferie för personen (syns i personens kategorigrupp), men `deptNameToCategory` returnerar `null` för fri/ferie så de skapar aldrig egen kategori eller påverkar sorteringen. OBS vid merge: bara fri-fixen hann med — se PR #56.
+- **PR #56 (mergat):** Prestandaoptimering av `ShiftCalendar.jsx` för Safari-trehet: `buildShiftIndex` (Map per `employeeId|date`, en gång per render) ersätter O(n²)-`shifts.filter()` i varje cell; `useMemo` på `dates`, `categoryGroups`, `deptNameById`, `shiftIndex`; `useCallback` för `shiftsForCell`. Kalendern renderar ~231 dagkolumner × anställda; nästa optimering om det behövs är färre renderade veckor åt gången (steg 1, kräver designbeslut om historikvy).
+- Lektion: vid merge, verifiera att alla commits i PR:et finns i `main` (`git merge-base --is-ancestor <sha> origin/main`) — PR #55 mergeades innan sista pushen hann med.
+- Firestore reads kunde ej kollas från agent-sandlådan (inga Firebase-verktyg/credentials); användaren ska kolla Firebase Console → Firestore → Usage manuellt enligt målet <50 000 reads/dag.
+
 ### Sammanfattning session (2026-10-12, egen kategori högst upp i kalendern)
 - `sortCategoriesForUser` tillagd i `ShiftCalendar.jsx` och `OverviewCalendar.jsx`: icke-admin-inloggade användare ser sin egen kategori (via `inferCategory`) först i kalenderns kategorigrupper; admin ser standardordning.
 - Verifierad med `npm run build` (godkänt).
