@@ -125,7 +125,8 @@ function ShiftCalendar({
   onNavigateWeek,
   onAddGroupEvent,
   onEditGroupEvent,
-  onDeleteGroupEvent
+  onDeleteGroupEvent,
+  onShowGroupOverview
 }) {
   const shortenComment = (comment, maxWords = 2) => {
     if (!comment) return '';
@@ -288,6 +289,7 @@ function ShiftCalendar({
             onAddEvent={onAddGroupEvent}
             onEditEvent={onEditGroupEvent}
             onDeleteEvent={onDeleteGroupEvent}
+            onShowOverview={onShowGroupOverview}
           />
             {categoryGroups.flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">

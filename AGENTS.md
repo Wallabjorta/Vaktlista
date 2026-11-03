@@ -51,6 +51,9 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - **PR #50 (stängd utan merge):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
 - Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
 
+### Sammanfattning session (2026-11-03, gruppeoversikt via «Grupper»-teksten)
+- Ny komponent `GroupOverviewCalendar.jsx`: 3-måneders kalender (12 veckor) med én rad per grupperevent och färgad bar från hent- till leveringsdato. Öppnas genom att klicka på «Grupper»-texten i `GroupBarsRow` (ny prop `onShowOverview`, trådas genom `ShiftCalendar`/`OverviewCalendar` via `onShowGroupOverview` i `App.jsx`). Klikk på bar öppnar `GroupEventModal`; admin får «+ Gruppe». Verifierad med `npm run build` (godkänd).
+
 ### Sammanfattning session (2026-11-03, 3-månadersöversikten grupperar efter skiftkategori)
 - `OverviewCalendar.jsx` grupperar nu anställda med `groupByShiftCategory` (samma som huvudkalendern) över översiktens 12-veckorsfönster: anställda med vakter i flera avdelningar visas under varje berörd kategori, och cellerna filtreras med `SHIFTS_BY_CATEGORY` (fri/ferie visas fortfarande överallt). `groupByShiftCategory`/`SHIFTS_BY_CATEGORY` exporteras nu från `ShiftCalendar.jsx`. Kategorirader sticky vid horisontell scroll redan fixat i PR #60 (samma markup i båda kalendrarna).
 - **PR #62 och #63 (mergade 2026-11-03, verifierade i produktion av användaren).**

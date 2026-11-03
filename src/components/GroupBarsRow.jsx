@@ -28,7 +28,7 @@ const formatDateTime = (dateStr, time) => {
  * mellom hentedato og leveringsdato (inkludert).
  * Klikk på en bar åpner detaljvindu.
  */
-function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEvent, compact = false }) {
+function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEvent, onShowOverview, compact = false }) {
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -73,7 +73,17 @@ function GroupBarsRow({ dates, currentUser, onAddEvent, onEditEvent, onDeleteEve
       <tr className="border-b bg-gray-50">
         <td className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
           <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-medium text-gray-600 uppercase">Grupper</span>
+            {onShowOverview ? (
+              <button
+                onClick={onShowOverview}
+                className="text-xs font-medium text-gray-600 uppercase hover:text-purple-700 cursor-pointer"
+                title="Åpne gruppeoversikt (3 måneder)"
+              >
+                Grupper
+              </button>
+            ) : (
+              <span className="text-xs font-medium text-gray-600 uppercase">Grupper</span>
+            )}
             {currentUser?.isAdmin && onAddEvent && (
               <button
                 onClick={onAddEvent}
