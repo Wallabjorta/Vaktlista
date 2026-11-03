@@ -416,12 +416,12 @@ function OverviewCalendar({
               {sortCategoriesForUser(groupByCategory(filteredEmployees || []), currentUser).flatMap(([category, categoryEmployees]) => [
                 <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                   <td
-                    colSpan={1 + dates.length}
-                    className="py-px px-3 font-semibold text-xs uppercase tracking-wide sticky left-0"
-                    style={{ backgroundColor: '#374151' }}
+                    className="py-px px-3 border-r font-semibold text-xs uppercase tracking-wide sticky left-0 z-10"
+                    style={{ backgroundColor: '#374151', minWidth: '70px' }}
                   >
                     {category}
                   </td>
+                  <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
                 </tr>,
                 ...categoryEmployees.map((employee) => (
                 <tr key={employee.id} className="border-b last:border-b-0">

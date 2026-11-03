@@ -292,12 +292,12 @@ function ShiftCalendar({
             {categoryGroups.flatMap(([category, categoryEmployees]) => [
               <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
                 <td
-                  colSpan={1 + dates.length}
-                  className="p-1 px-3 font-semibold text-sm uppercase tracking-wide sticky left-0"
+                  className="p-1 px-3 border-r font-semibold text-sm uppercase tracking-wide sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]"
                   style={{ backgroundColor: '#374151' }}
                 >
                   {category}
                 </td>
+                <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
               </tr>,
               ...categoryEmployees.map((employee) => (
               <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">

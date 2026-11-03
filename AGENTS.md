@@ -50,6 +50,9 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - **PR #50 (draft):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
 - Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
 
+### Sammanfattning session (2026-10-15, sticky kategorirader vid horisontell scroll)
+- Kategoriraderna i `ShiftCalendar.jsx` och `OverviewCalendar.jsx` hade en enda `<td>` med `colSpan` över hela raden; en fullbred sticky-celle kan inte fästa vid horisontell scroll, så kategoriet försvann åt vänster. Raden delas nu upp i en sticky första cell (samma min-bredd/z-index som namnkolumnen, mörk bakgrund `#374151`) + en utfyllnadscell med `colSpan={dates.length}`. Verifierad med `npm run build` (godkänd).
+
 ### Sammanfattning tidigare session (2026-09-28, Firestore-regler, dubletter, kategorier, backup/restore)
 
 - `main` innehåller nu PR #15–#21 (+ #22 om den mergas): Firestore-säkerhetsregler (Test Mode hade upphört och blockerade ALLÅT – därför försvann data i appen), ID-mapping-fiks (`{ ...doc.data(), id: doc.id }` i `src/firebase.js`, tidigare skrev gamla id-fältet över dokument-ID:t vilket skapade «osläppna» dubletter), idempotent localStorage-migrering (`setDoc` med ursprungligt id), sticky-rubrik + scrollfönster i `ShiftCalendar`, anställdkategorier (`EMPLOYEE_CATEGORIES` = Skiutleie/Butikk/Skiskole i `ShiftCalendar.jsx`, mörk separatorrad per kategori, dropdown i Ny/Redigera ansatt; befintliga utan kategori härleds från deptIds).
