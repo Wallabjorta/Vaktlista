@@ -108,10 +108,10 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
         </div>
 
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]">
-          <table className="w-full border-collapse min-w-[800px]">
+          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '2660px' }}>
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', minWidth: '140px' }}>
+                <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', width: '140px' }}>
                   <span className="text-xs font-medium text-gray-600 uppercase">Grupper</span>
                 </th>
                 {dates.map((date, index) => {
@@ -120,7 +120,7 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
                     <th
                       key={index}
                       className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                      style={{ minWidth: '30px' }}
+                      style={{ width: '30px' }}
                     >
                       <div className="font-medium text-gray-700 truncate">{date.getDate()}</div>
                       {index % 7 === 0 && (
@@ -140,7 +140,7 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
               )}
               {rows.map(({ event, startIdx, endIdx }) => (
                 <tr key={event.id} className="border-b last:border-b-0">
-                  <td className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '140px' }}>
+                  <td className="p-1 border-r bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', width: '140px' }}>
                     <div className="text-sm font-medium truncate" title={event.groupName}>{event.groupName}{event.participants != null && ` (${event.participants})`}</div>
                     <div className="text-[10px] text-gray-500 truncate">
                       {formatDateTime(event.pickupDate, event.pickupTime)} → {formatDateTime(event.dropoffDate, event.dropoffTime)}

@@ -324,10 +324,10 @@ function OverviewCalendar({
         </div>
         
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
-          <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
+          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '2590px' }}>
             <thead>
               <tr className="border-b">
-                <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
+                <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => {
                       const newDate = new Date(overviewDate);
@@ -348,7 +348,7 @@ function OverviewCalendar({
                     <th
                       key={index}
                       className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                      style={{ minWidth: '30px' }}
+                      style={{ width: '30px' }}
                    >
                       <div className="font-medium text-gray-700 truncate">
                         {date.getDate()}
@@ -425,7 +425,7 @@ function OverviewCalendar({
                 </tr>,
                 ...categoryEmployees.map((employee) => (
                 <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', minWidth: '70px' }}>
+                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
