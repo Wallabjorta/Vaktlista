@@ -97,8 +97,10 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     const categories = LOCATION_CATEGORIES[location];
     for (const s of shifts) {
       if (!map.has(s.date)) map.set(s.date, []);
+      const emp = employeeById.get(String(s.employeeId));
+      // Admin-brukare (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
+      if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
       if (categories) {
-        const emp = employeeById.get(String(s.employeeId));
         const cat = emp?.category || null;
         if (!cat || !categories.includes(cat)) continue;
       }

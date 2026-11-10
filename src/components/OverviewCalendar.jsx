@@ -180,6 +180,8 @@ function OverviewCalendar({
       const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
       if (deptName === 'fri') continue;
       const emp = employeeById.get(String(shift.employeeId));
+      // Admin-brukere (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
+      if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
       const cat = emp ? inferCategory(emp) : null;
       const deptIsVest = deptName.includes('vest');
       const deptIsOst = deptName.includes('øst') || deptName.includes('ost');
