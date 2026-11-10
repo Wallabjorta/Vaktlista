@@ -1,8 +1,15 @@
-// Automatisk utfylling av vakter basert på omsetning, ansettelsesprosent,
-// søndager og helligdager. Ren funksjon uten sideeffekter — kalleren viser
+// Automatisk utfylling av vakter basert på omsetning, søndager, helligdager
+// och jämn fördelning. Ren funksjon uten sideeffekter — kalleren viser
 // forslaget og bestemmer selv om det lagres.
+//
+// Regler:
+// - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
+//   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
+// - Grundbemanningen i kategorin fördelas jämnt över dagarna (den med
+//   minst arbetsdagar den veckan väljs först); dagar med högre behov
+//   (omsetning/söndag/helligdag) får extra folk på samma sätt.
 
-const FULL_TIME_WEEKLY_HOURS = 37.5;
+const MAX_DAYS_PER_WEEK = 5;
 
 export const toDateStr = (date) => {
   const y = date.getFullYear();
@@ -41,17 +48,6 @@ export const buildRevenueMap = (revenues) => {
     }
   }
   return map;
-};
-
-// Ukentlig timebudsjett utifrån ansettelsesprosent / kontraktstimer
-const weeklyHoursFor = (emp) => {
-  if (emp && emp.contractHours != null && !isNaN(Number(emp.contractHours)) && Number(emp.contractHours) > 0) {
-    return Number(emp.contractHours);
-  }
-  if (emp && emp.contractPercent != null && !isNaN(Number(emp.contractPercent)) && Number(emp.contractPercent) > 0) {
-    return (Number(emp.contractPercent) / 100) * FULL_TIME_WEEKLY_HOURS;
-  }
-  return FULL_TIME_WEEKLY_HOURS;
 };
 
 // Mandag som ukenøkkel
@@ -117,20 +113,24 @@ export const generateAutoFill = ({
     ? (staffingConfigs[loc] || staffingConfigs.total || null)
     : null;
   const revenueMap = buildRevenueMap(revenues);
-  const hours = shiftHours(startTime, endTime);
 
   const employeeById = new Map((allEmployees || employees).map(e => [String(e.id), e]));
   const deptNameById = new Map((departments || []).map(d => [d.id, (d?.name || '').toLowerCase()]));
 
   // Faktisk bemanning per dato (samme räknereglar som Bemanning V/Ø-raden:
-  // fri/ferie och admin räknas inte) + hvem som är upptagen per dag.
+  // fri/ferie och admin räknas inte) + hvem som är upptagen per dag
+  // + hur många arbetsdagar varje ansatt redan har den veckan.
   const staffingByDate = new Map();
   const busyByEmpDate = new Set();
+  const workDaysByEmpWeek = new Map();
   for (const s of shifts || []) {
     if (!s.date) continue;
     busyByEmpDate.add(`${s.employeeId}_${s.date}`);
     const dn = deptNameById.get(s.departmentId) || '';
     if (dn === 'fri' || dn === 'ferie') continue;
+    const [sy, sm, sd] = s.date.split('-').map(Number);
+    const swk = weekKeyFor(new Date(sy, sm - 1, sd));
+    workDaysByEmpWeek.set(`${s.employeeId}_${swk}`, (workDaysByEmpWeek.get(`${s.employeeId}_${swk}`) || 0) + 1);
     const emp = employeeById.get(String(s.employeeId));
     if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
     const isLoc = !loc
@@ -141,8 +141,8 @@ export const generateAutoFill = ({
     }
   }
 
-  // Fördelningstillstånd: planerade timmar per vecka + antal vakter (rotation)
-  const plannedHours = new Map();
+  // Fördelningstillstånd: arbetsdagar per vecka (max 5, jämn fördelning —
+  // den med minst dagar den veckan väljs först) + antal nya vakter (rotation)
   const plannedCount = new Map();
   const candidates = [...employees];
 
@@ -165,23 +165,24 @@ export const generateAutoFill = ({
     const names = [];
     for (let i = 0; i < missing; i++) {
       const wk = weekKeyFor(date);
+      const daysThisWeek = (emp) => workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0;
       const pick = candidates
         .filter(emp => !busyByEmpDate.has(`${emp.id}_${dateStr}`))
-        .filter(emp => (plannedHours.get(`${emp.id}_${wk}`) || 0) + hours <= weeklyHoursFor(emp) + 1e-9)
+        .filter(emp => daysThisWeek(emp) < MAX_DAYS_PER_WEEK)
         .sort((a, b) => {
-          const aRatio = (plannedHours.get(`${a.id}_${wk}`) || 0) / weeklyHoursFor(a);
-          const bRatio = (plannedHours.get(`${b.id}_${wk}`) || 0) / weeklyHoursFor(b);
-          if (aRatio !== bRatio) return aRatio - bRatio;
+          const ad = daysThisWeek(a);
+          const bd = daysThisWeek(b);
+          if (ad !== bd) return ad - bd;
           return (plannedCount.get(a.id) || 0) - (plannedCount.get(b.id) || 0);
         })[0];
       if (!pick) {
         warnings.push(
           `${dateStr}: ${missing - i} ${missing - i === 1 ? 'vakt' : 'vakter'} kunde ikke fylles — ` +
-          `ingen ledig ansatt innenfor ansettelsesprosenten.`
+          `ingen ledig ansatt (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd eller redan bokad).`
         );
         break;
       }
-      plannedHours.set(`${pick.id}_${wk}`, (plannedHours.get(`${pick.id}_${wk}`) || 0) + hours);
+      workDaysByEmpWeek.set(`${pick.id}_${wk}`, daysThisWeek(pick) + 1);
       plannedCount.set(pick.id, (plannedCount.get(pick.id) || 0) + 1);
       busyByEmpDate.add(`${pick.id}_${dateStr}`);
       assignments.push({

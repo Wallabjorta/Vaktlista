@@ -127,7 +127,8 @@ function AutoFillModal({
           <div>
             <h2 className="text-xl font-semibold">Auto-utfylling av vakter</h2>
             <p className="text-sm text-gray-600">
-              Basert på omsetning (bemanningskonfig), søndager, helligdager og ansettelsesprosent.
+              Fordeler vakter jevnt i kategorien — maks 5 arbeidsdager per ansatt per uke —
+              basert på omsetning (bemanningskonfig), søndager og helligdager.
               Bare tomme celler fylls.
             </p>
           </div>
