@@ -5,7 +5,7 @@ import { subscribeToGroupEvents } from '../firebase';
 
 export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
 
-const inferCategory = (employee) => {
+export const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
     return employee.category;
   }
@@ -15,7 +15,7 @@ const inferCategory = (employee) => {
   return 'Skiutleie Vest';
 };
 
-const deptNameToCategory = (deptName) => {
+export const deptNameToCategory = (deptName) => {
   const n = (deptName || '').toLowerCase();
   if (!n || n === 'fri' || n === 'ferie') return null;
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';

@@ -102,7 +102,6 @@ export const generateAutoFill = ({
   const warnings = [];
   const assignments = [];
   const perDate = [];
-  if (!departmentId) return { assignments, warnings, perDate };
 
   const dept = (departments || []).find(d => d && d.id === departmentId);
   const deptNameLower = (dept?.name || '').toLowerCase();
@@ -112,6 +111,8 @@ export const generateAutoFill = ({
   }
 
   const loc = locationForDepartmentName(dept?.name);
+  // Kategorier utan platskoppling (t.ex. Skiskole/Ekstra) använder total-konfigen
+  const revLoc = loc || 'total';
   const config = staffingConfigs
     ? (staffingConfigs[loc] || staffingConfigs.total || null)
     : null;
@@ -151,8 +152,8 @@ export const generateAutoFill = ({
     const isHoliday = (holidays || []).includes(dateStr);
 
     let recommended = null;
-    if (loc && revenueMap.has(`${loc}_${dateStr}`)) {
-      const rec = recommend ? recommend(revenueMap.get(`${loc}_${dateStr}`), config) : null;
+    if (revenueMap.has(`${revLoc}_${dateStr}`)) {
+      const rec = recommend ? recommend(revenueMap.get(`${revLoc}_${dateStr}`), config) : null;
       recommended = rec ? rec.staff : null;
     }
     let need = recommended != null ? recommended : 0;
@@ -187,7 +188,7 @@ export const generateAutoFill = ({
         employeeId: pick.id,
         employeeName: pick.name,
         date: dateStr,
-        departmentId,
+        departmentId: departmentId || (pick.deptIds && pick.deptIds[0]) || null,
         startTime,
         endTime,
         comment: 'Auto-utfylt',

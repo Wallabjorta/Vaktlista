@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
-import { generateAutoFill } from '../utils/autoFill';
+import { generateAutoFill, toDateStr } from '../utils/autoFill';
+import { EMPLOYEE_CATEGORIES, inferCategory, deptNameToCategory } from './ShiftCalendar';
 
 const DEFAULT_STAFFING_CONFIG = {
   minimumStaff: 2,
@@ -16,13 +17,15 @@ const MONTH_NAMES = ['jan.', 'feb.', 'mars', 'apr.', 'mai', 'juni', 'juli', 'aug
 const formatYMD = (dateStr) => {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
-  return `${Number(d)}. ${MONTH_NAMES[Number(m) - 1]}`;
+  return `${Number(d)}. ${MONTH_NAMES[Number(m) - 1]} ${y}`;
 };
 
+const CATEGORY_OPTIONS = EMPLOYEE_CATEGORIES.filter(c => c !== 'Admin');
+
 /**
- * Auto-utfylling av vakter: genererar förslag utifrån omsetning
- * (bemanningskonfig), søndager, helligdager och ansettelsesprosent.
- * Admin väljer avdeling og regler per kjøring, ser forslag og godkjenner
+ * Auto-utfylling av vakter: genererar förslag per kategori utifrån omsetning
+ * (bemanningskonfig), söndager, helligdager och ansettelsesprosent.
+ * Admin väljer kategori og periode per kjøring, ser forslag och godkjenner
  * før noe lagres. Bare tomme celler fylls.
  */
 function AutoFillModal({
@@ -37,7 +40,9 @@ function AutoFillModal({
   onSave,
   onClose
 }) {
-  const [departmentId, setDepartmentId] = useState('');
+  const [category, setCategory] = useState('');
+  const [periodStart, setPeriodStart] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
   const [startTime, setStartTime] = useState('08:45');
   const [endTime, setEndTime] = useState('16:00');
   const [sundayBoost, setSundayBoost] = useState('0');
@@ -56,22 +61,44 @@ function AutoFillModal({
     return () => { unsub1(); unsub2(); };
   }, []);
 
+  // Standardperiod = hela fönstret
+  useEffect(() => {
+    if (dates.length > 0) {
+      setPeriodStart(toDateStr(dates[0]));
+      setPeriodEnd(toDateStr(dates[dates.length - 1]));
+    }
+  }, [dates]);
+
   const candidates = useMemo(() => {
-    if (!departmentId) return [];
+    if (!category) return [];
     return (employees || []).filter(e =>
-      e && !e.isAdmin && e.category !== 'Admin' && (e.deptIds || []).includes(departmentId)
+      e && !e.isAdmin && e.category !== 'Admin' && inferCategory(e) === category
     );
-  }, [employees, departmentId]);
+  }, [employees, category]);
+
+  // Avdeling som motsvarar kategorin (för färg/visning av nya vakter);
+  // fallback är den enskilde anställdes första avdeling.
+  const deptForCategory = useMemo(() => {
+    if (!category) return null;
+    return (departments || []).find(d => d && deptNameToCategory(d.name) === category) || null;
+  }, [departments, category]);
 
   const handleGenerate = () => {
-    if (!departmentId) { alert('Velg avdeling!'); return; }
+    if (!category) { alert('Velg kategori!'); return; }
     if (candidates.length === 0) {
-      alert('Ingen ansatte (uten admin) i valgt avdeling.');
+      alert('Ingen ansatte (uten admin) i valgt kategori.');
       return;
     }
+    if (!periodStart || !periodEnd) { alert('Velg periode (fra og til dato)!'); return; }
+    if (periodStart > periodEnd) { alert('Fra-dato må være før eller lik til-dato!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
+    const datesInRange = dates.filter(d => {
+      const s = toDateStr(d);
+      return s >= periodStart && s <= periodEnd;
+    });
+    if (datesInRange.length === 0) { alert('Perioden ligger utenfor oversiktens vindu.'); return; }
     setResult(generateAutoFill({
-      dates,
+      dates: datesInRange,
       employees: candidates,
       allEmployees: allEmployees || employees,
       shifts,
@@ -81,7 +108,7 @@ function AutoFillModal({
       staffingConfigs: configs,
       recommend: recommendStaffing,
       options: {
-        departmentId,
+        departmentId: deptForCategory?.id || '',
         startTime,
         endTime,
         sundayBoost: Number(sundayBoost) || 0,
@@ -110,23 +137,50 @@ function AutoFillModal({
         <div className="p-4 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-1">Avdeling (arbeidsplass)</label>
+              <label className="block text-sm font-medium mb-1">Kategori</label>
               <select
-                value={departmentId}
-                onChange={(e) => { setDepartmentId(e.target.value); setResult(null); }}
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setResult(null); }}
                 className="w-full p-2 border rounded"
               >
-                <option value="">Velg avdeling</option>
-                {(departments || []).filter(d => d).map(dept => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                <option value="">Velg kategori</option>
+                {CATEGORY_OPTIONS.map(c => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
-              {departmentId && (
+              {category && (
                 <p className="text-xs text-gray-500 mt-1">
-                  {candidates.length} ansatte (uten admin) i avdelingen
+                  {candidates.length} ansatte (utan admin) i kategorien
                 </p>
               )}
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Fra dato</label>
+                <input
+                  type="date"
+                  value={periodStart}
+                  min={dates.length ? toDateStr(dates[0]) : undefined}
+                  max={dates.length ? toDateStr(dates[dates.length - 1]) : undefined}
+                  onChange={(e) => { setPeriodStart(e.target.value); setResult(null); }}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Til dato</label>
+                <input
+                  type="date"
+                  value={periodEnd}
+                  min={dates.length ? toDateStr(dates[0]) : undefined}
+                  max={dates.length ? toDateStr(dates[dates.length - 1]) : undefined}
+                  onChange={(e) => { setPeriodEnd(e.target.value); setResult(null); }}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Starttid</label>
@@ -137,24 +191,23 @@ function AutoFillModal({
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full p-2 border rounded" />
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Søndager</label>
-              <select value={sundayBoost} onChange={(e) => setSundayBoost(e.target.value)} className="w-full p-2 border rounded">
-                <option value="0">Samme bemanning som ellers</option>
-                <option value="1">+1 ekstra</option>
-                <option value="2">+2 ekstra</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Helligdager</label>
-              <select value={holidayBoost} onChange={(e) => setHolidayBoost(e.target.value)} className="w-full p-2 border rounded">
-                <option value="0">Samme bemanning som ellers</option>
-                <option value="1">+1 ekstra</option>
-                <option value="2">+2 ekstra</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Søndager</label>
+                <select value={sundayBoost} onChange={(e) => setSundayBoost(e.target.value)} className="w-full p-2 border rounded">
+                  <option value="0">Samme bemanning som ellers</option>
+                  <option value="1">+1 ekstra</option>
+                  <option value="2">+2 ekstra</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Helligdager</label>
+                <select value={holidayBoost} onChange={(e) => setHolidayBoost(e.target.value)} className="w-full p-2 border rounded">
+                  <option value="0">Samme bemanning som ellers</option>
+                  <option value="1">+1 ekstra</option>
+                  <option value="2">+2 ekstra</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -168,7 +221,7 @@ function AutoFillModal({
           {result && (
             <div className="space-y-3">
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 text-sm">
-                <strong>{totalNew} nye vakter</strong> foreslått over {dates.length} dager
+                <strong>{totalNew} nye vakter</strong> foreslått i perioden {formatYMD(periodStart)} – {formatYMD(periodEnd)}
                 ({candidates.length} ansatte, {relevantDates.length} dager berørt).
                 {totalNew === 0 && ' Ingen dager mangler bemanning innenfor disse reglene.'}
               </div>
