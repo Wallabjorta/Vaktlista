@@ -43,13 +43,18 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
-*(Senast uppdaterad av agent: 2026-11-03, session om PR #60/#61 + CI-fix för Firebase Hosting PR-preview.)*
+*(Senast uppdaterad av agent: 2026-11-10, session om auto-utfylling av vakter + tidigare bugfixar på main.)*
 *(Tidigare: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
 
 - **PR #48 (mergat):** Firestore offline-persistence aktiverat i `src/firebase.js` (`persistentLocalCache` + `persistentMultipleTabManager`). Återkommande användare betjänas från lokal cache; väntas minska reads 50–80 %.
 - **PR #49 (mergat):** `subscribeToShifts` stöder `{ start, end }`-fönster (Firestore `where` på `date`); `useFirebaseData` prenumererar rullande från kontraktsårets start till +92 dagar (täcker kalender, historikvy, AdminStats alla periodlägen). Redundant `getShifts()`-initialläsning bortagen – halverar start-reads. Realtime-uppdateringar behålls; ingen påverkan på användarnas historikvisning.
 - **PR #50 (stängd utan merge):** `LOGG.md` i roten – overflödig, denna fil är fortsättningsloggen. Stäng PR #50 utan merge.
 - Kostnadsanalys: samtliga lyssnare prenumererade tidigare på hela samlingar utan filter; `shifts` växer obegränsat över säsonger och är största read-drivern.
+
+### Sammanfattning session (2026-11-10, auto-utfylling av vakter + bugfixar på main)
+- Direkta commits på `main` (efter användarens uttryckliga önskan): (1) gruppebarer i 3-månedersöversikten låg ~2 dagar fel — `OverviewCalendar`/`GroupOverviewCalendar` fick `tableLayout:'fixed'` med lika datokolumnbredder (baren positioneras procentuellt och kräver lika kolumner); (2) admin-ansatte (`isAdmin` eller kategori 'Admin') räknas inte längre i faktisk bemanning (OverviewCalendar + StaffingPlanner); (3) `EditShiftModal` har dropdown för avdeling/arbeidsplass (sparas + loggas).
+- **Auto-utfylling (denna PR):** ny `src/utils/autoFill.js` (ren motor: omsetning→bemanning via `recommendStaffing`, söndag-/helligdagstillägg per körning, veckotimmar utifrån `contractHours`/`contractPercent`, roterar den med mest ledig budget, fyller bara tomma celler, exkluderar admin) + `src/components/AutoFillModal.jsx` (välj avdeling, tider, boost per kjøring; forhåndsvisning före lagring). Knapp «Auto-fyll vakter» i OverviewCalendar-huvudet (admin), trådad via `onAutoFill(dates)` → `handleAutoFillSave` i `App.jsx` (validerar med `validateShift`, loggar `shift_add` med `autoFill: true`). Fixade även befintlig bug: OverviewCalendar:s Forrige/Neste-knappar ändrade aldrig fönstret (`dates` använde `currentDate` i stället för `overviewDate`) — state deklarationen flyttad före `getDates` och `getDates` använder nu `overviewDate`.
+- Verifieras med `npm run build` (denna session) + manuell granskning på PR-preview.
 
 ### Sammanfattning session (2026-11-03, kort ukedag under dato i översiktskalendern)
 - `OverviewCalendar.jsx` visar nu kort ukedag (no-NO, t.ex. «man») under dagtallet i översiktskalenderns datumrad. Verifierad med `npm run build` (godkänd).

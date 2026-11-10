@@ -56,11 +56,14 @@ function OverviewCalendar({
   onAddGroupEvent,
   onEditGroupEvent,
   onDeleteGroupEvent,
-  onShowGroupOverview
+  onShowGroupOverview,
+  onAutoFill
 }) {
+  // Local date state for navigation (må ligga före getDates som använder den)
+  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
   const getDates = () => {
     const dates = [];
-    const startDate = new Date(currentDate || new Date());
+    const startDate = new Date(overviewDate || new Date());
     startDate.setHours(0, 0, 0, 0);
 
     const dayOfWeek = startDate.getDay();
@@ -220,8 +223,6 @@ function OverviewCalendar({
   }, [revenueByDateAndLocation, staffingConfigs, actualByDateAndLocation]);
 
   // Local date state for navigation
-  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
-  // Utvalg for bulkvakter: array av { date, employeeId }
   const [selectedCells, setSelectedCells] = useState([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkForm, setBulkForm] = useState({
@@ -319,6 +320,15 @@ function OverviewCalendar({
                 className="px-2 py-1 bg-gray-200 rounded text-sm hover:bg-gray-300"
               >
                 Nullstill
+              </button>
+            )}
+            {currentUser?.isAdmin && onAutoFill && (
+              <button
+                onClick={() => onAutoFill(dates)}
+                className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
+                title="Generer vakter automatisk basert på omsetning, søndager, helligdager og ansettelsesprosent"
+              >
+                Auto-fyll vakter
               </button>
             )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>

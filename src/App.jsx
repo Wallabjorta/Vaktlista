@@ -38,6 +38,7 @@ import {
 } from './firebase';
 import AuditLogView from './components/AuditLogView';
 import GroupEventModal from './components/GroupEventModal';
+import AutoFillModal from './components/AutoFillModal';
 import { addGroupEvent, updateGroupEvent, deleteGroupEvent } from './firebase';
 import { hashPassword, verifyPassword } from './utils/passwords';
 
@@ -155,6 +156,8 @@ function App() {
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
   const [showOverviewCalendar, setShowOverviewCalendar] = useState(false);
   const [showGroupOverview, setShowGroupOverview] = useState(false);
+  const [autoFillDates, setAutoFillDates] = useState(null);
+  const [savingAutoFill, setSavingAutoFill] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
 
@@ -526,6 +529,44 @@ function App() {
     } catch (error) {
       console.error('Error saving bulk shifts from overview:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
+    }
+  }, [shifts, holidaysObj, addShiftFirebase, currentUser]);
+
+  // Auto-utfylling: lagre godkjent forslag (validerar mot arbetsmarknadslagen som bulk)
+  const handleAutoFillSave = useCallback(async (assignments) => {
+    if (!assignments || assignments.length === 0) return;
+    setSavingAutoFill(true);
+    try {
+      const warnings = [];
+      const validatedSoFar = [...shifts];
+      const sorted = [...assignments].sort((a, b) => a.date.localeCompare(b.date));
+      for (const shift of sorted) {
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        if (!validation.isValid) {
+          warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): ${validation.errors.join(', ')}`);
+        }
+        validatedSoFar.push(shift);
+      }
+      for (const shift of sorted) {
+        await addShiftFirebase(shift);
+      }
+      await logAdminAction(currentUser, 'shift_add', {
+        autoFill: true,
+        count: sorted.length,
+        dates: [...new Set(sorted.map(s => s.date))],
+        employeeIds: [...new Set(sorted.map(s => s.employeeId))]
+      });
+      setAutoFillDates(null);
+      if (warnings.length > 0) {
+        alert(`⚠️ ${sorted.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+      } else {
+        alert(`✅ ${sorted.length} vakter opprettet!`);
+      }
+    } catch (error) {
+      console.error('Error saving auto-filled shifts:', error);
+      alert('Feil ved lagring av vakter: ' + error.message);
+    } finally {
+      setSavingAutoFill(false);
     }
   }, [shifts, holidaysObj, addShiftFirebase, currentUser]);
 
@@ -1202,6 +1243,22 @@ function App() {
           onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
           onDeleteGroupEvent={handleDeleteGroupEvent}
           onShowGroupOverview={() => setShowGroupOverview(true)}
+          onAutoFill={(dates) => setAutoFillDates(dates)}
+        />
+      )}
+
+      {autoFillDates && currentUser?.isAdmin && (
+        <AutoFillModal
+          dates={autoFillDates}
+          employees={employees}
+          allEmployees={employees}
+          shifts={shifts}
+          departments={departments}
+          holidays={Object.keys(holidaysObj || {})}
+          currentUser={currentUser}
+          saving={savingAutoFill}
+          onSave={handleAutoFillSave}
+          onClose={() => setAutoFillDates(null)}
         />
       )}
 
