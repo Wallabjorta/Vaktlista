@@ -326,7 +326,7 @@ function OverviewCalendar({
         </div>
         
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
-          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '2590px' }}>
+          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '4090px' }}>
             <thead>
               <tr className="border-b">
                 <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
@@ -350,7 +350,7 @@ function OverviewCalendar({
                     <th
                       key={index}
                       className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                      style={{ width: '30px' }}
+                      style={{ width: '48px' }}
                    >
                       <div className="font-medium text-gray-700 truncate">
                         {date.getDate()}
