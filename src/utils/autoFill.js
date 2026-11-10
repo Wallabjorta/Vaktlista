@@ -5,8 +5,8 @@
 // Regler:
 // - Minst minPerDay (standard 2) ansatte från kategorin varje dag —
 //   aldrig bara 1 person från kategorin en dag.
-// - Omsetning/bemanningskonfig ger behov utöver minimum; helger (lør+sön)
-//   och helligdager kan lägga till extra per kjøring.
+// - Omsetning/bemanningskonfig ger behovet — helgerna (lør+sön) bemannas
+//   till EXAKT samma behov som vardagarna (inget extra utöver behovet).
 // - Helgansatte (weekendOnlyIds) jobbar BARE lördag/söndag — de väljs
 //   först på helger, så de ordinaries dagar sparas till vardagarna.
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
@@ -82,12 +82,10 @@ const weekKeyFor = (date) => {
  * @param {string}   arg.options.departmentId
  * @param {string}   arg.options.startTime
  * @param {string}   arg.options.endTime
- * @param {number}   arg.options.sundayBoost
  * @param {number}   arg.options.holidayBoost
  * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
  * @param {Array}    [arg.options.pairIds=[]]      «Alltid en på jobb»-par (max 2 id)
  * @param {Array}    [arg.options.weekendOnlyIds=[]] Helgansatte — jobbar bare lør/sön
- * @param {number}   [arg.options.weekendBoost=0]   Extra bemanning på helger (lør+sön)
  * @returns {{ assignments: Array, warnings: string[], perDate: Array }}
  */
 export const generateAutoFill = ({
@@ -105,12 +103,10 @@ export const generateAutoFill = ({
     departmentId,
     startTime = '08:45',
     endTime = '16:00',
-    sundayBoost = 0,
     holidayBoost = 0,
     minPerDay = 2,
     pairIds = [],
-    weekendOnlyIds = [],
-    weekendBoost = 0
+    weekendOnlyIds = []
   } = options;
 
   const warnings = [];
@@ -170,8 +166,6 @@ export const generateAutoFill = ({
     }
     // Minst minPerDay från kategorin varje dag — aldrig bara 1 person.
     let fullNeed = Math.max(recommended != null ? recommended : 0, minPerDay);
-    if (isSunday) fullNeed += Number(sundayBoost) || 0;
-    if (isWeekend) fullNeed += Number(weekendBoost) || 0;
     if (isHoliday) fullNeed += Number(holidayBoost) || 0;
     return {
       date,

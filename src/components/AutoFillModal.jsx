@@ -45,7 +45,6 @@ function AutoFillModal({
   const [periodEnd, setPeriodEnd] = useState('');
   const [startTime, setStartTime] = useState('08:45');
   const [endTime, setEndTime] = useState('16:00');
-  const [sundayBoost, setSundayBoost] = useState('0');
   const [holidayBoost, setHolidayBoost] = useState('3');
   const [pairId1, setPairId1] = useState('');
   const [pairId2, setPairId2] = useState('');
@@ -131,12 +130,10 @@ function AutoFillModal({
         departmentId: deptForCategory?.id || '',
         startTime,
         endTime,
-        sundayBoost: Number(sundayBoost) || 0,
         holidayBoost: Number(holidayBoost) || 0,
         minPerDay: 2,
         pairIds: [pairId1, pairId2].filter(Boolean),
-        weekendOnlyIds: weekendOnlyIds,
-        weekendBoost: 1
+        weekendOnlyIds: weekendOnlyIds
       }
     }));
   };
@@ -218,13 +215,8 @@ function AutoFillModal({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Helger (lør & søn)</label>
-                <select value={sundayBoost} onChange={(e) => setSundayBoost(e.target.value)} className="w-full p-2 border rounded">
-                  <option value="0">Samme bemanning som ellers</option>
-                  <option value="1">+1 ekstra</option>
-                  <option value="2">+2 ekstra</option>
-                </select>
+              <div className="col-span-2 text-xs text-gray-500">
+                Helgerna (lør & søn) bemannas till samma bemanningsbehov som vardagarna — inget extra läggs till.
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Helligdager (juleferien: +3)</label>
@@ -278,7 +270,7 @@ function AutoFillModal({
             <p className="text-sm font-medium">Helgansatte (valgfritt)</p>
             <p className="text-xs text-gray-500">
               Ansatte som jobbar bare helg (lørdag/söndag) — de täcker helgerna,
-              så de ordinaries dagar sparas till vardagarna. Helgene får alltid +1 ekstra.
+              så de ordinaries dagar sparas till vardagarna.
             </p>
             <div className="max-h-[120px] overflow-y-auto border rounded p-2 space-y-1">
               {(employees || []).filter(e => e && !e.isAdmin && e.category !== 'Admin').map(e => (
