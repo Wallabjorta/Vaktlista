@@ -696,13 +696,15 @@ function App() {
       await updateShiftFirebase(shiftId, {
         startTime: updates.startTime,
         endTime: updates.endTime,
-        comment: updates.comment || ""
+        comment: updates.comment || "",
+        departmentId: updates.departmentId
       });
       await logAdminAction(currentUser, 'shift_update', {
         shiftId,
         startTime: updates.startTime,
         endTime: updates.endTime,
-        comment: updates.comment || ""
+        comment: updates.comment || "",
+        departmentId: updates.departmentId
       });
       setShiftToEdit(null);
     } catch (error) {
@@ -1237,6 +1239,7 @@ function App() {
         <EditShiftModal
           shift={shiftToEdit.shift}
           employeeName={shiftToEdit.employeeName}
+          departments={departments}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
         />

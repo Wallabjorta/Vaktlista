@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 
-function EditShiftModal({ shift, employeeName, onSave, onClose }) {
+function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose }) {
   const [comment, setComment] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
 
   useEffect(() => {
     setComment(shift?.comment || '');
     setStartTime(shift?.startTime || '');
     setEndTime(shift?.endTime || '');
+    setDepartmentId(shift?.departmentId || '');
   }, [shift]);
 
   if (!shift) return null;
@@ -18,7 +20,8 @@ function EditShiftModal({ shift, employeeName, onSave, onClose }) {
     if (!startTime) { alert('Velg starttid!'); return; }
     if (!endTime) { alert('Velg sluttid!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
-    onSave(shift.id, { ...shift, startTime, endTime, comment });
+    if (!departmentId) { alert('Velg avdeling/arbeidsplass!'); return; }
+    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment });
   };
 
   return (
@@ -33,6 +36,21 @@ function EditShiftModal({ shift, employeeName, onSave, onClose }) {
           <div className="text-sm text-gray-600">
             <p><strong>Ansatt:</strong> {employeeName || shift.employeeId}</p>
             <p><strong>Dato:</strong> {shift.date}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Arbeidsplass / Avdeling</label>
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Velg avdeling</option>
+              {(departments || []).map(dept => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
