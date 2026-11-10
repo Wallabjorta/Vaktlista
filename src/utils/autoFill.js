@@ -5,8 +5,10 @@
 // Regler:
 // - Minst minPerDay (standard 2) ansatte från kategorin varje dag —
 //   aldrig bara 1 person från kategorin en dag.
-// - Omsetning/bemanningskonfig ger behov utöver minimum; söndagar och
-//   helligdager kan lägga till extra per kjøring.
+// - Omsetning/bemanningskonfig ger behov utöver minimum; helger (lør+sön)
+//   och helligdager kan lägga till extra per kjøring.
+// - Helgansatte (weekendOnlyIds) jobbar BARE lördag/söndag — de väljs
+//   först på helger, så de ordinaries dagar sparas till vardagarna.
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
 // - Grundbemanningen fördelas jämnt över dagarna (den med minst
@@ -84,6 +86,8 @@ const weekKeyFor = (date) => {
  * @param {number}   arg.options.holidayBoost
  * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
  * @param {Array}    [arg.options.pairIds=[]]      «Alltid en på jobb»-par (max 2 id)
+ * @param {Array}    [arg.options.weekendOnlyIds=[]] Helgansatte — jobbar bare lør/sön
+ * @param {number}   [arg.options.weekendBoost=0]   Extra bemanning på helger (lør+sön)
  * @returns {{ assignments: Array, warnings: string[], perDate: Array }}
  */
 export const generateAutoFill = ({
@@ -104,7 +108,9 @@ export const generateAutoFill = ({
     sundayBoost = 0,
     holidayBoost = 0,
     minPerDay = 2,
-    pairIds = []
+    pairIds = [],
+    weekendOnlyIds = [],
+    weekendBoost = 0
   } = options;
 
   const warnings = [];
@@ -114,7 +120,7 @@ export const generateAutoFill = ({
   const deptNameLower = (dept?.name || '').toLowerCase();
   if (deptNameLower === 'fri' || deptNameLower === 'ferie') {
     warnings.push('Valgt avdeling er fri/ferie — ingen vakter genereres.');
-    return { assignments, warnings, perDate };
+    return { assignments, warnings, perDate: [] };
   }
 
   const loc = locationForDepartmentName(dept?.name);
@@ -128,6 +134,7 @@ export const generateAutoFill = ({
   const deptNameById = new Map((departments || []).map(d => [d.id, (d?.name || '').toLowerCase()]));
   const candidates = [...employees];
   const candIds = new Set(candidates.map(e => String(e.id)));
+  const weekendOnly = new Set((weekendOnlyIds || []).map(String));
 
   // Kategoribemanning per dato: kategorins anställda som redan jobbar
   // (icke-fri/ferie) + hvem som är upptagen per dag + arbetsdagar per vecka.
@@ -154,6 +161,7 @@ export const generateAutoFill = ({
   const dayInfos = dates.map(date => {
     const dateStr = toDateStr(date);
     const isSunday = date.getDay() === 0;
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isHoliday = (holidays || []).includes(dateStr);
     let recommended = null;
     if (revenueMap.has(`${revLoc}_${dateStr}`)) {
@@ -163,11 +171,13 @@ export const generateAutoFill = ({
     // Minst minPerDay från kategorin varje dag — aldrig bara 1 person.
     let fullNeed = Math.max(recommended != null ? recommended : 0, minPerDay);
     if (isSunday) fullNeed += Number(sundayBoost) || 0;
+    if (isWeekend) fullNeed += Number(weekendBoost) || 0;
     if (isHoliday) fullNeed += Number(holidayBoost) || 0;
     return {
       date,
       dateStr,
       isSunday,
+      isWeekend,
       isHoliday,
       recommended,
       fullNeed,
@@ -216,8 +226,14 @@ export const generateAutoFill = ({
     const wk = weekKeyFor(info.date);
     return candidates
       .filter(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`))
+      // Helgansatte jobbar bare helger (lør/sön)
+      .filter(emp => info.isWeekend || !weekendOnly.has(String(emp.id)))
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       .sort((a, b) => {
+        // På helger väljs helgansatte först — sparar ordinares dagar till vardagarna
+        const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
+        const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
+        if (info.isWeekend && aw !== bw) return aw - bw;
         const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
         const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
         if (ad !== bd) return ad - bd;
@@ -287,6 +303,7 @@ export const generateAutoFill = ({
     date: info.dateStr,
     recommended: info.recommended,
     isSunday: info.isSunday,
+    isWeekend: info.isWeekend,
     isHoliday: info.isHoliday,
     existing: info.existing0,
     generated: namesByDate.get(info.dateStr).length,

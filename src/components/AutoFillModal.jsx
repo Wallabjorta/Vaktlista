@@ -46,9 +46,10 @@ function AutoFillModal({
   const [startTime, setStartTime] = useState('08:45');
   const [endTime, setEndTime] = useState('16:00');
   const [sundayBoost, setSundayBoost] = useState('0');
-  const [holidayBoost, setHolidayBoost] = useState('0');
+  const [holidayBoost, setHolidayBoost] = useState('3');
   const [pairId1, setPairId1] = useState('');
   const [pairId2, setPairId2] = useState('');
+  const [weekendOnlyIds, setWeekendOnlyIds] = useState([]);
   const [result, setResult] = useState(null);
   const [revenues, setRevenues] = useState([]);
   const [configs, setConfigs] = useState(null);
@@ -78,6 +79,23 @@ function AutoFillModal({
     );
   }, [employees, category]);
 
+  // Helgansatte: jobbar bare lördag/söndag (kan vara utanför kategorin)
+  const weekendOnlyEmps = useMemo(() => {
+    const ids = new Set(weekendOnlyIds.map(String));
+    return (employees || []).filter(e =>
+      e && !e.isAdmin && e.category !== 'Admin' && ids.has(String(e.id))
+    );
+  }, [employees, weekendOnlyIds]);
+
+  const engineCandidates = useMemo(() => {
+    const seen = new Set();
+    return [...candidates, ...weekendOnlyEmps].filter(e => {
+      if (seen.has(String(e.id))) return false;
+      seen.add(String(e.id));
+      return true;
+    });
+  }, [candidates, weekendOnlyEmps]);
+
   // Avdeling som motsvarar kategorin (för färg/visning av nya vakter);
   // fallback är den enskilde anställdes första avdeling.
   const deptForCategory = useMemo(() => {
@@ -87,7 +105,7 @@ function AutoFillModal({
 
   const handleGenerate = () => {
     if (!category) { alert('Velg kategori!'); return; }
-    if (candidates.length === 0) {
+    if (candidates.length === 0 && weekendOnlyEmps.length === 0) {
       alert('Ingen ansatte (uten admin) i valgt kategori.');
       return;
     }
@@ -101,7 +119,7 @@ function AutoFillModal({
     if (datesInRange.length === 0) { alert('Perioden ligger utenfor oversiktens vindu.'); return; }
     setResult(generateAutoFill({
       dates: datesInRange,
-      employees: candidates,
+      employees: engineCandidates,
       allEmployees: allEmployees || employees,
       shifts,
       departments,
@@ -116,7 +134,9 @@ function AutoFillModal({
         sundayBoost: Number(sundayBoost) || 0,
         holidayBoost: Number(holidayBoost) || 0,
         minPerDay: 2,
-        pairIds: [pairId1, pairId2].filter(Boolean)
+        pairIds: [pairId1, pairId2].filter(Boolean),
+        weekendOnlyIds: weekendOnlyIds,
+        weekendBoost: 1
       }
     }));
   };
@@ -156,6 +176,7 @@ function AutoFillModal({
               {category && (
                 <p className="text-xs text-gray-500 mt-1">
                   {candidates.length} ansatte (utan admin) i kategorien
+                  {weekendOnlyEmps.length > 0 && ` + ${weekendOnlyEmps.length} helgansatte`}
                 </p>
               )}
             </div>
@@ -198,7 +219,7 @@ function AutoFillModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Søndager</label>
+                <label className="block text-sm font-medium mb-1">Helger (lør & søn)</label>
                 <select value={sundayBoost} onChange={(e) => setSundayBoost(e.target.value)} className="w-full p-2 border rounded">
                   <option value="0">Samme bemanning som ellers</option>
                   <option value="1">+1 ekstra</option>
@@ -206,11 +227,12 @@ function AutoFillModal({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Helligdager</label>
+                <label className="block text-sm font-medium mb-1">Helligdager (juleferien: +3)</label>
                 <select value={holidayBoost} onChange={(e) => setHolidayBoost(e.target.value)} className="w-full p-2 border rounded">
                   <option value="0">Samme bemanning som ellers</option>
                   <option value="1">+1 ekstra</option>
                   <option value="2">+2 ekstra</option>
+                  <option value="3">+3 ekstra (juleferien)</option>
                 </select>
               </div>
             </div>
@@ -249,6 +271,33 @@ function AutoFillModal({
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-3 space-y-2">
+            <p className="text-sm font-medium">Helgansatte (valgfritt)</p>
+            <p className="text-xs text-gray-500">
+              Ansatte som jobbar bare helg (lørdag/söndag) — de täcker helgerna,
+              så de ordinaries dagar sparas till vardagarna. Helgene får alltid +1 ekstra.
+            </p>
+            <div className="max-h-[120px] overflow-y-auto border rounded p-2 space-y-1">
+              {(employees || []).filter(e => e && !e.isAdmin && e.category !== 'Admin').map(e => (
+                <label key={e.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={weekendOnlyIds.some(id => String(id) === String(e.id))}
+                    onChange={(ev) => {
+                      setWeekendOnlyIds(prev =>
+                        ev.target.checked
+                          ? [...prev, e.id]
+                          : prev.filter(id => String(id) !== String(e.id))
+                      );
+                      setResult(null);
+                    }}
+                  />
+                  <span>{e.name}</span>
+                </label>
+              ))}
             </div>
           </div>
 
