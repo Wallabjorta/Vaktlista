@@ -47,6 +47,8 @@ function AutoFillModal({
   const [endTime, setEndTime] = useState('16:00');
   const [sundayBoost, setSundayBoost] = useState('0');
   const [holidayBoost, setHolidayBoost] = useState('0');
+  const [pairId1, setPairId1] = useState('');
+  const [pairId2, setPairId2] = useState('');
   const [result, setResult] = useState(null);
   const [revenues, setRevenues] = useState([]);
   const [configs, setConfigs] = useState(null);
@@ -112,7 +114,9 @@ function AutoFillModal({
         startTime,
         endTime,
         sundayBoost: Number(sundayBoost) || 0,
-        holidayBoost: Number(holidayBoost) || 0
+        holidayBoost: Number(holidayBoost) || 0,
+        minPerDay: 2,
+        pairIds: [pairId1, pairId2].filter(Boolean)
       }
     }));
   };
@@ -127,8 +131,8 @@ function AutoFillModal({
           <div>
             <h2 className="text-xl font-semibold">Auto-utfylling av vakter</h2>
             <p className="text-sm text-gray-600">
-              Fordeler vakter jevnt i kategorien — maks 5 arbeidsdager per ansatt per uke —
-              basert på omsetning (bemanningskonfig), søndager og helligdager.
+              Minst 2 fra kategorien hver dag, fordelt jevnt — maks 5 arbeidsdager
+              per ansatt per uke — basert på omsetning, søndager og helligdager.
               Bare tomme celler fylls.
             </p>
           </div>
@@ -207,6 +211,42 @@ function AutoFillModal({
                   <option value="0">Samme bemanning som ellers</option>
                   <option value="1">+1 ekstra</option>
                   <option value="2">+2 ekstra</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-3 space-y-2">
+            <p className="text-sm font-medium">Alltid én på jobb (valgfritt)</p>
+            <p className="text-xs text-gray-500">
+              Välj två ansatte — på dager som skal bemannes är alltid minst en av dem
+              på jobb, om ingen av dem redan jobbar.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1">Ansatte 1</label>
+                <select
+                  value={pairId1}
+                  onChange={(e) => { setPairId1(e.target.value); setResult(null); }}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">—</option>
+                  {candidates.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Ansatte 2</label>
+                <select
+                  value={pairId2}
+                  onChange={(e) => { setPairId2(e.target.value); setResult(null); }}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">—</option>
+                  {candidates.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

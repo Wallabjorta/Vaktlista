@@ -1,13 +1,18 @@
 // Automatisk utfylling av vakter basert på omsetning, søndager, helligdager
-// och jämn fördelning. Ren funksjon uten sideeffekter — kalleren viser
+// og jämn fördelning. Ren funksjon uten sideeffekter — kalleren viser
 // forslaget og bestemmer selv om det lagres.
 //
 // Regler:
+// - Minst minPerDay (standard 2) ansatte från kategorin varje dag —
+//   aldrig bara 1 person från kategorin en dag.
+// - Omsetning/bemanningskonfig ger behov utöver minimum; söndagar och
+//   helligdager kan lägga till extra per kjøring.
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
-// - Grundbemanningen i kategorin fördelas jämnt över dagarna (den med
-//   minst arbetsdagar den veckan väljs först); dagar med högre behov
-//   (omsetning/söndag/helligdag) får extra folk på samma sätt.
+// - Grundbemanningen fördelas jämnt över dagarna (den med minst
+//   arbetsdagar den veckan väljs först).
+// - Valfritt «alltid en på jobb»-par: om ingen ur paret jobbar en dag
+//   som ska bemannas, fylls en ur paret först.
 
 const MAX_DAYS_PER_WEEK = 5;
 
@@ -63,23 +68,28 @@ const weekKeyFor = (date) => {
  * Generera förslag på nya vakter.
  *
  * @param {Object} arg
- * @param {Date[]}   arg.dates          Datoer i vinduet
- * @param {Array}    arg.employees      Kandidater (valgt avdeling, utan admin)
- * @param {Array}    arg.shifts         Eksisterande vakter (vinduet)
- * @param {Array}    arg.allEmployees   Alla anställda (för admin-exkludering)
+ * @param {Date[]}   arg.dates            Datoer i perioden
+ * @param {Array}    arg.employees        Kandidater (valgt kategori, utan admin)
+ * @param {Array}    arg.shifts           Eksisterende vakter (perioden)
  * @param {Array}    arg.departments
- * @param {string[]} arg.holidays       ['YYYY-MM-DD', ...]
- * @param {Array}    arg.revenues       Rå omsättningsdokument { date, amount, location }
+ * @param {string[]} arg.holidays         ['YYYY-MM-DD', ...]
+ * @param {Array}    arg.revenues         Rå omsättningsdokument { date, amount, location }
  * @param {Object}   arg.staffingConfigs  { total, st, øst } eller null
- * @param {Function} arg.recommend      (amount, config) => { staff, label }
- * @param {Object}   arg.options         { departmentId, startTime, endTime, sundayBoost, holidayBoost }
+ * @param {Function} arg.recommend        (amount, config) => { staff, label }
+ * @param {Object}   arg.options
+ * @param {string}   arg.options.departmentId
+ * @param {string}   arg.options.startTime
+ * @param {string}   arg.options.endTime
+ * @param {number}   arg.options.sundayBoost
+ * @param {number}   arg.options.holidayBoost
+ * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
+ * @param {Array}    [arg.options.pairIds=[]]      «Alltid en på jobb»-par (max 2 id)
  * @returns {{ assignments: Array, warnings: string[], perDate: Array }}
  */
 export const generateAutoFill = ({
   dates = [],
   employees = [],
   shifts = [],
-  allEmployees,
   departments = [],
   holidays = [],
   revenues = [],
@@ -92,7 +102,9 @@ export const generateAutoFill = ({
     startTime = '08:45',
     endTime = '16:00',
     sundayBoost = 0,
-    holidayBoost = 0
+    holidayBoost = 0,
+    minPerDay = 2,
+    pairIds = []
   } = options;
 
   const warnings = [];
@@ -114,13 +126,13 @@ export const generateAutoFill = ({
     : null;
   const revenueMap = buildRevenueMap(revenues);
 
-  const employeeById = new Map((allEmployees || employees).map(e => [String(e.id), e]));
   const deptNameById = new Map((departments || []).map(d => [d.id, (d?.name || '').toLowerCase()]));
+  const candidates = [...employees];
+  const candIds = new Set(candidates.map(e => String(e.id)));
 
-  // Faktisk bemanning per dato (samme räknereglar som Bemanning V/Ø-raden:
-  // fri/ferie och admin räknas inte) + hvem som är upptagen per dag
-  // + hur många arbetsdagar varje ansatt redan har den veckan.
-  const staffingByDate = new Map();
+  // Kategoribemanning per dato: kategorins anställda som redan jobbar
+  // (icke-fri/ferie) + hvem som är upptagen per dag + arbetsdagar per vecka.
+  const catStaffingByDate = new Map();
   const busyByEmpDate = new Set();
   const workDaysByEmpWeek = new Map();
   for (const s of shifts || []) {
@@ -131,71 +143,92 @@ export const generateAutoFill = ({
     const [sy, sm, sd] = s.date.split('-').map(Number);
     const swk = weekKeyFor(new Date(sy, sm - 1, sd));
     workDaysByEmpWeek.set(`${s.employeeId}_${swk}`, (workDaysByEmpWeek.get(`${s.employeeId}_${swk}`) || 0) + 1);
-    const emp = employeeById.get(String(s.employeeId));
-    if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
-    const isLoc = !loc
-      ? true
-      : (loc === 'st' ? dn.includes('vest') : (dn.includes('øst') || dn.includes('ost')));
-    if (isLoc) {
-      staffingByDate.set(s.date, (staffingByDate.get(s.date) || 0) + 1);
+    if (candIds.has(String(s.employeeId))) {
+      catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
     }
   }
 
-  // Fördelningstillstånd: arbetsdagar per vecka (max 5, jämn fördelning —
-  // den med minst dagar den veckan väljs först) + antal nya vakter (rotation)
+  // Fördelningstillstånd: antal nya vakter per ansatt (rotation vid lika många dagar)
   const plannedCount = new Map();
-  const candidates = [...employees];
 
   for (const date of dates) {
     const dateStr = toDateStr(date);
     const isSunday = date.getDay() === 0;
     const isHoliday = (holidays || []).includes(dateStr);
+    const wk = weekKeyFor(date);
 
     let recommended = null;
     if (revenueMap.has(`${revLoc}_${dateStr}`)) {
       const rec = recommend ? recommend(revenueMap.get(`${revLoc}_${dateStr}`), config) : null;
       recommended = rec ? rec.staff : null;
     }
-    let need = recommended != null ? recommended : 0;
+    // Minst minPerDay från kategorin varje dag — aldrig bara 1 person.
+    let need = Math.max(recommended != null ? recommended : 0, minPerDay);
     if (isSunday) need += Number(sundayBoost) || 0;
     if (isHoliday) need += Number(holidayBoost) || 0;
 
-    const existing = staffingByDate.get(dateStr) || 0;
-    const missing = Math.max(0, need - existing);
+    const existing = catStaffingByDate.get(dateStr) || 0;
+    let missing = Math.max(0, need - existing);
     const names = [];
+
+    const daysThisWeek = (empId) => workDaysByEmpWeek.get(`${String(empId)}_${wk}`) || 0;
+    const addAssignment = (emp) => {
+      workDaysByEmpWeek.set(`${emp.id}_${wk}`, daysThisWeek(emp.id) + 1);
+      plannedCount.set(emp.id, (plannedCount.get(emp.id) || 0) + 1);
+      busyByEmpDate.add(`${emp.id}_${dateStr}`);
+      assignments.push({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        date: dateStr,
+        departmentId: departmentId || (emp.deptIds && emp.deptIds[0]) || null,
+        startTime,
+        endTime,
+        comment: 'Auto-utfylt',
+        breaks: []
+      });
+      names.push(emp.name);
+    };
+
+    // «Alltid en på jobb»: om ett par valts och ingen ur paret jobbar
+    // (eller är bokad) denna dag, fylls en ur paret först.
+    const pairEmps = pairIds
+      .map(id => candidates.find(c => String(c.id) === String(id)))
+      .filter(Boolean);
+    if (missing > 0 && pairEmps.length > 0 && !pairEmps.some(emp => busyByEmpDate.has(`${emp.id}_${dateStr}`))) {
+      const pickPair = pairEmps
+        .filter(emp => daysThisWeek(emp.id) < MAX_DAYS_PER_WEEK)
+        .sort((a, b) =>
+          daysThisWeek(a.id) - daysThisWeek(b.id) ||
+          String(a.id).localeCompare(String(b.id)))[0];
+      if (pickPair) {
+        addAssignment(pickPair);
+        missing -= 1;
+      } else {
+        warnings.push(
+          `${dateStr}: ingen av det valda paret kan jobba ` +
+          `(max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd).`
+        );
+      }
+    }
+
     for (let i = 0; i < missing; i++) {
-      const wk = weekKeyFor(date);
-      const daysThisWeek = (emp) => workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0;
       const pick = candidates
         .filter(emp => !busyByEmpDate.has(`${emp.id}_${dateStr}`))
-        .filter(emp => daysThisWeek(emp) < MAX_DAYS_PER_WEEK)
+        .filter(emp => daysThisWeek(emp.id) < MAX_DAYS_PER_WEEK)
         .sort((a, b) => {
-          const ad = daysThisWeek(a);
-          const bd = daysThisWeek(b);
+          const ad = daysThisWeek(a.id);
+          const bd = daysThisWeek(b.id);
           if (ad !== bd) return ad - bd;
           return (plannedCount.get(a.id) || 0) - (plannedCount.get(b.id) || 0);
         })[0];
       if (!pick) {
         warnings.push(
           `${dateStr}: ${missing - i} ${missing - i === 1 ? 'vakt' : 'vakter'} kunde ikke fylles — ` +
-          `ingen ledig ansatt (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd eller redan bokad).`
+          `ingen ledig ansatt (max ${MAX_DAYS_PER_WEEK} arbetsdager/vecka nådd eller redan bokad).`
         );
         break;
       }
-      workDaysByEmpWeek.set(`${pick.id}_${wk}`, daysThisWeek(pick) + 1);
-      plannedCount.set(pick.id, (plannedCount.get(pick.id) || 0) + 1);
-      busyByEmpDate.add(`${pick.id}_${dateStr}`);
-      assignments.push({
-        employeeId: pick.id,
-        employeeName: pick.name,
-        date: dateStr,
-        departmentId: departmentId || (pick.deptIds && pick.deptIds[0]) || null,
-        startTime,
-        endTime,
-        comment: 'Auto-utfylt',
-        breaks: []
-      });
-      names.push(pick.name);
+      addAssignment(pick);
     }
     perDate.push({
       date: dateStr,
