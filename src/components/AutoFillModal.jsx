@@ -45,7 +45,6 @@ function AutoFillModal({
   const [periodEnd, setPeriodEnd] = useState('');
   const [startTime, setStartTime] = useState('08:45');
   const [endTime, setEndTime] = useState('16:00');
-  const [holidayBoost, setHolidayBoost] = useState('3');
   const [pairId1, setPairId1] = useState('');
   const [pairId2, setPairId2] = useState('');
   const [weekendOnlyIds, setWeekendOnlyIds] = useState([]);
@@ -130,7 +129,6 @@ function AutoFillModal({
         departmentId: deptForCategory?.id || '',
         startTime,
         endTime,
-        holidayBoost: Number(holidayBoost) || 0,
         minPerDay: 2,
         pairIds: [pairId1, pairId2].filter(Boolean),
         weekendOnlyIds: weekendOnlyIds
@@ -216,16 +214,8 @@ function AutoFillModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 text-xs text-gray-500">
-                Helgerna (lør & søn) bemannas till samma bemanningsbehov som vardagarna — inget extra läggs till.
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Helligdager (juleferien: +3)</label>
-                <select value={holidayBoost} onChange={(e) => setHolidayBoost(e.target.value)} className="w-full p-2 border rounded">
-                  <option value="0">Samme bemanning som ellers</option>
-                  <option value="1">+1 ekstra</option>
-                  <option value="2">+2 ekstra</option>
-                  <option value="3">+3 ekstra (juleferien)</option>
-                </select>
+                Alla dagar — inkludert helger, juleferien och røda dager — bemannas
+                till EXAKT omsetningsbemanningen. Inga extra läggs till utöver behovet.
               </div>
             </div>
           </div>

@@ -5,8 +5,8 @@
 // Regler:
 // - Minst minPerDay (standard 2) ansatte från kategorin varje dag —
 //   aldrig bara 1 person från kategorin en dag.
-// - Omsetning/bemanningskonfig ger behovet — helgerna (lør+sön) bemannas
-//   till EXAKT samma behov som vardagarna (inget extra utöver behovet).
+// - Omsetning/bemanningskonfig ger behovet VARJE dag — helger, juleferien
+//   och røda dager bemannas till EXAKT samma behov (inga boost-tillägg).
 // - Helgansatte (weekendOnlyIds) jobbar BARE lördag/söndag — de väljs
 //   först på helger, så de ordinaries dagar sparas till vardagarna.
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
@@ -74,7 +74,7 @@ const weekKeyFor = (date) => {
  * @param {Array}    arg.employees        Kandidater (valgt kategori, utan admin)
  * @param {Array}    arg.shifts           Eksisterende vakter (perioden)
  * @param {Array}    arg.departments
- * @param {string[]} arg.holidays         ['YYYY-MM-DD', ...]
+ * @param {string[]} arg.holidays         ['YYYY-MM-DD', ...] (visning i perDate)
  * @param {Array}    arg.revenues         Rå omsättningsdokument { date, amount, location }
  * @param {Object}   arg.staffingConfigs  { total, st, øst } eller null
  * @param {Function} arg.recommend        (amount, config) => { staff, label }
@@ -82,7 +82,6 @@ const weekKeyFor = (date) => {
  * @param {string}   arg.options.departmentId
  * @param {string}   arg.options.startTime
  * @param {string}   arg.options.endTime
- * @param {number}   arg.options.holidayBoost
  * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
  * @param {Array}    [arg.options.pairIds=[]]      «Alltid en på jobb»-par (max 2 id)
  * @param {Array}    [arg.options.weekendOnlyIds=[]] Helgansatte — jobbar bare lør/sön
@@ -103,7 +102,6 @@ export const generateAutoFill = ({
     departmentId,
     startTime = '08:45',
     endTime = '16:00',
-    holidayBoost = 0,
     minPerDay = 2,
     pairIds = [],
     weekendOnlyIds = []
@@ -166,7 +164,6 @@ export const generateAutoFill = ({
     }
     // Minst minPerDay från kategorin varje dag — aldrig bara 1 person.
     let fullNeed = Math.max(recommended != null ? recommended : 0, minPerDay);
-    if (isHoliday) fullNeed += Number(holidayBoost) || 0;
     return {
       date,
       dateStr,
