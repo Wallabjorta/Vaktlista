@@ -101,6 +101,21 @@ function AutoFillModal({
     return (departments || []).find(d => d && deptNameToCategory(d.name) === category) || null;
   }, [departments, category]);
 
+  // Per-ansatt avdeling: kategorins avdeling om possible, annars den anställdes
+  // första avdeling som mappas till kategorin, annars första giltiga avdeling —
+  // nya vakter ska ALDRIG sparas utan giltig avdeling (då syns de ikke i kalendern).
+  const departmentIdByEmp = useMemo(() => {
+    const map = {};
+    for (const e of engineCandidates || []) {
+      const own = (e.deptIds || []).find(id =>
+        departments?.some(d => d && d.id === id && deptNameToCategory(d.name) === category)
+      );
+      map[String(e.id)] = deptForCategory?.id || own ||
+        (e.deptIds || [])[0] || null;
+    }
+    return map;
+  }, [engineCandidates, departments, category, deptForCategory]);
+
   const handleGenerate = () => {
     if (!category) { alert('Velg kategori!'); return; }
     if (candidates.length === 0 && weekendOnlyEmps.length === 0) {
@@ -131,7 +146,8 @@ function AutoFillModal({
         endTime,
         minPerDay: 2,
         pairIds: [pairId1, pairId2].filter(Boolean),
-        weekendOnlyIds: weekendOnlyIds
+        weekendOnlyIds: weekendOnlyIds,
+        departmentIdByEmp
       }
     }));
   };

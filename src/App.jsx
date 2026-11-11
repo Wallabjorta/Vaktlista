@@ -530,7 +530,7 @@ function App() {
       console.error('Error saving bulk shifts from overview:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
     }
-  }, [shifts, holidaysObj, addShiftFirebase, currentUser]);
+  }, [shifts, holidaysObj, departments, addShiftFirebase, currentUser]);
 
   // Auto-utfylling: lagre godkjent forslag (validerar mot arbetsmarknadslagen som bulk)
   const handleAutoFillSave = useCallback(async (assignments) => {
@@ -539,7 +539,18 @@ function App() {
     try {
       const warnings = [];
       const validatedSoFar = [...shifts];
-      const sorted = [...assignments].sort((a, b) => a.date.localeCompare(b.date));
+      const validDeptIds = new Set((departments || []).filter(Boolean).map(d => d.id));
+      const sorted = [...assignments]
+        .filter(shift => {
+          if (shift.departmentId && validDeptIds.has(shift.departmentId)) return true;
+          warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): vakt utan giltig avdeling — HOPPAT ÖVER (syns annars ikke i kalendern).`);
+          return false;
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+      if (sorted.length === 0) {
+        alert(`⚠️ Inga vakter sparade — alla saknar giltig avdeling:\n\n${warnings.join('\n')}`);
+        return;
+      }
       for (const shift of sorted) {
         const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
         if (!validation.isValid) {
@@ -568,7 +579,7 @@ function App() {
     } finally {
       setSavingAutoFill(false);
     }
-  }, [shifts, holidaysObj, addShiftFirebase, currentUser]);
+  }, [shifts, holidaysObj, departments, addShiftFirebase, currentUser]);
 
   const handleDateSelection = useCallback((newDates) => {
     // newDates is now an array of { date: string, employeeId: string } objects

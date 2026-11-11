@@ -113,7 +113,8 @@ export const generateAutoFill = ({
     endTime = '16:00',
     minPerDay = 2,
     pairIds = [],
-    weekendOnlyIds = []
+    weekendOnlyIds = [],
+    departmentIdByEmp = {}
   } = options;
 
   const warnings = [];
@@ -135,6 +136,10 @@ export const generateAutoFill = ({
   const revenueMap = buildRevenueMap(revenues);
 
   const deptNameById = new Map((departments || []).map(d => [d.id, (d?.name || '').toLowerCase()]));
+  const validDeptIds = new Set((departments || []).filter(Boolean).map(d => d.id));
+  // Spök-vakter: departmentId saknas eller finns inte bland avdelingarna —
+  // de syns ikke i kalendern och räknas därför inte som befintlig bemanning.
+  const ghostDates = new Set();
   const candidates = [...employees];
   const candIds = new Set(candidates.map(e => String(e.id)));
   const weekendOnly = new Set((weekendOnlyIds || []).map(String));
@@ -147,6 +152,10 @@ export const generateAutoFill = ({
   for (const s of shifts || []) {
     if (!s.date) continue;
     busyByEmpDate.add(`${s.employeeId}_${s.date}`);
+    if (!s.departmentId || !validDeptIds.has(s.departmentId)) {
+      ghostDates.add(s.date);
+      continue; // okänd/saknad avdeling: personen är upptagen men räknas inte som bemanning
+    }
     const dn = deptNameById.get(s.departmentId) || '';
     if (dn === 'fri' || dn === 'ferie') continue;
     const [sy, sm, sd] = s.date.split('-').map(Number);
@@ -155,6 +164,13 @@ export const generateAutoFill = ({
     if (candIds.has(String(s.employeeId))) {
       catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
     }
+  }
+
+  if (ghostDates.size > 0) {
+    warnings.push(
+      `⚠️ ${ghostDates.size} dag(ar) har vakter med okänd/saknad avdeling (syns ikke i kalendern). ` +
+      `De räknas inte som bemanning — fylls på nytt: ${[...ghostDates].sort().join(', ')}`
+    );
   }
 
   // Fördelningstillstånd: antal nya vakter per ansatt (rotation vid lika många dagar)
@@ -231,7 +247,10 @@ export const generateAutoFill = ({
       employeeId: emp.id,
       employeeName: emp.name,
       date: info.dateStr,
-      departmentId: departmentId || (emp.deptIds && emp.deptIds[0]) || null,
+      departmentId: departmentId ||
+        (departmentIdByEmp && departmentIdByEmp[String(emp.id)]) ||
+        (emp.deptIds && emp.deptIds.find(id => validDeptIds.has(id))) ||
+        null,
       startTime,
       endTime,
       comment: 'Auto-utfylt',
