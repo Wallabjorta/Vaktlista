@@ -136,7 +136,11 @@ function AutoFillModal({
     }));
   };
 
-  const relevantDates = (result?.perDate || []).filter(d => d.generated > 0);
+  // Visa alla dagar i perioden — även de utan nya vakter — så att
+  // «2 behövs, 1 finns redan, 1 läggs till, 0 saknas» syns tydligt.
+  const relevantDates = (result?.perDate || [])
+    .filter(d => (d.need || 0) > 0 || d.generated > 0)
+    .map(d => ({ ...d, missing: Math.max(0, (d.need || 0) - (d.existing || 0) - (d.generated || 0)) }));
   const totalNew = result?.assignments?.length || 0;
 
   return (
@@ -315,9 +319,10 @@ function AutoFillModal({
                     <thead className="sticky top-0">
                       <tr className="bg-gray-50 border-b">
                         <th className="p-2 text-left font-medium text-xs">Dag</th>
-                        <th className="p-2 text-left font-medium text-xs">Anbefalt</th>
+                        <th className="p-2 text-left font-medium text-xs">Behov</th>
                         <th className="p-2 text-left font-medium text-xs">Eksisterer</th>
                         <th className="p-2 text-left font-medium text-xs">Nye vakter</th>
+                        <th className="p-2 text-left font-medium text-xs">Mangler</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -328,11 +333,18 @@ function AutoFillModal({
                             {d.isSunday && <span className="text-red-600 text-xs ml-1">søn</span>}
                             {d.isHoliday && <span className="text-red-600 text-xs ml-1">helligdag</span>}
                           </td>
-                          <td className="p-2 border-r">{d.recommended ?? '—'}</td>
+                          <td className="p-2 border-r">{d.need ?? d.recommended ?? '—'}</td>
                           <td className="p-2 border-r">{d.existing}</td>
                           <td className="p-2">
                             <span className="font-medium">{d.generated}</span>
                             <span className="text-xs text-gray-600 ml-1">({d.names.join(', ')})</span>
+                          </td>
+                          <td className="p-2">
+                            {d.missing > 0 ? (
+                              <span className="text-red-600 font-medium">{d.missing}</span>
+                            ) : (
+                              <span className="text-green-600">0</span>
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -389,6 +389,7 @@ export const generateAutoFill = ({
   const perDate = dayInfos.map(info => ({
     date: info.dateStr,
     recommended: info.recommended,
+    need: info.fullNeed,
     isSunday: info.isSunday,
     isWeekend: info.isWeekend,
     isHoliday: info.isHoliday,
