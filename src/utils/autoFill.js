@@ -22,8 +22,9 @@
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
 // - Grundbemanningen fördelas jämnt över dagarna (den med minst
 //   arbetsdagar den veckan väljs först).
-// - Valfritt «alltid en på jobb»-par: om ingen ur paret jobbar en dag
-//   som ska bemannas, fylls en ur paret först.
+// - Valfritt «alltid en på jobb»-par (HÅRT): en ur paret jobbar VARJE dag
+//   i perioden — även om behovet redan är nått. Kan ingen ur paret jobba
+//   blir det ett hårt fel (⚠️-varning, manuell åtgärd).
 
 const MAX_DAYS_PER_WEEK = 5;
 
@@ -369,17 +370,31 @@ export const generateAutoFill = ({
     return [...pool].sort(rank)[0] || null;
   };
 
+  // Pass 0: «Alltid en på jobb»-paret är HÅRT — en ur paret jobbar VARJE dag
+  // i perioden, även om bemanningsbehovet redan är nått. Väljs innan allt
+  // annat så att veckodagarstaket inte förbrukas först. Om ingen ur paret
+  // kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad) är
+  // det ett hårt fel som måste lösas manuellt.
+  for (const info of dayInfos) {
+    if (pairEmps.length === 0 || pairCovered(info)) continue;
+    const pick = pickPairFor(info);
+    if (pick) {
+      addAssignment(info, pick);
+    } else {
+      warnings.push(
+        `⚠️ ${info.dateStr}: «alltid en på jobb»-paret kan INTE täcka dagen ` +
+        `(max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka, 2-helgedagar-regeln eller redan bokad) ` +
+        `— kräver manuell åtgärd!`
+      );
+    }
+  }
+
   // Pass 1: minimumsbemanning (minst minPerDay från kategorin) jämnt över
   // ALLA dagar i perioden först — så att helgen reserveras innan vardagarnas
   // extras förbrukar veckodagarstaket.
   for (const info of dayInfos) {
     const existing = catStaffingByDate.get(info.dateStr) || 0;
-    if (existing >= minPerDay) {
-      if (pairEmps.length > 0 && !pairCovered(info)) {
-        warnings.push(`${info.dateStr}: kategorin är bemannad, men ingen ur det valda paret jobbar.`);
-      }
-      continue;
-    }
+    if (existing >= minPerDay) continue;
     let missing = minPerDay - existing;
     const pickPair = pickPairFor(info);
     if (pickPair) {
