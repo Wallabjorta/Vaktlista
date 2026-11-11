@@ -157,7 +157,8 @@ function AutoFillModal({
         pairIds: [pairId1, pairId2].filter(Boolean),
         weekendOnlyIds: weekendOnlyIds,
         departmentIdByEmp,
-        location: LOCATION_BY_CATEGORY[category] || null
+        location: LOCATION_BY_CATEGORY[category] || null,
+        category
       }
     }));
   };

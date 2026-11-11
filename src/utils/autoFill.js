@@ -41,7 +41,7 @@ export const shiftHours = (startTime, endTime) => {
   return Math.max(0, (eh * 60 + em - (sh * 60 + sm)) / 60);
 };
 
-// Kartlegg avdelingsnavn til plats-nyckel som i StaffingPlanner/OverviewCalendar
+// Kartlegg avdelingsnavn till plats-nyckel som i StaffingPlanner/OverviewCalendar
 const locationForDepartmentName = (name) => {
   const n = (name || '').toLowerCase();
   if (n.includes('vest')) return 'st';
@@ -64,6 +64,20 @@ export const buildRevenueMap = (revenues) => {
     }
   }
   return map;
+};
+
+// Avdelingsnamn → kategori (samma logik som deptNameToCategory i ShiftCalendar):
+// en vakt på en ØST-avdeling räknas INTE som Vest-bemanning även om den
+// anställdes kategori är Vest — men personen är fortfarande upptagen den dagen.
+const categoryForDeptName = (name) => {
+  const n = (name || '').toLowerCase();
+  if (!n || n === 'fri' || n === 'ferie') return null;
+  if (n.includes('skolegrupper')) return 'Skiutleie Vest';
+  if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
+  if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
+  if (n.includes('vest')) return 'Skiutleie Vest';
+  if (n.includes('skiskole')) return 'Skiskole';
+  return null;
 };
 
 // Mandag som ukenøkkel
@@ -91,6 +105,9 @@ const weekKeyFor = (date) => {
  * @param {string}   arg.options.departmentId
  * @param {string}   [arg.options.location]  'st'/'øst' — samma platsmappning som
  *                                           OverviewCalendar:s bemanningsstatistik
+ * @param {string}   [arg.options.category]   Vald kategori — en vakt i en annan
+ *                                           kategoris avdeling (Vest-ansatt på Øst)
+ *                                           räknas INTE som bemanning, bara som upptagen
  * @param {string}   arg.options.startTime
  * @param {string}   arg.options.endTime
  * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
@@ -117,7 +134,8 @@ export const generateAutoFill = ({
     pairIds = [],
     weekendOnlyIds = [],
     departmentIdByEmp = {},
-    location = null
+    location = null,
+    category = null
   } = options;
 
   const warnings = [];
@@ -167,7 +185,14 @@ export const generateAutoFill = ({
     const swk = weekKeyFor(new Date(sy, sm - 1, sd));
     workDaysByEmpWeek.set(`${s.employeeId}_${swk}`, (workDaysByEmpWeek.get(`${s.employeeId}_${swk}`) || 0) + 1);
     if (candIds.has(String(s.employeeId))) {
-      catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
+      // Vakten räknas som befintlig bemanning för kategorin ENDAST om den
+      // ligger i kategorins egna avdelingar. En Vest-anställd med vakt på en
+      // Øst-avdeling är upptagen (dagar/vecka räknas) men bemannar INTE Vest.
+      const shiftCat = categoryForDeptName(dn);
+      const countsForRun = !category || shiftCat == null || shiftCat === category;
+      if (countsForRun) {
+        catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
+      }
     }
   }
 
