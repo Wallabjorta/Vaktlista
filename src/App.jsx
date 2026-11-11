@@ -675,7 +675,6 @@ function App() {
   }, [currentUser?.isAdmin, selectedDepartment, validate]);
 
   const handleDeleteShift = useCallback(async (shiftId) => {
-    if (!confirm('Slett vakt?')) return;
     const shift = shifts.find(s => s.id === shiftId);
     try {
       await deleteShiftFirebase(shiftId);

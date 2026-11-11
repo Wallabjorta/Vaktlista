@@ -270,7 +270,6 @@ function OverviewCalendar({
 
   const handleBulkDelete = () => {
     if (!onDeleteShift || shiftsInSelectedCells.length === 0) return;
-    if (!confirm('Slett ' + shiftsInSelectedCells.length + ' vakter?')) return;
     shiftsInSelectedCells.forEach(shift => onDeleteShift(shift.id));
     setSelectedCells([]);
   };
