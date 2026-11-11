@@ -257,13 +257,13 @@ function AutoFillModal({
           </div>
 
           <div className="border-t pt-3 space-y-2">
-            <p className="text-sm font-medium">Helgansatte (valgfritt)</p>
+            <p className="text-sm font-medium">Helgansatte (valgfritt — kun kategorien Ekstra)</p>
             <p className="text-xs text-gray-500">
               Ansatte som jobbar bare helg (lørdag/söndag) — de täcker helgerna,
               så de ordinaries dagar sparas till vardagarna.
             </p>
             <div className="max-h-[120px] overflow-y-auto border rounded p-2 space-y-1">
-              {(employees || []).filter(e => e && !e.isAdmin && e.category !== 'Admin').map(e => (
+              {(employees || []).filter(e => e && !e.isAdmin && e.category !== 'Admin' && inferCategory(e) === 'Ekstra').map(e => (
                 <label key={e.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
