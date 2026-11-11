@@ -11,6 +11,11 @@
 //   först på helger, så de ordinaries dagar sparas till vardagarna.
 // - Ingen ansatt får jobba mer æn 2 helgedagar (lør/sön) på rad —
 //   efter två helgedagar i följd följs nästa helgedag av någon annan.
+// - I juleferien/røda dager kan helgansatte (weekendOnly) også sättas
+//   på ukedager, inte bara helger.
+// - 2 dagar fri på rad prioriteras: den som väljs till en dag ska helst
+//   kunna behålla två sammanhängande lediga dagar samma vecka (mjuk regel —
+//   faller tillbaka på vanlig rotation om ingen kandidat klarar det).
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
 // - Grundbemanningen fördelas jämnt över dagarna (den med minst
@@ -217,6 +222,7 @@ export const generateAutoFill = ({
     workDaysByEmpWeek.set(`${emp.id}_${wk}`, (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) + 1);
     plannedCount.set(emp.id, (plannedCount.get(emp.id) || 0) + 1);
     busyByEmpDate.add(`${emp.id}_${info.dateStr}`);
+    noteBusy(emp.id, info.dateStr);
     noteWeekendWork(emp.id, info.dateStr);
     catStaffingByDate.set(info.dateStr, (catStaffingByDate.get(info.dateStr) || 0) + 1);
     assignments.push({
@@ -230,6 +236,39 @@ export const generateAutoFill = ({
       breaks: []
     });
     namesByDate.get(info.dateStr).push(emp.name);
+  };
+
+  // Datum per vecka (för «2 dagar fri på rad»-kontrollen)
+  const weekDatesMap = new Map();
+  for (const d of dates) {
+    const wk = weekKeyFor(d);
+    if (!weekDatesMap.has(wk)) weekDatesMap.set(wk, []);
+    weekDatesMap.get(wk).push(toDateStr(d));
+  }
+  const busyDatesByEmp = new Map();
+  for (const s of shifts || []) {
+    if (!s.date) continue;
+    if (!busyDatesByEmp.has(String(s.employeeId))) busyDatesByEmp.set(String(s.employeeId), new Set());
+    busyDatesByEmp.get(String(s.employeeId)).add(s.date);
+  }
+  const noteBusy = (empId, dateStr) => {
+    if (!busyDatesByEmp.has(String(empId))) busyDatesByEmp.set(String(empId), new Set());
+    busyDatesByEmp.get(String(empId)).add(dateStr);
+  };
+  // Har emp två sammanhängande lediga dagar kvar i veckan OM även info.dateStr blir arbetad?
+  const keepsTwoConsecutiveFree = (empId, wk, dateStr) => {
+    const wds = weekDatesMap.get(wk);
+    if (!wds || wds.length < 3) return true;
+    const busy = new Set(busyDatesByEmp.get(String(empId)) || []);
+    busy.add(dateStr);
+    // sammanhängande = på varandra följande kalenderdagar
+    for (let i = 0; i + 1 < wds.length; i++) {
+      const a = wds[i];
+      const [ay, am, ad] = a.split('-').map(Number);
+      const aNextStr = toDateStr(new Date(ay, am - 1, ad + 1));
+      if (!busy.has(a) && !busy.has(aNextStr)) return true;
+    }
+    return false;
   };
 
   const pairCovered = (info) =>
@@ -248,23 +287,32 @@ export const generateAutoFill = ({
 
   const pickFor = (info) => {
     const wk = weekKeyFor(info.date);
-    return candidates
+    const eligible = candidates
       .filter(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`))
-      // Helgansatte jobbar bare helger (lør/sön)
-      .filter(emp => info.isWeekend || !weekendOnly.has(String(emp.id)))
+      // Helgansatte jobbar bare helger (lør/sön) — utom i juleferien/røda dager
+      .filter(emp => info.isWeekend || info.isHoliday || !weekendOnly.has(String(emp.id)))
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       // Max 2 helgedagar på rad per ansatt
-      .filter(emp => weekendOk(emp.id, info))
-      .sort((a, b) => {
-        // På helger väljs helgansatte först — sparar ordinares dagar till vardagarna
-        const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
-        const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
-        if (info.isWeekend && aw !== bw) return aw - bw;
-        const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
-        const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
-        if (ad !== bd) return ad - bd;
-        return (plannedCount.get(a.id) || 0) - (plannedCount.get(b.id) || 0);
-      })[0] || null;
+      .filter(emp => weekendOk(emp.id, info));
+    const rank = (a, b) => {
+      // På helger (och i juleferien) väljs helgansatte först —
+      // sparar ordinares dagar till vardagarna
+      const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
+      const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
+      if ((info.isWeekend || info.isHoliday) && aw !== bw) return aw - bw;
+      // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
+      const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
+      const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
+      if (af !== bf) return af - bf;
+      const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
+      const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
+      if (ad !== bd) return ad - bd;
+      return (plannedCount.get(a.id) || 0) - (plannedCount.get(b.id) || 0);
+    };
+    // Prova först de som behåller 2 fria dagar på rad; fall tillbaka på alla
+    const preferred = eligible.filter(emp => keepsTwoConsecutiveFree(emp.id, wk, info.dateStr));
+    const pool = preferred.length > 0 ? preferred : eligible;
+    return [...pool].sort(rank)[0] || null;
   };
 
   // Pass 1: minimumsbemanning (minst minPerDay från kategorin) jämnt över

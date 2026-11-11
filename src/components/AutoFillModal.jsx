@@ -147,7 +147,8 @@ function AutoFillModal({
             <h2 className="text-xl font-semibold">Auto-utfylling av vakter</h2>
             <p className="text-sm text-gray-600">
               Minst 2 fra kategorien hver dag, fordelt jevnt — maks 5 arbeidsdager
-              per ansatt per uke — basert på omsetning, søndager og helligdager.
+              per ansatt per uke, ingen mer æn 2 helgedager på rad, prioriteras
+              2 dagar fri på rad — basert på omsetning.
               Bare tomme celler fylls.
             </p>
           </div>
@@ -260,7 +261,8 @@ function AutoFillModal({
             <p className="text-sm font-medium">Helgansatte (valgfritt — kun kategorien Ekstra)</p>
             <p className="text-xs text-gray-500">
               Ansatte som jobbar bare helg (lørdag/söndag) — de täcker helgerna,
-              så de ordinaries dagar sparas till vardagarna.
+              så de ordinaries dagar sparas till vardagarna. I juleferien/røda
+              dager kan de også sättas på ukedager.
             </p>
             <div className="max-h-[120px] overflow-y-auto border rounded p-2 space-y-1">
               {(employees || []).filter(e => e && !e.isAdmin && e.category !== 'Admin' && inferCategory(e) === 'Ekstra').map(e => (
