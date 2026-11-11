@@ -9,6 +9,8 @@
 //   och røda dager bemannas till EXAKT samma behov (inga boost-tillägg).
 // - Helgansatte (weekendOnlyIds) jobbar BARE lördag/söndag — de väljs
 //   först på helger, så de ordinaries dagar sparas till vardagarna.
+// - Ingen ansatt får jobba mer æn 2 helgedagar (lør/sön) på rad —
+//   efter två helgedagar i följd följs nästa helgedag av någon annan.
 // - Timmar/ansettelsesprocent begränsar INTE — men max MAX_DAYS_PER_WEEK
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
 // - Grundbemanningen fördelas jämnt över dagarna (den med minst
@@ -151,6 +153,35 @@ export const generateAutoFill = ({
   // Fördelningstillstånd: antal nya vakter per ansatt (rotation vid lika många dagar)
   const plannedCount = new Map();
 
+  // Helgedags-sekvens (lør/sön i kronologisk ordning) och streak-state:
+  // ingen ansatt får jobba mer æn MAX_WEEKEND_STREAK helgedagar på rad.
+  // Befintliga vakter på helger seedar streaken.
+  const weekendDates = dates
+    .filter(d => d.getDay() === 0 || d.getDay() === 6)
+    .map(toDateStr);
+  const weekendIdx = new Map(weekendDates.map((d, i) => [d, i]));
+  const workedWeekendByEmp = new Map();
+  const noteWeekendWork = (empId, dateStr) => {
+    if (!weekendIdx.has(dateStr)) return;
+    if (!workedWeekendByEmp.has(String(empId))) workedWeekendByEmp.set(String(empId), new Set());
+    workedWeekendByEmp.get(String(empId)).add(dateStr);
+  };
+  for (const s of shifts || []) {
+    if (!s.date || !weekendIdx.has(s.date)) continue;
+    noteWeekendWork(s.employeeId, s.date);
+  }
+  // Antal helgedagar på rad (bakåt, utan avbrott) som emp jobbat innan helge-index idx
+  const weekendStreakBefore = (empId, idx) => {
+    const worked = workedWeekendByEmp.get(String(empId));
+    if (!worked) return 0;
+    let streak = 0;
+    for (let i = idx - 1; i >= 0 && worked.has(weekendDates[i]); i--) streak += 1;
+    return streak;
+  };
+  const weekendOk = (empId, info) =>
+    !info.isWeekend ||
+    weekendStreakBefore(empId, weekendIdx.get(info.dateStr)) < 2;
+
   // Behov per dag
   const dayInfos = dates.map(date => {
     const dateStr = toDateStr(date);
@@ -186,6 +217,7 @@ export const generateAutoFill = ({
     workDaysByEmpWeek.set(`${emp.id}_${wk}`, (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) + 1);
     plannedCount.set(emp.id, (plannedCount.get(emp.id) || 0) + 1);
     busyByEmpDate.add(`${emp.id}_${info.dateStr}`);
+    noteWeekendWork(emp.id, info.dateStr);
     catStaffingByDate.set(info.dateStr, (catStaffingByDate.get(info.dateStr) || 0) + 1);
     assignments.push({
       employeeId: emp.id,
@@ -208,6 +240,7 @@ export const generateAutoFill = ({
     const wk = weekKeyFor(info.date);
     return pairEmps
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
+      .filter(emp => weekendOk(emp.id, info))
       .sort((a, b) =>
         (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) - (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) ||
         String(a.id).localeCompare(String(b.id)))[0] || null;
@@ -220,6 +253,8 @@ export const generateAutoFill = ({
       // Helgansatte jobbar bare helger (lør/sön)
       .filter(emp => info.isWeekend || !weekendOnly.has(String(emp.id)))
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
+      // Max 2 helgedagar på rad per ansatt
+      .filter(emp => weekendOk(emp.id, info))
       .sort((a, b) => {
         // På helger väljs helgansatte först — sparar ordinares dagar till vardagarna
         const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
