@@ -3,6 +3,15 @@ import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } fro
 import { generateAutoFill, toDateStr } from '../utils/autoFill';
 import { EMPLOYEE_CATEGORIES, inferCategory, deptNameToCategory } from './ShiftCalendar';
 
+// Samma platsmappning som OverviewCalendar:s bemanningsstatistik — så att
+// auto-fyllen bemannar till EXAKT det behov statistiken visar rött/grönt för.
+const LOCATION_BY_CATEGORY = {
+  'Skiutleie Vest': 'st',
+  'Butikk Vest': 'st',
+  'Skiutleie Øst': 'øst',
+  'Butikk Øst': 'øst'
+};
+
 const DEFAULT_STAFFING_CONFIG = {
   minimumStaff: 2,
   thresholds: [
@@ -147,7 +156,8 @@ function AutoFillModal({
         minPerDay: 2,
         pairIds: [pairId1, pairId2].filter(Boolean),
         weekendOnlyIds: weekendOnlyIds,
-        departmentIdByEmp
+        departmentIdByEmp,
+        location: LOCATION_BY_CATEGORY[category] || null
       }
     }));
   };

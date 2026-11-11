@@ -89,6 +89,8 @@ const weekKeyFor = (date) => {
  * @param {Function} arg.recommend        (amount, config) => { staff, label }
  * @param {Object}   arg.options
  * @param {string}   arg.options.departmentId
+ * @param {string}   [arg.options.location]  'st'/'øst' — samma platsmappning som
+ *                                           OverviewCalendar:s bemanningsstatistik
  * @param {string}   arg.options.startTime
  * @param {string}   arg.options.endTime
  * @param {number}   [arg.options.minPerDay=2]      Minst så mange fra kategorien per dag
@@ -114,7 +116,8 @@ export const generateAutoFill = ({
     minPerDay = 2,
     pairIds = [],
     weekendOnlyIds = [],
-    departmentIdByEmp = {}
+    departmentIdByEmp = {},
+    location = null
   } = options;
 
   const warnings = [];
@@ -127,7 +130,9 @@ export const generateAutoFill = ({
     return { assignments, warnings, perDate: [] };
   }
 
-  const loc = locationForDepartmentName(dept?.name);
+  // Plats: options.location (kategori-baserad, samma som bemanningsstatistiken)
+  // har företräde — annars härleds den från avdelingsnamnet.
+  const loc = location || locationForDepartmentName(dept?.name);
   // Kategorier utan platskoppling (t.ex. Skiskole/Ekstra) använder total-konfigen
   const revLoc = loc || 'total';
   const config = staffingConfigs
