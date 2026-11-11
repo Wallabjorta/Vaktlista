@@ -9,8 +9,9 @@
 //   och røda dager bemannas till EXAKT samma behov (inga boost-tillägg).
 // - Helgansatte (weekendOnlyIds) jobbar BARE lördag/söndag — de väljs
 //   först på helger, så de ordinaries dagar sparas till vardagarna.
-// - Ingen ansatt får jobba mer æn 2 helgedagar (lør/sön) på rad —
-//   efter två helgedagar i följd följs nästa helgedag av någon annan.
+// - Ingen ansatt får jobba mer æn 2 helgedagar/helligdagar (lør/sön/røde
+//   dager) på rad — efter två på rad följs nästa av någon annan (ingen
+//   får t.ex. 8 dagar i jula).
 // - I juleferien/røda dager kan helgansatte (weekendOnly) også sättas
 //   på ukedager, inte bara helger.
 // - Det får ALDRIG bli 2 vakter som ikke kan fylles på en dag (1 er ok):
@@ -213,11 +214,14 @@ export const generateAutoFill = ({
   // Fördelningstillstånd: antal nya vakter per ansatt (rotation vid lika många dagar)
   const plannedCount = new Map();
 
-  // Helgedags-sekvens (lør/sön i kronologisk ordning) och streak-state:
-  // ingen ansatt får jobba mer æn MAX_WEEKEND_STREAK helgedagar på rad.
-  // Befintliga vakter på helger seedar streaken.
+  // Helgedags-sekvens (lør/sön OCH helligdager — dvs alla «røde» dagar —
+  // i kronologisk ordning) och streak-state: ingen ansatt får jobba mer æn
+  // MAX_WEEKEND_STREAK helgedagar/helligdagar på rad (t.ex. aldrig 8 dagar
+  // i jula). Befintliga vakter på dessa dagar seedar streaken.
+  const holidaySetForStreak = new Set((holidays || []));
   const weekendDates = dates
-    .filter(d => d.getDay() === 0 || d.getDay() === 6)
+    .filter(d => d.getDay() === 0 || d.getDay() === 6 ||
+      holidaySetForStreak.has(toDateStr(d)))
     .map(toDateStr);
   const weekendIdx = new Map(weekendDates.map((d, i) => [d, i]));
   const workedWeekendByEmp = new Map();
@@ -239,7 +243,7 @@ export const generateAutoFill = ({
     return streak;
   };
   const weekendOk = (empId, info) =>
-    !info.isWeekend ||
+    (!info.isWeekend && !info.isHoliday) ||
     weekendStreakBefore(empId, weekendIdx.get(info.dateStr)) < 2;
 
   // Behov per dag
