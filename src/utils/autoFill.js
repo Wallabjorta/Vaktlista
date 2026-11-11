@@ -13,6 +13,8 @@
 //   efter två helgedagar i följd följs nästa helgedag av någon annan.
 // - I juleferien/røda dager kan helgansatte (weekendOnly) også sättas
 //   på ukedager, inte bara helger.
+// - Det får ALDRIG bli 2 vakter som ikke kan fylles på en dag (1 er ok):
+//   i nödfall används helgansatte på vardagar så att högst 1 vakt blir tom.
 // - 2 dagar fri på rad prioriteras: den som väljs till en dag ska helst
 //   kunna behålla två sammanhängande lediga dagar samma vecka (mjuk regel —
 //   faller tillbaka på vanlig rotation om ingen kandidat klarar det).
@@ -285,12 +287,15 @@ export const generateAutoFill = ({
         String(a.id).localeCompare(String(b.id)))[0] || null;
   };
 
-  const pickFor = (info) => {
+  // relaxed=true: nödfall när mer æn 1 vakt skulle bli ofylld — då får
+  // helgansatte (weekendOnly) också användas på vanliga vardagar.
+  const pickFor = (info, relaxed = false) => {
     const wk = weekKeyFor(info.date);
     const eligible = candidates
       .filter(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`))
-      // Helgansatte jobbar bare helger (lør/sön) — utom i juleferien/røda dager
-      .filter(emp => info.isWeekend || info.isHoliday || !weekendOnly.has(String(emp.id)))
+      // Helgansatte jobbar bare helger (lør/sön) — utom i juleferien/røda dager,
+      // eller i nödfall (relaxed) när annars 2+ vakter blir ofyllda
+      .filter(emp => info.isWeekend || info.isHoliday || relaxed || !weekendOnly.has(String(emp.id)))
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       // Max 2 helgedagar på rad per ansatt
       .filter(emp => weekendOk(emp.id, info));
@@ -337,11 +342,15 @@ export const generateAutoFill = ({
       );
     }
     for (let i = 0; i < missing; i++) {
-      const pick = pickFor(info);
+      let pick = pickFor(info);
+      // Det får aldrig bli 2 vakter som ikke kan fylles — 1 er ok.
+      // Nödfall: om mer æn 1 vakt skulle bli ofylld tas helgansatte
+      // in på vardagar också.
+      if (!pick && missing - i > 1) pick = pickFor(info, true);
       if (!pick) {
         warnings.push(
-          `${info.dateStr}: minimum ${minPerDay} per dag kunde inte nås — ` +
-          `för få lediga i kategorin (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka).`
+          `${info.dateStr}: 1 vakt kunde ikke fylles — ` +
+          `inga lediga (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd eller redan bokad).`
         );
         break;
       }
@@ -361,11 +370,15 @@ export const generateAutoFill = ({
       missing -= 1;
     }
     for (let i = 0; i < missing; i++) {
-      const pick = pickFor(info);
+      let pick = pickFor(info);
+      // Det får aldrig bli 2 vakter som ikke kan fylles — 1 er ok.
+      // Nödfall: om mer æn 1 vakt skulle bli ofylld tas helgansatte
+      // in på vardagar också.
+      if (!pick && missing - i > 1) pick = pickFor(info, true);
       if (!pick) {
         warnings.push(
-          `${info.dateStr}: ${missing - i} ${missing - i === 1 ? 'vakt' : 'vakter'} kunde ikke fylles — ` +
-          `ingen ledig ansatt (max ${MAX_DAYS_PER_WEEK} arbetsdager/vecka nådd eller redan bokad).`
+          `${info.dateStr}: 1 vakt kunde ikke fylles — ` +
+          `inga lediga (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd eller redan bokad).`
         );
         break;
       }
