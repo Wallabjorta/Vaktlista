@@ -174,6 +174,9 @@ export const generateAutoFill = ({
   // (icke-fri/ferie) + hvem som är upptagen per dag + arbetsdagar per vecka.
   const catStaffingByDate = new Map();
   const busyByEmpDate = new Set();
+  // Upptagen i DENNA körningens avdelingar (par-täckning): en Øst-vakt gör
+  // en Vest-ansatt upptagen men täcker INTE «alltid en på jobb» för Vest.
+  const runBusyByEmpDate = new Set();
   const workDaysByEmpWeek = new Map();
   for (const s of shifts || []) {
     if (!s.date) continue;
@@ -195,6 +198,7 @@ export const generateAutoFill = ({
       const countsForRun = !category || shiftCat == null || shiftCat === category;
       if (countsForRun) {
         catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
+        runBusyByEmpDate.add(`${s.employeeId}_${s.date}`);
       }
     }
   }
@@ -273,6 +277,7 @@ export const generateAutoFill = ({
     workDaysByEmpWeek.set(`${emp.id}_${wk}`, (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) + 1);
     plannedCount.set(emp.id, (plannedCount.get(emp.id) || 0) + 1);
     busyByEmpDate.add(`${emp.id}_${info.dateStr}`);
+    runBusyByEmpDate.add(`${emp.id}_${info.dateStr}`);
     noteBusy(emp.id, info.dateStr);
     noteHolidayWork(emp.id, info.dateStr);
     noteWeekendWork(emp.id, info.dateStr);
@@ -342,8 +347,10 @@ export const generateAutoFill = ({
     }
   }
 
+  // Paret täcker dagen bara med en vakt i KATEGORINS EGNA avdelingar —
+  // en pair-medlem som jobbar Øst är inte «på jobb» för Vest-den dagen.
   const pairCovered = (info) =>
-    pairEmps.length > 0 && pairEmps.some(emp => busyByEmpDate.has(`${emp.id}_${info.dateStr}`));
+    pairEmps.length > 0 && pairEmps.some(emp => runBusyByEmpDate.has(`${emp.id}_${info.dateStr}`));
 
   const pickPairFor = (info) => {
     if (pairEmps.length === 0 || pairCovered(info)) return null;
