@@ -23,8 +23,8 @@
 //   arbetsdagar per ansatt och vecka (befintliga vakter räknas med).
 // - Grundbemanningen fördelas jämnt över dagarna (den med minst
 //   arbetsdagar den veckan väljs först).
-// - Jämna helligdagar: vanliga ansatte får LIKA många helligdagar —
-//   på røda dager väljs den med färst helligdagar först.
+// - Jämna RØDE DAGAR: fasta och extra anställda delar helger + helligdager
+//   lika — på røda dager väljs den med färst røda dagar först.
 // - Valfritt «alltid en på jobb»-par (HÅRT): en ur paret jobbar VARJE dag
 //   i perioden — även om behovet redan är nått. Kan ingen ur paret jobba
 //   blir det ett hårt fel (⚠️-varning, manuell åtgärd).
@@ -335,18 +335,17 @@ export const generateAutoFill = ({
     return false;
   };
 
-  // Jämna helligdagar: räkna helligdags-vakter per ansatt (befintliga + nya)
-  // — på røda dager väljs den med färst helligdagar först, så att vanliga
-  // anställda får lika många helligdager.
-  const holidayDates = new Set((holidays || []));
+  // Jämna RØDE DAGAR (helger + helligdager sammanlagt): räkna per ansatt
+  // (befintliga + nya) — på røda dager väljs den med färst røda dagar först,
+  // så att fasta och extra anställda delar røda dagarna lika.
   const holidayCountByEmp = new Map();
   const noteHolidayWork = (empId, dateStr) => {
-    if (!holidayDates.has(dateStr)) return;
+    if (!weekendIdx.has(dateStr)) return; // weekendIdx = hela røda-dag-sekvensen
     const k = String(empId);
     holidayCountByEmp.set(k, (holidayCountByEmp.get(k) || 0) + 1);
   };
   for (const s of shifts || []) {
-    if (s.date && s.departmentId && validDeptIds.has(s.departmentId) && holidayDates.has(s.date)) {
+    if (s.date && s.departmentId && validDeptIds.has(s.departmentId) && weekendIdx.has(s.date)) {
       noteHolidayWork(s.employeeId, s.date);
     }
   }
@@ -363,7 +362,7 @@ export const generateAutoFill = ({
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       .filter(emp => weekendOk(emp.id, info))
       .sort((a, b) => {
-        if (info.isHoliday) {
+        if (info.isWeekend || info.isHoliday) {
           const ah = (holidayCountByEmp.get(String(a.id)) || 0);
           const bh = (holidayCountByEmp.get(String(b.id)) || 0);
           if (ah !== bh) return ah - bh;
@@ -388,15 +387,17 @@ export const generateAutoFill = ({
     const rank = (a, b) => {
       // På helger (och i juleferien) väljs helgansatte först —
       // sparar ordinares dagar till vardagarna
-      const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
-      const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
-      if ((info.isWeekend || info.isHoliday) && aw !== bw) return aw - bw;
-      // Jämna helligdagar: på røda dager väljs den med färst helligdagar först
-      if (info.isHoliday && !info.isWeekend) {
+      const isRedDay = info.isWeekend || info.isHoliday;
+      // Jämna røda dagar: den med färst røda dagar (fasta + extra lika) först
+      if (isRedDay) {
         const ah = (holidayCountByEmp.get(String(a.id)) || 0);
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
         if (ah !== bh) return ah - bh;
       }
+      // Därefter helgansatte först på helgerna
+      const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
+      const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
+      if (isRedDay && aw !== bw) return aw - bw;
       // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
       const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
       const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
