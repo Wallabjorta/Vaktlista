@@ -142,7 +142,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
       const date = new Date(dateStr + 'T00:00:00');
       const dayOfWeek = date.getDay();
       const isSunday = dayOfWeek === 0;
-      const isHoliday = holidays && holidays[dateStr];
+      const isHoliday = holidays && holidays.includes(dateStr);
       
       if (isSunday) {
         sundaysWorked++;
