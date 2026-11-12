@@ -376,6 +376,17 @@ export const generateAutoFill = ({
       })[0] || null;
   };
 
+  // Måldagar/vecka per kontraktsprocent: auto-fyllen fyller ut KONTRAKTET —
+  // en 50 %-anställd siktar på ~2,5 dagar/vecka, en 100 % på 5. Saknas
+  // kontraktsprocent antas 100 %. (5-dagarstaket gäller alltid.)
+  const targetDaysFor = (emp) => {
+    const pct = Number(emp && emp.contractPercent);
+    if (pct > 0) {
+      return Math.min(MAX_DAYS_PER_WEEK, Math.max(1, Math.round(MAX_DAYS_PER_WEEK * pct / 100)));
+    }
+    return MAX_DAYS_PER_WEEK;
+  };
+
   // relaxed=true: nödfall när mer æn 1 vakt skulle bli ofylld — då får
   // helgansatte (weekendOnly) också användas på vanliga vardagar.
   const pickFor = (info, relaxed = false) => {
@@ -385,23 +396,29 @@ export const generateAutoFill = ({
       // Helgansatte jobbar bare helger (lør/sön) — utom i juleferien/røda dager,
       // eller i nödfall (relaxed) när annars 2+ vakter blir ofyllda
       .filter(emp => info.isWeekend || info.isHoliday || relaxed || !weekendOnly.has(String(emp.id)))
-      .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
+      // Veckotak: 100 % → MAX_DAYS_PER_WEEK dagar; med kontraktsprocent
+      // skalas taket (en 50 %-anställd arbetar ~3 dagar/vecka, inte 5).
+      // Saknas kontraktsprocent antas 100 %.
+      .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < targetDaysFor(emp))
       // Max 2 helgedagar på rad per ansatt
       .filter(emp => weekendOk(emp.id, info));
     const rank = (a, b) => {
-      // På helger (och i juleferien) väljs helgansatte först —
-      // sparar ordinares dagar till vardagarna
       const isRedDay = info.isWeekend || info.isHoliday;
-      // Jämna røda dagar: den med färst røda dagar (fasta + extra lika) först
+      // Jämna røda dagar: den med färst røda dagar först (gäller fasta och
+      // extra lika)
       if (isRedDay) {
         const ah = (holidayCountByEmp.get(String(a.id)) || 0);
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
         if (ah !== bh) return ah - bh;
       }
-      // Därefter helgansatte först på helgerna
-      const aw = weekendOnly.has(String(a.id)) ? 0 : 1;
-      const bw = weekendOnly.has(String(b.id)) ? 0 : 1;
-      if (isRedDay && aw !== bw) return aw - bw;
+      // Kontraktsprocenten avgör: den som är MINST fylld mot sitt kontrakt
+      // (arbetsdagar/måldagar för veckan) väljs först — så en 100 %-anställd
+      // hinner inte hamna 3 vakter efter en 50 %-anställd.
+      const fillRatio = (emp) =>
+        (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) / targetDaysFor(emp);
+      const ar = fillRatio(a);
+      const br = fillRatio(b);
+      if (ar !== br) return ar - br;
       // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
       const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
       const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
@@ -412,9 +429,17 @@ export const generateAutoFill = ({
       return (plannedCount.get(a.id) || 0) - (plannedCount.get(b.id) || 0);
     };
     // Prova först de som behåller 2 fria dagar på rad; fall tillbaka på alla
-    const preferred = eligible.filter(emp => keepsTwoConsecutiveFree(emp.id, wk, info.dateStr));
-    const pool = preferred.length > 0 ? preferred : eligible;
-    return [...pool].sort(rank)[0] || null;
+    const pickFrom = (pool) => {
+      const preferred = pool.filter(emp => keepsTwoConsecutiveFree(emp.id, wk, info.dateStr));
+      const p = preferred.length > 0 ? preferred : pool;
+      return [...p].sort(rank)[0] || null;
+    };
+    // FASTA FÖRST — helgansatte (weekendOnly) är en RESERVPOOL: de får en
+    // vakt bara när ingen fast ansatt i kategorin kan ta dagen enligt
+    // reglene (bokad, 5-dagarstak, 2-helgedagar-regeln).
+    const faste = eligible.filter(emp => !weekendOnly.has(String(emp.id)));
+    const extras = eligible.filter(emp => weekendOnly.has(String(emp.id)));
+    return pickFrom(faste) || pickFrom(extras);
   };
 
   // Pass 0: «Alltid en på jobb»-paret är HÅRT — en ur paret jobbar VARJE dag
