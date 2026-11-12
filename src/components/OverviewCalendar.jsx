@@ -181,7 +181,7 @@ function OverviewCalendar({
     for (const shift of shifts) {
       if (!shift.date) continue;
       const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
-      if (deptName === 'fri') continue;
+      if (deptName === 'fri' || deptName.includes('heis')) continue;
       const emp = employeeById.get(String(shift.employeeId));
       // Admin-brukere (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
       if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;

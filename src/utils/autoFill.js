@@ -75,8 +75,7 @@ export const buildRevenueMap = (revenues) => {
 // anställdes kategori är Vest — men personen är fortfarande upptagen den dagen.
 const categoryForDeptName = (name) => {
   const n = (name || '').toLowerCase();
-  if (!n || n === 'fri' || n === 'ferie') return null;
-  if (n.includes('heis')) return 'Heis';
+  if (!n || n === 'fri' || n === 'ferie' || n.includes('heis')) return null;
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
@@ -197,7 +196,10 @@ export const generateAutoFill = ({
       // ligger i kategorins egna avdelingar. En Vest-anställd med vakt på en
       // Øst-avdeling är upptagen (dagar/vecka räknas) men bemannar INTE Vest.
       const shiftCat = categoryForDeptName(dn);
-      const countsForRun = !category || shiftCat == null || shiftCat === category;
+      // Heis är en extravakt: personen är upptagen (busyByEmpDate satt ovan,
+      // arbetsdag räknas nedan) men den räknas INTE som bemanning för kategorin.
+      const isHeis = (dn || '').toLowerCase().includes('heis');
+      const countsForRun = !isHeis && (!category || shiftCat == null || shiftCat === category);
       if (countsForRun) {
         catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
         runBusyByEmpDate.add(`${s.employeeId}_${s.date}`);
