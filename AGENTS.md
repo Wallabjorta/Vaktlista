@@ -126,3 +126,5 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - **Verifierat med node-test:** E1 med en skiskole-vakt 15/12 → `existing: 0` för Skiutleie Vest den dagen (2 nya vakter fylls), men E1 är fortfarande upptagen (ingen dubbelvakt).
 
 - (2026-11-12, main) Statistiken: nytt periodval «Neste måned» i AdminStats (monthBounds(1), periodMode 'nextMonth'). OBS kontraktsuträkningen: Kontraktsprocent räknas bara om Kontraktstart OCH Kontraktslutt är satta — fel år i Kontraktslutt ger fel/saknad uträkning (användarfall 2026-11-12).
+
+- (2026-11-12, main) AdminStats: ny kolumn «Satt % av 100 %» (syns när en period med datumintervall är vald, t.ex. «Neste måned»): schemalagda timmar ÷ heltidstimmar för perioden (Kvitfjell-norm 1762,5 t/år × dagar/365). Gul/röd om det avviker från anställdens kontraktsprocent, tooltip visar timmar + kontrakt.

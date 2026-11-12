@@ -236,6 +236,27 @@ function AdminStats({ employees, shifts, holidays, departments }) {
     return { contractHours, usedHours, ferieHours: stats.ferieHours, remainingHours };
   };
 
+  // «Satt % av 100 %»: hur stor andel av heltid (Kvitfjell-norm 1762,5 t/år,
+  // omräknat mot periodens dagantal) den anställda är schemalagd på i perioden.
+  const scheduledPercent = (employee) => {
+    if (!hasRange || !range.start || !range.end) return null;
+    const start = new Date(range.start + 'T00:00:00');
+    const end = new Date(range.end + 'T00:00:00');
+    if (isNaN(start) || isNaN(end) || end < start) return null;
+    const days = Math.round((end - start) / 86400000) + 1;
+    const fullTimeHours = (1762.5 * days) / 365;
+    if (!fullTimeHours) return null;
+    const stats = calculateEmployeeStats(employee);
+    const usedHours = stats.totalMinutes / 60;
+    const contractPct = Number(employee.contractPercent) || null;
+    return {
+      pct: (usedHours / fullTimeHours) * 100,
+      usedHours,
+      fullTimeHours,
+      contractPct
+    };
+  };
+
   const exportCsv = () => {
     const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Ansatt', 'Totale vakter', 'Arbeidstimer', 'Timer (desimal)', 'Fri-timer (fratrekk)', 'Ferie-timer', 'Kontraktstimer', 'Brukte timer (inkl. fri)', 'Gjenstående timer', 'Totale dager', 'Søndager', 'Helligdager', 'Spesialdager', 'Avdelinger'];
@@ -370,6 +391,9 @@ function AdminStats({ employees, shifts, holidays, departments }) {
               <th className="p-2 text-left text-xs font-medium text-gray-700">Fri (fratrekk)</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Ferie</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Kontrakt</th>
+              {hasRange && (
+                <th className="p-2 text-left text-xs font-medium text-gray-700">Satt % av 100 %</th>
+              )}
               <th className="p-2 text-left text-xs font-medium text-gray-700">Totale dager</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Søndager</th>
               <th className="p-2 text-left text-xs font-medium text-gray-700">Helligdager</th>
@@ -414,6 +438,22 @@ function AdminStats({ employees, shifts, holidays, departments }) {
                       );
                     })()}
                   </td>
+                  {hasRange && (() => {
+                    const sp = scheduledPercent(employee);
+                    if (!sp) return <td className="p-2 border-r text-gray-400">–</td>;
+                    const over = sp.contractPct != null && sp.pct > sp.contractPct + 0.5;
+                    const under = sp.contractPct != null && sp.pct < sp.contractPct - 0.5;
+                    const cls = over ? 'text-red-600 font-semibold' : under ? 'text-yellow-700' : 'text-green-700';
+                    const title = `${sp.usedHours.toFixed(1).replace('.', ',')} t av ${sp.fullTimeHours.toFixed(1).replace('.', ',')} t heltid i perioden`
+                      + (sp.contractPct != null ? ` (kontrakt: ${String(sp.contractPct).replace('.', ',')} %)` : '');
+                    return (
+                      <td className="p-2 border-r">
+                        <span className={cls} title={title}>
+                          {sp.pct.toFixed(1).replace('.', ',')} %
+                        </span>
+                      </td>
+                    );
+                  })()}
                   <td className="p-2 border-r">{stats.totalDays}</td>
                   <td className="p-2 border-r">{stats.sundaysWorked}</td>
                   <td className="p-2 border-r">{stats.holidaysWorked}</td>
