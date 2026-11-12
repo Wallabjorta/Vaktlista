@@ -242,13 +242,13 @@ export const generateAutoFill = ({
     d.getDay() === 0 || d.getDay() === 6 ||
     holidaySetForStreak.has(toDateStr(d));
 
-  // Romjulen (27/12–01/01): julferiens UKEDAGER. Extra/helgansatte ska
-  // nyttjas ordentligt här — de får (som reserv, efter fasta) jobba vilken
-  // romjulsdag som helst, inte bara lør/sön/helligdager. Kontraktsprocenten
+  // Juleferien (19/12–03/01, datumbaserad varje år): extra/helgansatte ska
+  // nyttjas ordentligt här — de får (som reserv, efter fasta) jobga vilken
+  // juleferiedag som helst, inte bara lør/sön/helligdager. Kontraktsprocenten
   // (t.ex. 5 %) är ett MINIMUM och begränsar inte — upp till 5 dagar/vecka.
-  const isRomjul = (dateStr) => {
+  const isJuleferie = (dateStr) => {
     const md = dateStr.slice(5);
-    return md >= '12-27' && md <= '12-31';
+    return md >= '12-19' || md <= '01-03';
   };
   const weekendDates = [...padDates, ...dates]
     .filter(isRedDay)
@@ -441,10 +441,9 @@ export const generateAutoFill = ({
     const eligible = candidates
       .filter(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`))
       // Helgansatte jobbar normalt bare helger (lør/sön) + helligdager — men
-      // i romjulen (27/12–01/01, julferiens ukedagar) får de jobga ALLA dagar
-      // (efter fasta, som reserv), och i nödfall (relaxed) när annars 2+ vakter
-      // blir ofyllda
-      .filter(emp => info.isWeekend || info.isHoliday || isRomjul(info.dateStr) || relaxed || !weekendOnly.has(String(emp.id)))
+      // i juleferien (19/12–03/01) får de jobga ALLA dagar (efter fasta, som
+      // reserv), och i nödfall (relaxed) när annars 2+ vakter blir ofyllda
+      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || relaxed || !weekendOnly.has(String(emp.id)))
       // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
       // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
       // högt bemanningsbehov får även en 50 %-anställd fler dagar (upp till 5).
