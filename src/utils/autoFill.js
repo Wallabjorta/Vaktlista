@@ -274,6 +274,14 @@ export const generateAutoFill = ({
     };
   });
 
+  // PRIORITERAD DAGORDNING (2026-11-12): helligdager fylles FÖRST, sen
+  // søndager, sen övriga ukedagar — inom varje grupp kronologiskt. Pass 1
+  // och 2 fyller i den ordningen, så när veckotaket/personbristen tar slut
+  // är det alltid vardagarna som blir ofyllda först — aldrig røde dager.
+  const dayPrio = (info) => (info.isHoliday ? 0 : info.isSunday ? 1 : 2);
+  const orderedDays = [...dayInfos].sort((a, b) =>
+    dayPrio(a) - dayPrio(b) || a.dateStr.localeCompare(b.dateStr));
+
   const namesByDate = new Map(dayInfos.map(d => [d.dateStr, []]));
   const pairEmps = (pairIds || [])
     .map(id => candidates.find(c => String(c.id) === String(id)))
@@ -499,10 +507,9 @@ export const generateAutoFill = ({
     }
   }
 
-  // Pass 1: minimumsbemanning (minst minPerDay från kategorin) jämnt över
-  // ALLA dagar i perioden först — så att helgen reserveras innan vardagarnas
-  // extras förbrukar veckodagarstaket.
-  for (const info of dayInfos) {
+  // Pass 1: minimumsbemanning (minst minPerDay från kategorin) — i
+  // prioriterad ordning: helligdager → søndager → ukedagar.
+  for (const info of orderedDays) {
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     if (existing >= minPerDay) continue;
     let missing = minPerDay - existing;
@@ -533,8 +540,9 @@ export const generateAutoFill = ({
   }
 
   // Pass 2: extra bemanning (omsetning/söndag/helligdag) ovanpå minimum,
-  // fortfarande jämnt fördelat (den med minst dagar den veckan väljs först).
-  for (const info of dayInfos) {
+  // fortfarande jämnt fördelat — i prioriterad ordning: helligdager →
+  // söndager → ukedagar.
+  for (const info of orderedDays) {
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     let missing = Math.max(0, info.fullNeed - existing);
     if (missing <= 0) continue;
