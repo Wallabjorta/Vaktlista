@@ -282,7 +282,7 @@ const removeUndefined = (obj) => {
 };
 
 export const logAdminAction = async (admin, action, details = {}) => {
-  if (!admin || !admin.isAdmin) return;
+  if (!admin || !(admin.isAdmin || admin.isSuperadmin)) return;
   try {
     await addDoc(auditLogsCollection, removeUndefined({
       adminId: admin.id,

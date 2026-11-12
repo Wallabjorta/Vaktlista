@@ -775,6 +775,10 @@ function App() {
         ? Number(updatedEmployee.contractPercent) || 0
         : null;
       await updateEmployeeFirebase(updatedEmployee.id, toSave);
+      if (currentUser && String(currentUser.id) === String(updatedEmployee.id)) {
+        setCurrentUser(toSave);
+        localStorage.setItem('currentUser', JSON.stringify(toSave));
+      }
       await logAdminAction(currentUser, 'employee_update', {
         employeeId: updatedEmployee.id,
         name: updatedEmployee.name
@@ -1166,7 +1170,7 @@ function App() {
           />
         </div>
       )}
-      {currentUser?.isAdmin && (
+      {currentUser?.isSuperadmin && (
         <StaffingPlanner employees={employees} shifts={shifts} currentUser={currentUser} />
       )}
 
@@ -1223,6 +1227,8 @@ function App() {
         <EditEmployeeModal
           employee={selectedEmployee}
           departments={departments}
+          employees={employees}
+          currentUser={currentUser}
           onSave={handleSaveEmployee}
           onClose={() => setShowEditEmployeeModal(false)}
         />
@@ -1258,7 +1264,7 @@ function App() {
         />
       )}
 
-      {autoFillDates && currentUser?.isAdmin && (
+      {autoFillDates && currentUser?.isSuperadmin && (
         <AutoFillModal
           dates={autoFillDates}
           employees={employees}

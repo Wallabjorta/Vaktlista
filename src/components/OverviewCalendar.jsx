@@ -324,7 +324,7 @@ function OverviewCalendar({
                 Nullstill
               </button>
             )}
-            {currentUser?.isAdmin && onAutoFill && (
+            {currentUser?.isSuperadmin && onAutoFill && (
               <button
                 onClick={() => onAutoFill(dates)}
                 className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
@@ -390,7 +390,7 @@ function OverviewCalendar({
                 onDeleteEvent={onDeleteGroupEvent}
                 onShowOverview={onShowGroupOverview}
               />
-              {currentUser?.isAdmin && (
+              {currentUser?.isSuperadmin && (
                 <tr className="border-b bg-blue-50">
                   <td className="p-1 border-r text-xs font-medium text-gray-700 bg-blue-50 sticky left-0 z-10" style={{ minWidth: '70px' }}>
                     Bemanning V/Ø
@@ -495,7 +495,7 @@ function OverviewCalendar({
                                   key={shiftIndex}
                                   className="p-0.5 rounded text-xs text-white font-medium truncate"
                                   style={{ backgroundColor: deptColor }}
-                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
                                 >
                                   {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime.replace(':00', '')}
                                 </div>

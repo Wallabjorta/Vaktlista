@@ -358,7 +358,7 @@ function ShiftCalendar({
                                   key={shiftIndex}
                                   className="p-1 rounded text-xs text-white font-medium group relative"
                                   style={{ backgroundColor: deptColor }}
-                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
                                 >
                                   <div 
                                     className="truncate text-center cursor-pointer"

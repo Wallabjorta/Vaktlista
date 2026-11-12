@@ -296,7 +296,8 @@ export const generateAutoFill = ({
         null,
       startTime,
       endTime,
-      comment: 'Auto-utfylt',
+      comment: '',
+      autoFilled: true,
       breaks: []
     });
     namesByDate.get(info.dateStr).push(emp.name);
