@@ -384,9 +384,10 @@ export const generateAutoFill = ({
       })[0] || null;
   };
 
-  // Måldagar/vecka per kontraktsprocent: auto-fyllen fyller ut KONTRAKTET —
-  // en 50 %-anställd siktar på ~2,5 dagar/vecka, en 100 % på 5. Saknas
-  // kontraktsprocent antas 100 %. (5-dagarstaket gäller alltid.)
+  // Måldagar/vecka per kontraktsprocent: ansettelsesprocenten är ett MINIMUM —
+  // en 50 %-anställd ska få ~2,5 dagar/vecka INNAN 100 %-anställda får mer
+  // (fillRatio rangordnar per arbetsdagar/måldagar). Den är INTE ett tak: vid
+  // högt behov kan alla jobba upp till MAX_DAYS_PER_WEEK. Saknas procent antas 100 %.
   const targetDaysFor = (emp) => {
     const pct = Number(emp && emp.contractPercent);
     if (pct > 0) {
@@ -399,15 +400,18 @@ export const generateAutoFill = ({
   // helgansatte (weekendOnly) också användas på vanliga vardagar.
   const pickFor = (info, relaxed = false) => {
     const wk = weekKeyFor(info.date);
+    // Föregående kalenderdag (för bulkordningning)
+    const [py, pm, pd] = info.dateStr.split('-').map(Number);
+    const prevDateStr = toDateStr(new Date(py, pm - 1, pd - 1));
     const eligible = candidates
       .filter(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`))
       // Helgansatte jobbar bare helger (lør/sön) — utom i juleferien/røda dager,
       // eller i nödfall (relaxed) när annars 2+ vakter blir ofyllda
       .filter(emp => info.isWeekend || info.isHoliday || relaxed || !weekendOnly.has(String(emp.id)))
-      // Veckotak: 100 % → MAX_DAYS_PER_WEEK dagar; med kontraktsprocent
-      // skalas taket (en 50 %-anställd arbetar ~3 dagar/vecka, inte 5).
-      // Saknas kontraktsprocent antas 100 %.
-      .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < targetDaysFor(emp))
+      // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
+      // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
+      // högt bemanningsbehov får även en 50 %-anställd fler dagar (upp till 5).
+      .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       // Max 2 helgedagar på rad per ansatt
       .filter(emp => weekendOk(emp.id, info));
     const rank = (a, b) => {
@@ -424,6 +428,26 @@ export const generateAutoFill = ({
       // hinner inte hamna 3 vakter efter en 50 %-anställd.
       const fillRatio = (emp) =>
         (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) / targetDaysFor(emp);
+      // 1) Kontraktsminimummet först: den som ännu är UNDER sitt kontrakts-
+      //    minimum (måldagar/vecka enligt procenten) väljs före de som nått det.
+      const am = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) < targetDaysFor(a) ? 0 : 1;
+      const bm = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) < targetDaysFor(b) ? 0 : 1;
+      if (am !== bm) return am - bm;
+      // 2) BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
+      //    väljs först — vakter klustras till sammanhängande bulker (block) i
+      //    stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
+      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 1
+      //    arbetsdag före den som arbetat minst i poolen denna vecka — annars
+      //    slår kontraktsjämnheten till och blocket bryts (kluster max ~2-3
+      //    dagar före nästa tar över).
+      const lead = (emp) => {
+        if (minWorkedThisWeek == null) return 1;
+        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < 2 ? 0 : 1;
+      };
+      const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
+      const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
+      if (pa !== pb) return pa - pb;
+      // 3) Därefter den som är minst fylld mot kontraktet
       const ar = fillRatio(a);
       const br = fillRatio(b);
       if (ar !== br) return ar - br;
@@ -442,6 +466,12 @@ export const generateAutoFill = ({
       const p = preferred.length > 0 ? preferred : pool;
       return [...p].sort(rank)[0] || null;
     };
+    // Minst arbetade dagar denna vecka i poolen — för bulker-ledningsvakten
+    let minWorkedThisWeek = null;
+    if (eligible.length > 0) {
+      minWorkedThisWeek = Math.min(...eligible.map(emp =>
+        (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0)));
+    }
     // FASTA FÖRST — helgansatte (weekendOnly) är en RESERVPOOL: de får en
     // vakt bara när ingen fast ansatt i kategorin kan ta dagen enligt
     // reglene (bokad, 5-dagarstak, 2-helgedagar-regeln).
