@@ -279,6 +279,14 @@ export const generateAutoFill = ({
     .map(id => candidates.find(c => String(c.id) === String(id)))
     .filter(Boolean);
 
+  // Tidig stängning: 24. desember (juleaften) är en vanlig dag men stänger
+  // kl 13:00 — auto-genererade vakter den dagen får sluttid 13:00.
+  const EARLY_CLOSE = { '12-24': '13:00' };
+  const endTimeFor = (dateStr) => {
+    const md = dateStr.slice(5);
+    return EARLY_CLOSE[md] || endTime;
+  };
+
   const addAssignment = (info, emp) => {
     const wk = weekKeyFor(info.date);
     workDaysByEmpWeek.set(`${emp.id}_${wk}`, (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) + 1);
@@ -298,7 +306,7 @@ export const generateAutoFill = ({
         (emp.deptIds && emp.deptIds.find(id => validDeptIds.has(id))) ||
         null,
       startTime,
-      endTime,
+      endTime: endTimeFor(info.dateStr),
       comment: '',
       autoFilled: true,
       breaks: []
