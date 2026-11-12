@@ -215,6 +215,7 @@ export const generateAutoFill = ({
   }
 
   // Fördelningstillstånd: antal nya vakter per ansatt (rotation vid lika många dagar)
+  const MAX_WEEKEND_STREAK = 2; // norsk arbetslag: max 2 helligdager/søndager på rad
   const plannedCount = new Map();
 
   // Helgedags-sekvens (lør/sön OCH helligdager — dvs alla «røde» dagar —
@@ -272,9 +273,26 @@ export const generateAutoFill = ({
     for (let i = idx - 1; i >= 0 && worked.has(weekendDates[i]); i--) streak += 1;
     return streak;
   };
-  const weekendOk = (empId, info) =>
-    (!info.isWeekend && !info.isHoliday) ||
-    weekendStreakBefore(empId, weekendIdx.get(info.dateStr)) < 2;
+  // Streak EFTER idx (framåt): dagprioriteringen (helligdager → søndager
+  // → ukedager) behandlar dagarna i icke-kronologisk ordning, så en ansatt
+  // kan redan ha vakter på senare røde dager när en tidigare dag fylls.
+  // Kolla därför BÅDA riktningarna: dagar före + dagar efter + denna dag
+  // får aldrig överstiga MAX_WEEKEND_STREAK.
+  const weekendStreakAfter = (empId, idx) => {
+    const worked = workedWeekendByEmp.get(String(empId));
+    if (!worked) return 0;
+    let streak = 0;
+    for (let i = idx + 1; i < weekendDates.length && worked.has(weekendDates[i]); i++) streak += 1;
+    return streak;
+  };
+  const weekendOk = (empId, info) => {
+    if (!info.isWeekend && !info.isHoliday) return true;
+    const idx = weekendIdx.get(info.dateStr);
+    return (
+      weekendStreakBefore(empId, idx) + weekendStreakAfter(empId, idx) <
+      MAX_WEEKEND_STREAK
+    );
+  };
 
   // Behov per dag
   const dayInfos = dates.map(date => {
