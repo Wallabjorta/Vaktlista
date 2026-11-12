@@ -78,6 +78,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
 
   const getRange = () => {
     if (periodMode === 'month') return monthBounds(0);
+    if (periodMode === 'nextMonth') return monthBounds(1);
     if (periodMode === 'lastMonth') return monthBounds(-1);
     if (periodMode === 'season') return seasonBounds(0);
     if (periodMode === 'lastSeason') return seasonBounds(-1);
@@ -98,6 +99,12 @@ function AdminStats({ employees, shifts, holidays, departments }) {
     if (periodMode === 'month') {
       const now = new Date();
       return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    }
+    if (periodMode === 'nextMonth') {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() + 1);
+      return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
     }
     if (periodMode === 'lastMonth') {
       const d = new Date();
@@ -289,6 +296,7 @@ function AdminStats({ employees, shifts, holidays, departments }) {
           >
             <option value="all">Alle vakter</option>
             <option value="month">Denne måneden</option>
+            <option value="nextMonth">Neste måned</option>
             <option value="lastMonth">Forrige måned</option>
             <option value="season">Denne sesongen (nov–apr)</option>
             <option value="lastSeason">Forrige sesong (nov–apr)</option>
