@@ -224,6 +224,8 @@ function OverviewCalendar({
 
   // Local date state for navigation
   const [selectedCells, setSelectedCells] = useState([]);
+  // Klicka på ett namn → hela raden markeras (lätt att se när den ansatte jobbar)
+  const [highlightEmployeeId, setHighlightEmployeeId] = useState(null);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkForm, setBulkForm] = useState({
     departmentId: '',
@@ -435,9 +437,16 @@ function OverviewCalendar({
                   </td>
                   <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
                 </tr>,
-                ...categoryEmployees.map((employee) => (
+                ...categoryEmployees.map((employee) => {
+                  const isRowHighlighted = highlightEmployeeId === employee.id;
+                  return (
                 <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
+                  <td
+                    className="p-1 border-r font-medium sticky left-0 z-10 cursor-pointer select-none"
+                    style={{ backgroundColor: isRowHighlighted ? '#fde68a' : '#f9fafb', width: '70px' }}
+                    title="Klikk for å markere hele raden"
+                    onClick={() => setHighlightEmployeeId(isRowHighlighted ? null : employee.id)}
+                  >
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -466,7 +475,8 @@ function OverviewCalendar({
                     }
 
                     const isCellSelected = selectedCells.some(c => c.date === dateStr && c.employeeId === employee.id);
-                    const cellStyle = isCellSelected ? { ...bgStyle, backgroundColor: '#86efac' } : bgStyle;
+                    let cellStyle = isCellSelected ? { ...bgStyle, backgroundColor: '#86efac' } : bgStyle;
+                    if (isRowHighlighted) cellStyle = { ...cellStyle, boxShadow: 'inset 0 0 0 2px #f59e0b' };
                     return (
                       <td
                         key={dateIndex}
@@ -497,7 +507,8 @@ function OverviewCalendar({
                     );
                   })}
                 </tr>
-                ))
+                  );
+                })}
               ])}
             </tbody>
           </table>
