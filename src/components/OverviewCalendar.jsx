@@ -508,7 +508,7 @@ function OverviewCalendar({
                   })}
                 </tr>
                   );
-                })}
+                })
               ])}
             </tbody>
           </table>
