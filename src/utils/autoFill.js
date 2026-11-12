@@ -222,9 +222,27 @@ export const generateAutoFill = ({
   // MAX_WEEKEND_STREAK helgedagar/helligdagar på rad (t.ex. aldrig 8 dagar
   // i jula). Befintliga vakter på dessa dagar seedar streaken.
   const holidaySetForStreak = new Set((holidays || []));
-  const weekendDates = dates
-    .filter(d => d.getDay() === 0 || d.getDay() === 6 ||
-      holidaySetForStreak.has(toDateStr(d)))
+  // Röd-dag-sekvensen måste börja FÖRE körningens fönster: en ansatt som
+  // redan jobbat 2 røde dager (t.ex. 25 + 26/12) precis före perioden ska
+  // inte kunna få den NÄSTA røde dagen (t.ex. 27/12) — annars blir det 3 på
+  // rad i strid med norsk lag. Därför fylls ~10 kalenderdagar innan
+  // periodstart in i sekvensen (enbart för streak-räkning — inga vakter
+  // genereras där).
+  const padDates = [];
+  if (dates.length > 0) {
+    const first = new Date(dates[0]);
+    first.setHours(0, 0, 0, 0);
+    for (let back = 10; back >= 1; back--) {
+      const d = new Date(first);
+      d.setDate(d.getDate() - back);
+      padDates.push(d);
+    }
+  }
+  const isRedDay = (d) =>
+    d.getDay() === 0 || d.getDay() === 6 ||
+    holidaySetForStreak.has(toDateStr(d));
+  const weekendDates = [...padDates, ...dates]
+    .filter(isRedDay)
     .map(toDateStr);
   const weekendIdx = new Map(weekendDates.map((d, i) => [d, i]));
   const workedWeekendByEmp = new Map();
