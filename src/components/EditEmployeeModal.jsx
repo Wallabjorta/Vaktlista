@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { hashPassword } from '../utils/passwords';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
-function EditEmployeeModal({ employee, departments, onSave, onClose }) {
+function EditEmployeeModal({ employee, departments, employees = [], currentUser, onSave, onClose }) {
   const [editedEmployee, setEditedEmployee] = useState({
     id: employee?.id || '',
     name: employee?.name || '',
@@ -210,6 +210,19 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                 className="w-4 h-4"
               />
             </div>
+
+            {/* Superadmin — bara synlig för superadmin, eller innan någon superadmin finns (första installationen) */}
+            {(currentUser?.isSuperadmin || !employees.some(e => e?.isSuperadmin)) && (
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-medium">Superadmin</label>
+                <input
+                  type="checkbox"
+                  checked={editedEmployee.isSuperadmin || false}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, isSuperadmin: e.target.checked }))}
+                  className="w-4 h-4"
+                />
+              </div>
+            )}
 
             {/* Passord */}
             <div>

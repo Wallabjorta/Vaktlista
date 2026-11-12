@@ -56,11 +56,14 @@ function OverviewCalendar({
   onAddGroupEvent,
   onEditGroupEvent,
   onDeleteGroupEvent,
-  onShowGroupOverview
+  onShowGroupOverview,
+  onAutoFill
 }) {
+  // Local date state for navigation (må ligga före getDates som använder den)
+  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
   const getDates = () => {
     const dates = [];
-    const startDate = new Date(currentDate || new Date());
+    const startDate = new Date(overviewDate || new Date());
     startDate.setHours(0, 0, 0, 0);
 
     const dayOfWeek = startDate.getDay();
@@ -178,7 +181,7 @@ function OverviewCalendar({
     for (const shift of shifts) {
       if (!shift.date) continue;
       const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
-      if (deptName === 'fri') continue;
+      if (deptName === 'fri' || deptName.includes('heis')) continue;
       const emp = employeeById.get(String(shift.employeeId));
       // Admin-brukere (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
       if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
@@ -220,9 +223,9 @@ function OverviewCalendar({
   }, [revenueByDateAndLocation, staffingConfigs, actualByDateAndLocation]);
 
   // Local date state for navigation
-  const [overviewDate, setOverviewDate] = useState(currentDate || new Date());
-  // Utvalg for bulkvakter: array av { date, employeeId }
   const [selectedCells, setSelectedCells] = useState([]);
+  // Klicka på ett namn → hela raden markeras (lätt att se när den ansatte jobbar)
+  const [highlightEmployeeId, setHighlightEmployeeId] = useState(null);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkForm, setBulkForm] = useState({
     departmentId: '',
@@ -320,6 +323,15 @@ function OverviewCalendar({
                 Nullstill
               </button>
             )}
+            {currentUser?.isSuperadmin && onAutoFill && (
+              <button
+                onClick={() => onAutoFill(dates)}
+                className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 whitespace-nowrap"
+                title="Generer vakter automatisk basert på omsetning, søndager, helligdager og ansettelsesprosent"
+              >
+                Auto-fyll vakter
+              </button>
+            )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
           </div>
         </div>
@@ -377,7 +389,7 @@ function OverviewCalendar({
                 onDeleteEvent={onDeleteGroupEvent}
                 onShowOverview={onShowGroupOverview}
               />
-              {currentUser?.isAdmin && (
+              {currentUser?.isSuperadmin && (
                 <tr className="border-b bg-blue-50">
                   <td className="p-1 border-r text-xs font-medium text-gray-700 bg-blue-50 sticky left-0 z-10" style={{ minWidth: '70px' }}>
                     Bemanning V/Ø
@@ -424,9 +436,16 @@ function OverviewCalendar({
                   </td>
                   <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
                 </tr>,
-                ...categoryEmployees.map((employee) => (
+                ...categoryEmployees.map((employee) => {
+                  const isRowHighlighted = highlightEmployeeId === employee.id;
+                  return (
                 <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
-                  <td className="p-1 border-r font-medium bg-gray-50 sticky left-0 z-10" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
+                  <td
+                    className="p-1 border-r font-medium sticky left-0 z-10 cursor-pointer select-none"
+                    style={{ backgroundColor: isRowHighlighted ? '#fde68a' : '#f9fafb', width: '70px' }}
+                    title="Klikk for å markere hele raden"
+                    onClick={() => setHighlightEmployeeId(isRowHighlighted ? null : employee.id)}
+                  >
                     <div className="flex items-center gap-1 text-sm truncate">
                       <span className="truncate">{employee.name}</span>
                       {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
@@ -455,7 +474,8 @@ function OverviewCalendar({
                     }
 
                     const isCellSelected = selectedCells.some(c => c.date === dateStr && c.employeeId === employee.id);
-                    const cellStyle = isCellSelected ? { ...bgStyle, backgroundColor: '#86efac' } : bgStyle;
+                    let cellStyle = isCellSelected ? { ...bgStyle, backgroundColor: '#86efac' } : bgStyle;
+                    if (isRowHighlighted) cellStyle = { ...cellStyle, boxShadow: 'inset 0 0 0 2px #f59e0b' };
                     return (
                       <td
                         key={dateIndex}
@@ -474,7 +494,7 @@ function OverviewCalendar({
                                   key={shiftIndex}
                                   className="p-0.5 rounded text-xs text-white font-medium truncate"
                                   style={{ backgroundColor: deptColor }}
-                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
                                 >
                                   {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime.replace(':00', '')}
                                 </div>
@@ -486,7 +506,8 @@ function OverviewCalendar({
                     );
                   })}
                 </tr>
-                ))
+                  );
+                })
               ])}
             </tbody>
           </table>
