@@ -76,11 +76,13 @@ export const buildRevenueMap = (revenues) => {
 const categoryForDeptName = (name) => {
   const n = (name || '').toLowerCase();
   if (!n || n === 'fri' || n === 'ferie' || n.includes('heis')) return null;
+  // Skiskole måste kollas FÖRE øst/vest: en avdeling som heter t.ex.
+  // «Skiskole Vest» är Skiskole — inte Skiutleie Vest-bemanning.
+  if (n.includes('skiskole')) return 'Skiskole';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
   if (n.includes('vest')) return 'Skiutleie Vest';
-  if (n.includes('skiskole')) return 'Skiskole';
   return null;
 };
 

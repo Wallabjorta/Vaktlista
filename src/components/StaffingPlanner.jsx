@@ -52,7 +52,7 @@ const DEFAULT_CONFIG = {
   ]
 };
 
-function StaffingPlanner({ employees, shifts, currentUser }) {
+function StaffingPlanner({ employees, shifts, departments, currentUser }) {
   const [revenues, setRevenues] = useState([]);
   const [configs, setConfigs] = useState(null);
   const [tab, setTab] = useState('compare');
@@ -92,6 +92,13 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
     return map;
   }, [employees]);
 
+  const deptNameByIdSp = useMemo(() => {
+    const map = new Map();
+    for (const d of departments || []) {
+      if (d && d.id) map.set(d.id, d.name || '');
+    }
+    return map;
+  }, [departments]);
   const shiftsByDate = useMemo(() => {
     const map = new Map();
     const categories = LOCATION_CATEGORIES[location];
@@ -100,6 +107,9 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       const emp = employeeById.get(String(s.employeeId));
       // Admin-brukare (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
       if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
+      // Skiskole-vakter räknas inte i skiutleie/butikk-bemanningen
+      const deptNameSp = (deptNameByIdSp.get(s.departmentId) || '').toLowerCase();
+      if (categories && deptNameSp.includes('skiskole')) continue;
       if (categories) {
         const cat = emp?.category || null;
         if (!cat || !categories.includes(cat)) continue;
@@ -107,7 +117,7 @@ function StaffingPlanner({ employees, shifts, currentUser }) {
       map.get(s.date).push(s);
     }
     return map;
-  }, [shifts, location, employeeById]);
+  }, [shifts, location, employeeById, deptNameByIdSp]);
 
   const filteredRevenues = useMemo(() => {
     return revenues.filter(r => {

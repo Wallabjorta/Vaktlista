@@ -18,11 +18,12 @@ export const inferCategory = (employee) => {
 export const deptNameToCategory = (deptName) => {
   const n = (deptName || '').toLowerCase();
   if (!n || n === 'fri' || n === 'ferie' || n.includes('heis')) return null;
+  // Skiskole före øst/vest: «Skiskole Vest» är Skiskole, inte Skiutleie Vest
+  if (n.includes('skiskole')) return 'Skiskole';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
   if (n.includes('vest')) return 'Skiutleie Vest';
-  if (n.includes('skiskole')) return 'Skiskole';
   return null;
 };
 
@@ -30,6 +31,8 @@ export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
   return (allShifts || []).filter(shift => {
     const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
     if (deptName === 'fri' || deptName === 'ferie' || deptName.includes('heis')) return true;
+    // Skiskole-vakter syns bara under Skiskole — aldrig under Skiutleie/Butikk
+    if (deptName.includes('skiskole')) return category === 'Skiskole';
     if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
     if (category === 'Skiutleie Øst') return deptName.includes('øst') || deptName.includes('ost');
     if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');

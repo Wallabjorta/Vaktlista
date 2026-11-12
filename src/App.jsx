@@ -1170,7 +1170,7 @@ function App() {
         </div>
       )}
       {currentUser?.isSuperadmin && (
-        <StaffingPlanner employees={employees} shifts={shifts} currentUser={currentUser} />
+        <StaffingPlanner employees={employees} shifts={shifts} departments={departments} currentUser={currentUser} />
       )}
 
 

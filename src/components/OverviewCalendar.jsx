@@ -182,6 +182,9 @@ function OverviewCalendar({
       if (!shift.date) continue;
       const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
       if (deptName === 'fri' || deptName.includes('heis')) continue;
+      // Skiskole-vakter räknas INTE som skiutleie-bemanning (även om
+      // avdelingsnamnet innehåller vest/øst, t.ex. «Skiskole Vest»)
+      if (deptName.includes('skiskole')) continue;
       const emp = employeeById.get(String(shift.employeeId));
       // Admin-brukere (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
       if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
