@@ -76,6 +76,7 @@ export const buildRevenueMap = (revenues) => {
 const categoryForDeptName = (name) => {
   const n = (name || '').toLowerCase();
   if (!n || n === 'fri' || n === 'ferie') return null;
+  if (n.includes('heis')) return 'Heis';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';

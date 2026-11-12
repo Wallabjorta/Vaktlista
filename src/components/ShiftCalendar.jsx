@@ -3,7 +3,7 @@ import GroupBarsRow from './GroupBarsRow';
 import { subscribeToGroupEvents } from '../firebase';
 
 
-export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
+export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Heis', 'Ekstra', 'Admin'];
 
 export const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
@@ -18,6 +18,7 @@ export const inferCategory = (employee) => {
 export const deptNameToCategory = (deptName) => {
   const n = (deptName || '').toLowerCase();
   if (!n || n === 'fri' || n === 'ferie') return null;
+  if (n.includes('heis')) return 'Heis';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
@@ -35,6 +36,7 @@ export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
     if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');
     if (category === 'Butikk Øst') return deptName.includes('butikk') && (deptName.includes('øst') || deptName.includes('ost'));
     if (category === 'Skiskole') return deptName.includes('skiskole');
+    if (category === 'Heis') return deptName.includes('heis');
     return false;
   });
 };
