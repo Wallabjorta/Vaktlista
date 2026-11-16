@@ -160,6 +160,11 @@ function ShiftCalendar({
     }
     return result;
   }, [currentDate, showHistory]);
+  const weekGroups = useMemo(() => {
+    const groups = [];
+    for (let i = 0; i < dates.length; i += 7) groups.push(dates.slice(i, i + 7));
+    return groups;
+  }, [dates]);
   const deptNameById = useMemo(() => new Map((departments || []).filter(Boolean).map(d => [d.id, (d.name || '').toLowerCase()])), [departments]);
   const firstDateStr = dates.length ? `${dates[0].getFullYear()}-${String(dates[0].getMonth() + 1).padStart(2, '0')}-${String(dates[0].getDate()).padStart(2, '0')}` : '';
   const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
@@ -263,7 +268,26 @@ function ShiftCalendar({
     <div className="bg-white border rounded-lg shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-160px)]">
       <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
           <thead>
+            {heisOnly && (
+              <tr className="border-b">
+                <th rowSpan={2} className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
+                  {onNavigateWeek && (
+                    <div className="flex gap-1 justify-center">
+                      <button onClick={() => onNavigateWeek(-7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
+                      <button onClick={() => onNavigateWeek('today')} className="px-1 py-0.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">Idag</button>
+                      <button onClick={() => onNavigateWeek(7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Neste</button>
+                    </div>
+                  )}
+                </th>
+                {weekGroups.map((wg, i) => (
+                  <th key={`wk-${i}`} colSpan={wg.length} className="p-1 h-6 text-center border-r bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-20">
+                    Uke {getWeekNumber(wg[0])}
+                  </th>
+                ))}
+              </tr>
+            )}
             <tr className="border-b">
+              {!heisOnly && (
               <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
@@ -273,19 +297,33 @@ function ShiftCalendar({
                   </div>
                 )}
               </th>
+              )}
               {dates.map((date, index) => {
                 const isToday = date.toDateString() === new Date().toDateString();
                 return (
                   <th
                     key={index}
-                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                    className={`p-1 text-center border-r last:border-r-0 text-xs sticky z-20 ${heisOnly ? 'top-6' : 'top-0 md:p-2 md:text-sm'} ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                   >
-                    <div className="font-medium text-gray-700 truncate">
-                      {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
-                    </div>
-                    <div className="hidden md:block text-xs text-gray-500">
-                      Uke {getWeekNumber(date)}
-                    </div>
+                    {heisOnly ? (
+                      <>
+                        <div className="font-semibold text-gray-700 leading-tight">
+                          {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short' })}
+                        </div>
+                        <div className="text-gray-500 leading-tight">
+                          {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'short' })}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium text-gray-700 truncate">
+                          {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
+                        </div>
+                        <div className="hidden md:block text-xs text-gray-500">
+                          Uke {getWeekNumber(date)}
+                        </div>
+                      </>
+                    )}
                   </th>
                 );
               })}
@@ -310,13 +348,20 @@ function ShiftCalendar({
                 </td>
                 <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
               </tr>,
-              ...categoryEmployees.map((employee) => (
+              ...categoryEmployees.map((employee) => {
+                const heisPosts = heisOnly
+                  ? (employee.deptIds || []).map(id => (departments || []).find(d => d && d.id === id)?.name).filter(n => n && n.toLowerCase().includes('heis'))
+                  : [];
+                return (
               <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
                 <td className="p-1 md:p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]">
                   <div className="flex items-center gap-1 text-sm truncate">
                     <span className="truncate">{employee.name}</span>
                     {employee.isAdmin && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 rounded">Admin</span>}
                   </div>
+                  {heisOnly && heisPosts.length > 0 && (
+                    <div className="text-[10px] text-gray-500 truncate" title={heisPosts.join(', ')}>{heisPosts.join(', ')}</div>
+                  )}
                 </td>
                 {dates.map((date, dateIndex) => {
                   const year = date.getFullYear();
@@ -348,7 +393,7 @@ function ShiftCalendar({
                   return (
                     <td
                       key={dateIndex}
-                      className="p-1 border-r border-b h-10 md:h-14 min-w-[70px] md:min-w-[90px] relative text-xs"
+                      className={`p-1 border-r border-b h-10 md:h-14 relative text-xs ${heisOnly ? 'min-w-[34px] w-9 md:min-w-[38px] md:w-10' : 'min-w-[70px] md:min-w-[90px]'}`}
                       style={{
                         ...bgStyle,
                         ...(isSelected ? { backgroundColor: '#DBEAFE' } : {})
@@ -381,7 +426,7 @@ function ShiftCalendar({
                                       });
                                     }}
                                   >
-                                    {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
+                                    {heisOnly ? deptName : deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
                                   {currentUser?.isAdmin && (
                                     <button
@@ -451,7 +496,8 @@ function ShiftCalendar({
                   );
                 })}
               </tr>
-              ))
+                );
+              })
             ])}
           </tbody>
         </table>
