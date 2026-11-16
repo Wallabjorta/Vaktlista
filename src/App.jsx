@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import GroupOverviewCalendar from './components/GroupOverviewCalendar';
@@ -206,6 +206,19 @@ function App() {
     if (currentUser) loadRequests();
   }, [currentUser]);
 
+  // Ruting ved innlogging: ansatte som KUN har heis-avdelinger havner i Heis-vyn,
+  // alle andre (skiutleie/skiskole/butikk, eller begge deler) havner i hovedlisten
+  const departmentsRef = useRef(departments);
+  useEffect(() => { departmentsRef.current = departments; }, [departments]);
+  useEffect(() => {
+    if (!currentUser) return;
+    const depts = departmentsRef.current;
+    const ids = currentUser.deptIds || [];
+    const heisOnly = ids.length > 0 && ids.every(id => isHeisDeptName(depts.find(d => d && d.id === id)?.name));
+    setHeisView(heisOnly);
+    if (heisOnly) setSelectedDepartment(null);
+  }, [currentUser]);
+
   // Fallback: Load default employees if Firebase returns empty
   useEffect(() => {
     if (!loading && employees.length === 0) {
@@ -329,6 +342,8 @@ function App() {
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
+    setHeisView(false);
+    setSelectedDepartment(null);
   }, []);
 
   const handleAddShift = useCallback(async () => {
@@ -909,10 +924,24 @@ function App() {
 
   const heisDepartment = departments.find(d => d && isHeisDeptName(d.name));
   const heisDeptIds = new Set(departments.filter(d => d && isHeisDeptName(d.name)).map(d => d.id));
-  const heisEmployees = employees.filter(e => (e.deptIds || []).some(id => heisDeptIds.has(id)));
+  const appDeptNameById = new Map(departments.filter(Boolean).map(d => [d.id, (d.name || '').toLowerCase()]));
+  const empIdsWithHeisShift = new Set();
+  const empIdsWithOtherShift = new Set();
+  for (const s of shifts || []) {
+    const name = appDeptNameById.get(s.departmentId);
+    if (name === undefined) continue;
+    if (isHeisDeptName(name)) empIdsWithHeisShift.add(String(s.employeeId));
+    else if (name !== 'fri' && name !== 'ferie') empIdsWithOtherShift.add(String(s.employeeId));
+  }
+  // Heis-vyn: alle med heis-avdeling ELLER heis-vakt
+  const heisEmployees = employees.filter(e => (e.deptIds || []).some(id => heisDeptIds.has(id)) || empIdsWithHeisShift.has(String(e.id)));
+  // Hovedlisten: alle UTEN de som kun har heis (verken heis-avdeling blandet med annet, eller ikke-heis-vakt)
   const heisOnlyIds = new Set(
     employees
-      .filter(e => (e.deptIds || []).length > 0 && (e.deptIds || []).every(id => heisDeptIds.has(id)))
+      .filter(e => {
+        const ids = e.deptIds || [];
+        return ids.length > 0 && ids.every(id => heisDeptIds.has(id)) && !empIdsWithOtherShift.has(String(e.id));
+      })
       .map(e => e.id)
   );
   const visibleEmployees = heisView
