@@ -910,6 +910,16 @@ function App() {
   const heisDepartment = departments.find(d => d && isHeisDeptName(d.name));
   const heisDeptIds = new Set(departments.filter(d => d && isHeisDeptName(d.name)).map(d => d.id));
   const heisEmployees = employees.filter(e => (e.deptIds || []).some(id => heisDeptIds.has(id)));
+  const heisOnlyIds = new Set(
+    employees
+      .filter(e => (e.deptIds || []).length > 0 && (e.deptIds || []).every(id => heisDeptIds.has(id)))
+      .map(e => e.id)
+  );
+  const visibleEmployees = heisView
+    ? (heisEmployees.length > 0 ? heisEmployees : employees)
+    : selectedDepartment
+      ? employees.filter(e => e.deptIds?.includes(selectedDepartment))
+      : employees.filter(e => !heisOnlyIds.has(e.id));
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -1074,7 +1084,7 @@ function App() {
         {currentUser && (
           <>
             <ShiftCalendar
-              employees={heisView ? (heisEmployees.length > 0 ? heisEmployees : employees) : employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
+              employees={visibleEmployees}
               shifts={shifts}
               selectedDepartment={heisView ? (heisDepartment?.id || null) : selectedDepartment}
               heisOnly={heisView}
@@ -1106,12 +1116,14 @@ function App() {
               onShowGroupOverview={() => setShowGroupOverview(true)}
             />
             <div className="flex items-center gap-2 my-2 flex-wrap">
+              {!heisView && (
               <button
                 onClick={() => setShowOverviewCalendar(true)}
                 className="px-3 py-1 bg-purple-600 text-white rounded border border-purple-600 hover:bg-purple-700 text-sm"
               >
                 3-måneders oversikt
               </button>
+              )}
               <span className="text-sm text-gray-600">Sorter:</span>
               <select
                 value={employeeSort}
@@ -1123,7 +1135,7 @@ function App() {
               </select>
             </div>
             <div className="flex flex-wrap gap-1 md:gap-2">
-          {employees
+          {visibleEmployees
             .slice()
             .sort((a, b) => {
               if (employeeSort === 'department') {
@@ -1281,7 +1293,7 @@ function App() {
       
       {showOverviewCalendar && (
         <OverviewCalendar
-          employees={employees}
+          employees={visibleEmployees}
           shifts={shifts}
           departments={departments}
           holidays={Object.keys(holidaysObj || {})}

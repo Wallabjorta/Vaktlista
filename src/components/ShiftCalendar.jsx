@@ -31,7 +31,9 @@ export const deptNameToCategory = (deptName) => {
 export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
   return (allShifts || []).filter(shift => {
     const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
-    if (deptName === 'fri' || deptName === 'ferie' || deptName.includes('heis')) return true;
+    if (deptName === 'fri' || deptName === 'ferie') return true;
+    // Heis-vakter tilhører kun Heis-vyn — aldri noen annen kategori
+    if (deptName.includes('heis')) return false;
     // Skiskole-vakter syns bara under Skiskole — aldrig under Skiutleie/Butikk
     if (deptName.includes('skiskole')) return category === 'Skiskole';
     if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
@@ -181,8 +183,7 @@ function ShiftCalendar({
     if (heisOnly) {
       return forCell.filter(shift => (deptNameById.get(shift.departmentId) || '').includes('heis'));
     }
-    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById)
-      .filter(shift => !(deptNameById.get(shift.departmentId) || '').includes('heis'));
+    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById);
   }, [shiftIndex, deptNameById, heisOnly]);
 
   const getWeekNumber = (date) => {
