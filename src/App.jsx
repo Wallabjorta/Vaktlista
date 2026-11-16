@@ -931,24 +931,26 @@ function App() {
             </h1>
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setSelectedDepartment(null); setHeisView(false); }}
+              className="px-4 py-2 rounded border"
+              style={!selectedDepartment && !heisView ? { backgroundColor: '#3B82F6', color: 'white', borderColor: '#3B82F6' } : { backgroundColor: '#f3f4f6' }}
+            >
+              Vaktliste Skiutleie/Skiskole/Butikk
+            </button>
+            <button
+              onClick={() => { setSelectedDepartment(null); setHeisView(true); }}
+              className="px-4 py-2 rounded border"
+              style={heisView ? { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280' } : { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280', opacity: 0.7 }}
+            >
+              Heis
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <button
-          onClick={() => { setSelectedDepartment(null); setHeisView(false); }}
-          className="px-4 py-2 rounded border"
-          style={!selectedDepartment && !heisView ? { backgroundColor: '#3B82F6', color: 'white', borderColor: '#3B82F6' } : { backgroundColor: '#f3f4f6' }}
-        >
-          Vaktliste Skiutleie/Skiskole/Butikk
-        </button>
-        <button
-          onClick={() => { setSelectedDepartment(null); setHeisView(true); }}
-          className="px-4 py-2 rounded border"
-          style={heisView ? { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280' } : { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280', opacity: 0.7 }}
-        >
-          Heis
-        </button>
         {departments
           .filter(dept => !(dept.name || '').toLowerCase().includes('heis'))
           .slice()
