@@ -4,7 +4,7 @@ import { subscribeToGroupEvents } from '../firebase';
 import { heisLiftName } from '../utils/heisLifts';
 
 
-export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
+export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'BL', 'Partall', 'Oddetall', 'SkiP', 'Prepp', 'Park', 'Sport1', 'Ekstra', 'Admin'];
 
 export const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
@@ -22,6 +22,13 @@ export const deptNameToCategory = (deptName) => {
   // Skiskole före øst/vest: «Skiskole Vest» är Skiskole, inte Skiutleie Vest
   if (n.includes('skiskole')) return 'Skiskole';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
+  if (n.includes('prepp') || n.includes('løype') || n.includes('loype')) return 'Prepp';
+  if (n.includes('park')) return 'Park';
+  if (n.includes('sport')) return 'Sport1';
+  if (n.includes('skip')) return 'SkiP';
+  if (n.includes('partall')) return 'Partall';
+  if (n.includes('oddetall')) return 'Oddetall';
+  if (n.includes('bemanningsleder') || n === 'bl' || n === 'l adm') return 'BL';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
   if (n.includes('vest')) return 'Skiutleie Vest';
@@ -41,6 +48,13 @@ export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
     if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');
     if (category === 'Butikk Øst') return deptName.includes('butikk') && (deptName.includes('øst') || deptName.includes('ost'));
     if (category === 'Skiskole') return deptName.includes('skiskole');
+    if (category === 'Prepp') return deptName.includes('prepp') || deptName.includes('løype') || deptName.includes('loype');
+    if (category === 'Park') return deptName.includes('park');
+    if (category === 'Sport1') return deptName.includes('sport');
+    if (category === 'SkiP') return deptName.includes('skip');
+    if (category === 'Partall') return deptName.includes('partall');
+    if (category === 'Oddetall') return deptName.includes('oddetall');
+    if (category === 'BL') return deptName.includes('bemanningsleder') || deptName === 'bl' || deptName === 'l adm';
     return false;
   });
 };

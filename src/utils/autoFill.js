@@ -80,6 +80,13 @@ const categoryForDeptName = (name) => {
   // «Skiskole Vest» är Skiskole — inte Skiutleie Vest-bemanning.
   if (n.includes('skiskole')) return 'Skiskole';
   if (n.includes('skolegrupper')) return 'Skiutleie Vest';
+  if (n.includes('prepp') || n.includes('løype') || n.includes('loype')) return 'Prepp';
+  if (n.includes('park')) return 'Park';
+  if (n.includes('sport')) return 'Sport1';
+  if (n.includes('skip')) return 'SkiP';
+  if (n.includes('partall')) return 'Partall';
+  if (n.includes('oddetall')) return 'Oddetall';
+  if (n.includes('bemanningsleder') || n === 'bl' || n === 'l adm') return 'BL';
   if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
   if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
   if (n.includes('vest')) return 'Skiutleie Vest';
