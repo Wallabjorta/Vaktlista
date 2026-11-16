@@ -112,6 +112,7 @@ function ShiftCalendar({
   employees = [],
   shifts = [],
   selectedDepartment,
+  heisOnly = false,
   currentDate,
   departments = [],
   holidays = [],
@@ -164,14 +165,18 @@ function ShiftCalendar({
   const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
   const shiftIndex = useMemo(() => buildShiftIndex(shifts), [shifts]);
   const categoryGroups = useMemo(() => {
+    if (heisOnly) return [['Heis', employees || []]];
     const groups = groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr);
     return sortCategoriesForUser(groups, currentUser);
-  }, [employees, shifts, departments, firstDateStr, lastDateStr, currentUser]);
+  }, [heisOnly, employees, shifts, departments, firstDateStr, lastDateStr, currentUser]);
   const shiftsForCell = useCallback((category, employeeId, dateStr) => {
     const forCell = shiftIndex.get(`${String(employeeId)}|${dateStr}`) || EMPTY_SHIFTS;
     if (forCell.length === 0) return forCell;
+    if (heisOnly) {
+      return forCell.filter(shift => (deptNameById.get(shift.departmentId) || '').includes('heis'));
+    }
     return SHIFTS_BY_CATEGORY(forCell, category, deptNameById);
-  }, [shiftIndex, deptNameById]);
+  }, [shiftIndex, deptNameById, heisOnly]);
 
   const getWeekNumber = (date) => {
     const d = new Date(date);

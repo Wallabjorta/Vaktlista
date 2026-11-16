@@ -139,6 +139,7 @@ function App() {
   } = useFirebaseData({ shiftsUntil: calendarShiftsUntil(currentDate) });
 
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [heisView, setHeisView] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [employeeSort, setEmployeeSort] = useState('name');
@@ -894,6 +895,8 @@ function App() {
     }
   }, [deleteDepartmentFirebase]);
 
+  const heisDepartment = departments.find(d => d && (d.name || '').toLowerCase().includes('heis'));
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="mb-4 flex justify-between items-center">
@@ -924,7 +927,7 @@ function App() {
         <div className="flex justify-between items-center flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {selectedDepartment ? `Vaktlista - ${departments.find(d => d.id === selectedDepartment)?.name}` : 'Vaktlista - Alle avdelinger'}
+              {heisView ? 'Vaktplan - Heis' : selectedDepartment ? `Vaktlista - ${departments.find(d => d.id === selectedDepartment)?.name}` : 'Vaktliste - Skiutleie/Skiskole/Butikk'}
             </h1>
             <p className="text-gray-600">Visning: 30 uker</p>
           </div>
@@ -933,11 +936,11 @@ function App() {
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
-          onClick={() => setSelectedDepartment(null)}
+          onClick={() => { setSelectedDepartment(null); setHeisView(false); }}
           className="px-4 py-2 rounded border"
-          style={!selectedDepartment ? { backgroundColor: '#3B82F6', color: 'white', borderColor: '#3B82F6' } : { backgroundColor: '#f3f4f6' }}
+          style={!selectedDepartment && !heisView ? { backgroundColor: '#3B82F6', color: 'white', borderColor: '#3B82F6' } : { backgroundColor: '#f3f4f6' }}
         >
-          Oversikt (Alle)
+          Vaktliste Skiutleie/Skiskole/Butikk
         </button>
         {departments
           .slice()
@@ -945,13 +948,20 @@ function App() {
           .map(dept => (
           <button
             key={dept.id}
-            onClick={() => setSelectedDepartment(dept.id)}
+            onClick={() => { setSelectedDepartment(dept.id); setHeisView(false); }}
             className="px-4 py-2 rounded border"
-            style={selectedDepartment === dept.id ? { backgroundColor: dept.color, color: 'white', borderColor: dept.color } : { backgroundColor: dept.color, color: 'white', borderColor: dept.color, opacity: 0.7 }}
+            style={selectedDepartment === dept.id && !heisView ? { backgroundColor: dept.color, color: 'white', borderColor: dept.color } : { backgroundColor: dept.color, color: 'white', borderColor: dept.color, opacity: 0.7 }}
           >
             {dept.name}
           </button>
         ))}
+        <button
+          onClick={() => { setSelectedDepartment(null); setHeisView(true); }}
+          className="px-4 py-2 rounded border"
+          style={heisView ? { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280' } : { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280', opacity: 0.7 }}
+        >
+          Heis
+        </button>
         <button
           onClick={() => setShowHistory(!showHistory)}
           className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200"
@@ -986,13 +996,13 @@ function App() {
                       setNewShift(prev => ({
                         ...prev,
                         employeeId: selectedEmployeeForBulk,
-                        departmentId: selectedDepartment || "",
+                        departmentId: (heisView ? heisDepartment?.id : selectedDepartment) || "",
                         date: selectedDates[0]
                       }));
                     } else {
                       setNewShift({
                         employeeId: "",
-                        departmentId: selectedDepartment || "",
+                        departmentId: (heisView ? heisDepartment?.id : selectedDepartment) || "",
                         date: new Date().toISOString().split('T')[0],
                         startTime: DEFAULT_SHIFT_TIMES.start,
                         endTime: DEFAULT_SHIFT_TIMES.end
@@ -1045,9 +1055,10 @@ function App() {
         {currentUser && (
           <>
             <ShiftCalendar
-              employees={employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
+              employees={heisView ? employees : employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
               shifts={shifts}
-              selectedDepartment={selectedDepartment}
+              selectedDepartment={heisView ? (heisDepartment?.id || null) : selectedDepartment}
+              heisOnly={heisView}
               currentDate={currentDate}
               departments={departments}
               holidays={holidays}

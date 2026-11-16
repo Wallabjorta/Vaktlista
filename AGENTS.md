@@ -43,6 +43,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
+*(Senast uppdaterad av agent: 2026-11-16, session om Heis-vy: knapp «Heis» → egen kalender med bara kategorin Heis (heisOnly i ShiftCalendar), «Oversikt (Alle)» omdöpt till «Vaktliste Skiutleie/Skiskole/Butikk», titel «Vaktlista - Alle avdelinger» → «Vaktliste - Skiutleie/Skiskole/Butikk». Verifierad med `npm run build`.)*
 *(Senast uppdaterad av agent: 2026-11-12, session om auto-utfylling av vakter + radmarkering + helligdagsstatistik-fix + Superadmin-låsning + extravakt «Heis» + 24.12 + fasta-före-extra + kontraktsminimum + bulker.)*
 *(Tidigare: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
 
