@@ -12,10 +12,12 @@ export const HEIS_LIFTS = [
   { code: 'D', name: 'Dag' },
   { code: 'Ds', name: 'Dag snø' },
   { code: 'E', name: 'Familieheisen' },
+  { code: 'E2', name: 'Familieheisen kveldskjøring' },
   { code: 'G', name: 'Barneheisen Mellomstasjon' },
   { code: 'H', name: 'Fjellheisen' },
   { code: 'HD', name: 'Hotellheisen' },
   { code: 'I', name: 'Barneheisen Vestsiden' },
+  { code: 'I2', name: 'Barneheisen Vestsiden kveldskjøring' },
   { code: 'K', name: 'Oleheisen' },
   { code: 'Ks', name: 'Kveld snø' },
   { code: 'L', name: 'Løypekjøring' },
@@ -28,7 +30,11 @@ export const HEIS_LIFTS = [
   { code: 'V2', name: 'Billett Skitorget, 2 på jobb' },
   { code: 'WC', name: 'World Cup' },
   { code: 'AØ', name: 'Automat øst' },
-  { code: 'AV', name: 'Automat vest' }
+  { code: 'AV', name: 'Automat vest' },
+  { code: 'MB', name: 'Gondolen Skitorget' },
+  { code: 'MT', name: 'Gondolen Varden' },
+  { code: 'NB', name: 'Varden Express Bunn' },
+  { code: 'NT', name: 'Varden Express Topp' }
 ];
 
 export const isHeisDeptName = (name) => (name || '').toLowerCase().includes('heis');
