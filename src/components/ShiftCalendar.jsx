@@ -175,7 +175,8 @@ function ShiftCalendar({
     if (heisOnly) {
       return forCell.filter(shift => (deptNameById.get(shift.departmentId) || '').includes('heis'));
     }
-    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById);
+    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById)
+      .filter(shift => !(deptNameById.get(shift.departmentId) || '').includes('heis'));
   }, [shiftIndex, deptNameById, heisOnly]);
 
   const getWeekNumber = (date) => {

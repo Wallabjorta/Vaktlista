@@ -942,7 +942,15 @@ function App() {
         >
           Vaktliste Skiutleie/Skiskole/Butikk
         </button>
+        <button
+          onClick={() => { setSelectedDepartment(null); setHeisView(true); }}
+          className="px-4 py-2 rounded border"
+          style={heisView ? { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280' } : { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280', opacity: 0.7 }}
+        >
+          Heis
+        </button>
         {departments
+          .filter(dept => !(dept.name || '').toLowerCase().includes('heis'))
           .slice()
           .sort((a, b) => (a.order || 999) - (b.order || 999) || a.name.localeCompare(b.name, 'no-NO'))
           .map(dept => (
@@ -956,13 +964,6 @@ function App() {
           </button>
         ))}
         <button
-          onClick={() => { setSelectedDepartment(null); setHeisView(true); }}
-          className="px-4 py-2 rounded border"
-          style={heisView ? { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280' } : { backgroundColor: heisDepartment?.color || '#6B7280', color: 'white', borderColor: heisDepartment?.color || '#6B7280', opacity: 0.7 }}
-        >
-          Heis
-        </button>
-        <button
           onClick={() => setShowHistory(!showHistory)}
           className="px-4 py-2 rounded border bg-gray-100 hover:bg-gray-200"
         >
@@ -973,7 +974,7 @@ function App() {
       <div className="mb-6 p-4 bg-white border rounded-lg shadow-sm">
         <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
           <h2 className="text-lg font-semibold">
-            {selectedDepartment ? `Ansatte (${departments.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
+            {heisView ? 'Ansatte (Heis)' : selectedDepartment ? `Ansatte (${departments.find(d => d.id === selectedDepartment)?.name})` : 'Ansatte (Alle)'}
           </h2>
           <div className="flex gap-2">
             <button onClick={() => setEmployeeSort('name')} className={`px-2 py-1 text-xs rounded border ${employeeSort === 'name' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>A-Å</button>
