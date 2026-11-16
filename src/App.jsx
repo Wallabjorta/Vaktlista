@@ -206,18 +206,18 @@ function App() {
     if (currentUser) loadRequests();
   }, [currentUser]);
 
-  // Ruting ved innlogging: ansatte som KUN har heis-avdelinger havner i Heis-vyn,
-  // alle andre (skiutleie/skiskole/butikk, eller begge deler) havner i hovedlisten
-  const departmentsRef = useRef(departments);
-  useEffect(() => { departmentsRef.current = departments; }, [departments]);
+  // Ruting ved innlogging (én gang, bevoktet med ref): ansatte som KUN har heis-avdelinger
+  // havner i Heis-vyn, alle andre (skiutleie/skiskole/butikk, eller begge deler) i hovedlisten.
+  // Viktig: ikke kjør på hver currentUser-oppdatering, ellers kastes brukeren ut av Heis-vyn ved dataendringer.
+  const routedRef = useRef(false);
   useEffect(() => {
-    if (!currentUser) return;
-    const depts = departmentsRef.current;
+    if (routedRef.current || !currentUser || departments.length === 0) return;
+    routedRef.current = true;
     const ids = currentUser.deptIds || [];
-    const heisOnly = ids.length > 0 && ids.every(id => isHeisDeptName(depts.find(d => d && d.id === id)?.name));
+    const heisOnly = ids.length > 0 && ids.every(id => isHeisDeptName(departments.find(d => d && d.id === id)?.name));
     setHeisView(heisOnly);
     if (heisOnly) setSelectedDepartment(null);
-  }, [currentUser]);
+  }, [currentUser, departments]);
 
   // Fallback: Load default employees if Firebase returns empty
   useEffect(() => {
@@ -276,8 +276,13 @@ function App() {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
     setShowLoginModal(false);
+    const ids = user.deptIds || [];
+    const heisOnly = ids.length > 0 && ids.every(id => isHeisDeptName(departments.find(d => d && d.id === id)?.name));
+    routedRef.current = true;
+    setHeisView(heisOnly);
+    if (heisOnly) setSelectedDepartment(null);
     return true;
-  }, [employees, updateEmployeeFirebase]);
+  }, [employees, departments, updateEmployeeFirebase]);
 
   const handleSaveGroupEvent = useCallback(async (data) => {
     try {
@@ -344,6 +349,7 @@ function App() {
     localStorage.removeItem('currentUser');
     setHeisView(false);
     setSelectedDepartment(null);
+    routedRef.current = false;
   }, []);
 
   const handleAddShift = useCallback(async () => {
