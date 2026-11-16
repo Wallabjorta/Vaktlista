@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react';
 
+import { HEIS_LIFTS, isHeisDeptName } from '../utils/heisLifts';
+
 function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose }) {
   const [comment, setComment] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [lift, setLift] = useState('');
 
   useEffect(() => {
     setComment(shift?.comment || '');
     setStartTime(shift?.startTime || '');
     setEndTime(shift?.endTime || '');
     setDepartmentId(shift?.departmentId || '');
+    setLift(shift?.lift || '');
   }, [shift]);
 
   if (!shift) return null;
+
+  const deptIsHeis = isHeisDeptName((departments || []).find(d => d && d.id === departmentId)?.name);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -21,7 +27,7 @@ function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose
     if (!endTime) { alert('Velg sluttid!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
     if (!departmentId) { alert('Velg avdeling/arbeidsplass!'); return; }
-    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment });
+    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment, lift: deptIsHeis ? lift : '' });
   };
 
   return (
@@ -52,6 +58,22 @@ function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose
               ))}
             </select>
           </div>
+
+          {deptIsHeis && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Heis</label>
+              <select
+                value={lift}
+                onChange={(e) => setLift(e.target.value)}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Velg heis</option>
+                {HEIS_LIFTS.map(l => (
+                  <option key={l.code} value={l.code}>{l.code} — {l.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -41,6 +41,7 @@ import GroupEventModal from './components/GroupEventModal';
 import AutoFillModal from './components/AutoFillModal';
 import { addGroupEvent, updateGroupEvent, deleteGroupEvent } from './firebase';
 import { hashPassword, verifyPassword } from './utils/passwords';
+import { isHeisDeptName } from './utils/heisLifts';
 
 // Kun denne administratoren kan se endringsloggen
 const AUDIT_LOG_VIEWER = "Bjørn Waldenstrøm";
@@ -172,7 +173,8 @@ function App() {
     date: new Date().toISOString().split('T')[0],
     startTime: DEFAULT_SHIFT_TIMES.start,
     endTime: DEFAULT_SHIFT_TIMES.end,
-    comment: ""
+    comment: "",
+    lift: ""
   });
 
   // Hent norske helligdager dynamisk
@@ -353,8 +355,10 @@ function App() {
       alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
     }
 
+    const saveDept = departments.find(d => d && d.id === newShift.departmentId);
     const shiftToSave = {
       ...newShift,
+      lift: isHeisDeptName(saveDept?.name) ? (newShift.lift || '') : '',
       breaks: []
     };
 
@@ -374,7 +378,8 @@ function App() {
         date: new Date().toISOString().split('T')[0],
         startTime: DEFAULT_SHIFT_TIMES.start,
         endTime: DEFAULT_SHIFT_TIMES.end,
-        comment: ""
+        comment: "",
+        lift: ""
       });
       setSelectedDates([]);
       setSelectedEmployeeForBulk(null);
@@ -412,6 +417,8 @@ function App() {
     }
 
     // Opprett vakter for alle valgte kombinasjoner
+    const bulkDept = departments.find(d => d && d.id === newShift.departmentId);
+    const bulkLift = isHeisDeptName(bulkDept?.name) ? (newShift.lift || '') : '';
     const shiftsToSave = cellsToCreate.map(cell => ({
       employeeId: cell.employeeId,
       departmentId: newShift.departmentId,
@@ -419,6 +426,7 @@ function App() {
       startTime: newShift.startTime,
       endTime: newShift.endTime,
       comment: newShift.comment || "",
+      lift: bulkLift,
       breaks: []
     }));
 
@@ -453,7 +461,8 @@ function App() {
         date: new Date().toISOString().split('T')[0],
         startTime: DEFAULT_SHIFT_TIMES.start,
         endTime: DEFAULT_SHIFT_TIMES.end,
-        comment: ""
+        comment: "",
+        lift: ""
       }));
       if (warnings.length > 0) {
         alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
@@ -722,7 +731,8 @@ function App() {
       departmentId: deptId || selectedDepartment || "",
       date: date,
       startTime: DEFAULT_SHIFT_TIMES.start,
-      endTime: DEFAULT_SHIFT_TIMES.end
+      endTime: DEFAULT_SHIFT_TIMES.end,
+      lift: ""
     });
     setShowAddShiftModal(true);
   }, [currentUser?.isAdmin, selectedDepartment, validate]);
@@ -749,14 +759,16 @@ function App() {
         startTime: updates.startTime,
         endTime: updates.endTime,
         comment: updates.comment || "",
-        departmentId: updates.departmentId
+        departmentId: updates.departmentId,
+        lift: updates.lift || ""
       });
       await logAdminAction(currentUser, 'shift_update', {
         shiftId,
         startTime: updates.startTime,
         endTime: updates.endTime,
         comment: updates.comment || "",
-        departmentId: updates.departmentId
+        departmentId: updates.departmentId,
+        lift: updates.lift || ""
       });
       setShiftToEdit(null);
     } catch (error) {
@@ -895,7 +907,9 @@ function App() {
     }
   }, [deleteDepartmentFirebase]);
 
-  const heisDepartment = departments.find(d => d && (d.name || '').toLowerCase().includes('heis'));
+  const heisDepartment = departments.find(d => d && isHeisDeptName(d.name));
+  const heisDeptIds = new Set(departments.filter(d => d && isHeisDeptName(d.name)).map(d => d.id));
+  const heisEmployees = employees.filter(e => (e.deptIds || []).some(id => heisDeptIds.has(id)));
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -1000,7 +1014,8 @@ function App() {
                         ...prev,
                         employeeId: selectedEmployeeForBulk,
                         departmentId: (heisView ? heisDepartment?.id : selectedDepartment) || "",
-                        date: selectedDates[0]
+                        date: selectedDates[0],
+                        lift: ""
                       }));
                     } else {
                       setNewShift({
@@ -1008,7 +1023,8 @@ function App() {
                         departmentId: (heisView ? heisDepartment?.id : selectedDepartment) || "",
                         date: new Date().toISOString().split('T')[0],
                         startTime: DEFAULT_SHIFT_TIMES.start,
-                        endTime: DEFAULT_SHIFT_TIMES.end
+                        endTime: DEFAULT_SHIFT_TIMES.end,
+                        lift: ""
                       });
                     }
                     setShowAddShiftModal(true);
@@ -1058,7 +1074,7 @@ function App() {
         {currentUser && (
           <>
             <ShiftCalendar
-              employees={heisView ? employees : employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
+              employees={heisView ? (heisEmployees.length > 0 ? heisEmployees : employees) : employees.filter(employee => !selectedDepartment || employee.deptIds?.includes(selectedDepartment))}
               shifts={shifts}
               selectedDepartment={heisView ? (heisDepartment?.id || null) : selectedDepartment}
               heisOnly={heisView}
@@ -1208,7 +1224,14 @@ function App() {
           employees={employees}
           departments={departments}
           newShift={newShift}
-          onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
+          onChange={(field, value) => setNewShift(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'departmentId') {
+              const dept = departments.find(d => d && d.id === value);
+              if (!isHeisDeptName(dept?.name)) next.lift = "";
+            }
+            return next;
+          })}
           onSave={selectedDates.length > 0 ? handleBulkAddShift : handleAddShift}
           onClose={() => {
             setShowAddShiftModal(false);

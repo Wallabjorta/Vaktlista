@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import GroupBarsRow from './GroupBarsRow';
 import { subscribeToGroupEvents } from '../firebase';
+import { heisLiftName } from '../utils/heisLifts';
 
 
 export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
@@ -412,7 +413,7 @@ function ShiftCalendar({
                                   key={shiftIndex}
                                   className="p-1 rounded text-xs text-white font-medium group relative"
                                   style={{ backgroundColor: deptColor }}
-                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
+                                  title={`${shift.startTime}-${shift.endTime}${shift.lift ? ` – ${shift.lift} ${heisLiftName(shift.lift)}` : ''} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
                                 >
                                   <div 
                                     className="truncate text-center cursor-pointer"
@@ -426,7 +427,7 @@ function ShiftCalendar({
                                       });
                                     }}
                                   >
-                                    {heisOnly ? deptName : deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
+                                    {heisOnly ? (shift.lift || deptName) : deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
                                   {currentUser?.isAdmin && (
                                     <button
@@ -535,6 +536,9 @@ function ShiftCalendar({
                   {(departments || []).find(d => d && d.id === shiftDetail.shift.departmentId)?.name || shiftDetail.shift.departmentId}
                 </span>
               </p>
+              {shiftDetail.shift.lift && (
+                <p><span className="font-medium">Heis:</span> {shiftDetail.shift.lift} — {heisLiftName(shiftDetail.shift.lift)}</p>
+              )}
               {shiftDetail.shift.comment ? (
                 <p className="whitespace-pre-wrap"><span className="font-medium">Kommentar:</span> {shiftDetail.shift.comment}</p>
               ) : (

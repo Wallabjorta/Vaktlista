@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { HEIS_LIFTS, isHeisDeptName } from '../utils/heisLifts';
+
 function AddShiftModal({ 
   employees, 
   departments, 
@@ -17,6 +19,8 @@ function AddShiftModal({
     bulkByEmployee[cell.employeeId] = (bulkByEmployee[cell.employeeId] || 0) + 1;
   });
   const bulkEmployeeIds = Object.keys(bulkByEmployee);
+  const selectedDept = (departments || []).find(d => d && d.id === newShift.departmentId);
+  const deptIsHeis = isHeisDeptName(selectedDept?.name);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
@@ -93,6 +97,22 @@ function AddShiftModal({
               ))}
             </select>
           </div>
+
+          {deptIsHeis && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Heis</label>
+              <select
+                value={newShift.lift || ''}
+                onChange={(e) => onChange('lift', e.target.value)}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Velg heis</option>
+                {HEIS_LIFTS.map(l => (
+                  <option key={l.code} value={l.code}>{l.code} — {l.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Dato</label>
