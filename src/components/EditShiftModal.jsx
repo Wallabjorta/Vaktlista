@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { HEIS_LIFTS, isHeisDeptName } from '../utils/heisLifts';
 
-function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose }) {
+function EditShiftModal({ shift, employeeName, departments = [], employees = [], onSave, onClose }) {
   const [comment, setComment] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -20,6 +20,8 @@ function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose
   if (!shift) return null;
 
   const deptIsHeis = isHeisDeptName((departments || []).find(d => d && d.id === departmentId)?.name);
+  const empComps = (employees || []).find(e => e && e.id === shift.employeeId)?.heisCompetences || [];
+  const liftOptions = deptIsHeis && empComps.length > 0 ? HEIS_LIFTS.filter(l => empComps.includes(l.code)) : HEIS_LIFTS;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -68,7 +70,7 @@ function EditShiftModal({ shift, employeeName, departments = [], onSave, onClose
                 className="w-full p-2 border rounded"
               >
                 <option value="">Velg heis</option>
-                {HEIS_LIFTS.map(l => (
+                {liftOptions.map(l => (
                   <option key={l.code} value={l.code}>{l.code} — {l.name}</option>
                 ))}
               </select>

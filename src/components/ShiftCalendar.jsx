@@ -4,7 +4,7 @@ import { subscribeToGroupEvents } from '../firebase';
 import { heisLiftName } from '../utils/heisLifts';
 
 
-export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'BL', 'Partall', 'Oddetall', 'SkiP', 'Prepp', 'Park', 'Sport1', 'Ekstra', 'Admin'];
+export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'BL', 'Partall', 'Oddetall', 'Heis', 'SkiP', 'Prepp', 'Park', 'Sport1', 'Ekstra', 'Admin'];
 
 export const inferCategory = (employee) => {
   if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
@@ -187,8 +187,18 @@ function ShiftCalendar({
   const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
   const shiftIndex = useMemo(() => buildShiftIndex(shifts), [shifts]);
   const categoryGroups = useMemo(() => {
-    if (heisOnly) return [['Heis', employees || []]];
-    const groups = groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr);
+    if (heisOnly) {
+      // Heis-kalenderen grupperer etter den ansattes kategori (Heis, Park, Prepp ...), fallback «Heis»
+      const groups = new Map();
+      for (const emp of employees || []) {
+        const cat = (emp.category && EMPLOYEE_CATEGORIES.includes(emp.category)) ? emp.category : 'Heis';
+        if (!groups.has(cat)) groups.set(cat, []);
+        groups.get(cat).push(emp);
+      }
+      return EMPLOYEE_CATEGORIES.filter(c => groups.has(c)).map(c => [c, groups.get(c)]);
+    }
+    const groups = groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr)
+      .filter(([cat]) => cat !== 'Heis');
     return sortCategoriesForUser(groups, currentUser);
   }, [heisOnly, employees, shifts, departments, firstDateStr, lastDateStr, currentUser]);
   const shiftsForCell = useCallback((category, employeeId, dateStr) => {
@@ -377,6 +387,9 @@ function ShiftCalendar({
                   </div>
                   {heisOnly && heisPosts.length > 0 && (
                     <div className="text-[10px] text-gray-500 truncate" title={heisPosts.join(', ')}>{heisPosts.join(', ')}</div>
+                  )}
+                  {heisOnly && (employee.heisCompetences || []).length > 0 && (
+                    <div className="text-[10px] text-blue-600 truncate" title={`Kompetanse: ${(employee.heisCompetences || []).join(', ')}`}>{(employee.heisCompetences || []).join(' ')}</div>
                   )}
                 </td>
                 {dates.map((date, dateIndex) => {

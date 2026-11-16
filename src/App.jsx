@@ -1393,6 +1393,7 @@ function App() {
           shift={shiftToEdit.shift}
           employeeName={shiftToEdit.employeeName}
           departments={modalDepartments}
+          employees={visibleEmployees}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
         />

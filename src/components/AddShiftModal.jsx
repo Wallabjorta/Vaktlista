@@ -21,6 +21,9 @@ function AddShiftModal({
   const bulkEmployeeIds = Object.keys(bulkByEmployee);
   const selectedDept = (departments || []).find(d => d && d.id === newShift.departmentId);
   const deptIsHeis = isHeisDeptName(selectedDept?.name);
+  const selectedEmp = (employees || []).find(e => e && e.id === newShift.employeeId);
+  const empComps = selectedEmp?.heisCompetences || [];
+  const liftOptions = deptIsHeis && empComps.length > 0 ? HEIS_LIFTS.filter(l => empComps.includes(l.code)) : HEIS_LIFTS;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
@@ -107,10 +110,13 @@ function AddShiftModal({
                 className="w-full p-2 border rounded"
               >
                 <option value="">Velg heis</option>
-                {HEIS_LIFTS.map(l => (
+                {liftOptions.map(l => (
                   <option key={l.code} value={l.code}>{l.code} — {l.name}</option>
                 ))}
               </select>
+              {deptIsHeis && empComps.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">Viser bare heiser {selectedEmp?.name || 'den ansatte'} har kompetanse for.</p>
+              )}
             </div>
           )}
 

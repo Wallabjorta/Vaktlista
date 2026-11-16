@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { hashPassword } from '../utils/passwords';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
+import { HEIS_LIFTS, isHeisDeptName } from '../utils/heisLifts';
 
 function AddEmployeeModal({ departments, onSave, onClose }) {
   const [newEmployee, setNewEmployee] = useState({
@@ -14,7 +15,8 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     contractHours: '',
     contractPercent: '',
     contractStart: '',
-    contractEnd: ''
+    contractEnd: '',
+    heisCompetences: []
   });
 
   const handleSubmit = async (e) => {
@@ -60,6 +62,15 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
       return { ...prev, deptIds: newDeptIds };
     });
   };
+
+  const handleCompetenceToggle = (code) => {
+    setNewEmployee(prev => {
+      const list = prev.heisCompetences || [];
+      return { ...prev, heisCompetences: list.includes(code) ? list.filter(c => c !== code) : [...list, code] };
+    });
+  };
+
+  const showHeisCompetences = (newEmployee.deptIds || []).some(id => isHeisDeptName(departments.find(d => d && d.id === id)?.name)) || newEmployee.category === 'Heis';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -154,6 +165,26 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
                 ))}
               </div>
             </div>
+
+            {/* Heis-kompetanse */}
+            {showHeisCompetences && (
+              <div>
+                <label className="block text-sm font-medium mb-1">Heis-kompetanse (heiser den ansatte kan bemanne)</label>
+                <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
+                  {HEIS_LIFTS.map(l => (
+                    <button
+                      key={l.code}
+                      type="button"
+                      onClick={() => handleCompetenceToggle(l.code)}
+                      className={`px-2 py-1 rounded text-xs border whitespace-nowrap ${(newEmployee.heisCompetences || []).includes(l.code) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 hover:bg-gray-200'}`}
+                      title={l.name}
+                    >
+                      {l.code}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Kontrakt */}
             <div className="grid grid-cols-2 gap-3">

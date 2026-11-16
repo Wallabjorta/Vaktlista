@@ -246,7 +246,8 @@ function OverviewCalendar({
   const firstDateStr = dates.length ? toDateStr(dates[0]) : '';
   const lastDateStr = dates.length ? toDateStr(dates[dates.length - 1]) : '';
   const categoryGroups = sortCategoriesForUser(
-    groupByShiftCategory(filteredEmployees || [], shifts || [], departments || [], firstDateStr, lastDateStr),
+    groupByShiftCategory(filteredEmployees || [], shifts || [], departments || [], firstDateStr, lastDateStr)
+      .filter(([cat]) => cat !== 'Heis'),
     currentUser
   );
 
