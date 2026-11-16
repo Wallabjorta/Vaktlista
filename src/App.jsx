@@ -949,6 +949,8 @@ function App() {
     : selectedDepartment
       ? employees.filter(e => e.deptIds?.includes(selectedDepartment))
       : employees.filter(e => !heisOnlyIds.has(e.id));
+  const heisDepartments = departments.filter(d => d && isHeisDeptName(d.name));
+  const modalDepartments = heisView && heisDepartments.length > 0 ? heisDepartments : departments;
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -1004,7 +1006,7 @@ function App() {
       </header>
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
-        {departments
+        {!heisView && departments
           .filter(dept => !(dept.name || '').toLowerCase().includes('heis'))
           .slice()
           .sort((a, b) => (a.order || 999) - (b.order || 999) || a.name.localeCompare(b.name, 'no-NO'))
@@ -1262,8 +1264,8 @@ function App() {
 
       {showAddShiftModal && (
         <AddShiftModal
-          employees={employees}
-          departments={departments}
+          employees={visibleEmployees}
+          departments={modalDepartments}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => {
             const next = { ...prev, [field]: value };
@@ -1390,7 +1392,7 @@ function App() {
         <EditShiftModal
           shift={shiftToEdit.shift}
           employeeName={shiftToEdit.employeeName}
-          departments={departments}
+          departments={modalDepartments}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
         />
