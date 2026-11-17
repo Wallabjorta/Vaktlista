@@ -158,8 +158,8 @@ function OverviewCalendar({
   }, [revenues]);
 
   const LOCATION_CATEGORIES = {
-    st: ['Skiutleie Vest', 'Butikk Vest'],
-    'øst': ['Skiutleie Øst', 'Butikk Øst']
+    st: ['Skiutleie Vest'],
+    'øst': ['Skiutleie Øst']
   };
 
   const employeeById = useMemo(() => {
@@ -187,6 +187,8 @@ function OverviewCalendar({
       if (deptName.includes('skiskole')) continue;
       // Skolegrupper-vakter räknas inte som skiutleie/butikk-bemanning i statistiken
       if (deptName.includes('skolegrupper')) continue;
+      // Statistikk/planering gäller bara Skiutleie Øst/Vest — butikk räknas inte med
+      if (deptName.includes('butikk')) continue;
       const emp = employeeById.get(String(shift.employeeId));
       // Admin-brukere (t.ex. Björn Waldenström) räknas inte i faktisk bemanning
       if (emp && (emp.isAdmin || emp.category === 'Admin')) continue;
