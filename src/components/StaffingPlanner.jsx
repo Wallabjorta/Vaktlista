@@ -110,6 +110,8 @@ function StaffingPlanner({ employees, shifts, departments, currentUser }) {
       // Skiskole-vakter räknas inte i skiutleie/butikk-bemanningen
       const deptNameSp = (deptNameByIdSp.get(s.departmentId) || '').toLowerCase();
       if (categories && deptNameSp.includes('skiskole')) continue;
+      // Skolegrupper-vakter räknas inte i bemanningsplaneringen
+      if (categories && deptNameSp.includes('skolegrupper')) continue;
       if (categories) {
         const cat = emp?.category || null;
         if (!cat || !categories.includes(cat)) continue;

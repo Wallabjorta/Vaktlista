@@ -201,7 +201,8 @@ export const generateAutoFill = ({
       // Heis är en extravakt: personen är upptagen (busyByEmpDate satt ovan,
       // arbetsdag räknas nedan) men den räknas INTE som bemanning för kategorin.
       const isHeis = (dn || '').toLowerCase().includes('heis');
-      const countsForRun = !isHeis && (!category || shiftCat == null || shiftCat === category);
+      const isSkolegrupper = (dn || '').toLowerCase().includes('skolegrupper');
+      const countsForRun = !isHeis && !isSkolegrupper && (!category || shiftCat == null || shiftCat === category);
       if (countsForRun) {
         catStaffingByDate.set(s.date, (catStaffingByDate.get(s.date) || 0) + 1);
         runBusyByEmpDate.add(`${s.employeeId}_${s.date}`);
