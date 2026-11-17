@@ -55,11 +55,6 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // Vaktmallar (forhåndsdefinerte vakttider): läs/skriv
-    match /shiftTemplates/{templateId} {
-      allow read, write: if true;
-    }
-
     // Backup-metadata: endast Cloud Functions (Admin SDK kringgår reglerna)
     match /backups/{backupId} {
       allow read, write: if false;

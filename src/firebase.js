@@ -49,7 +49,6 @@ const swapRequestsCollection = collection(db, "swapRequests");
 const auditLogsCollection = collection(db, "auditLogs");
 const groupEventsCollection = collection(db, "groupEvents");
 const revenueCollection = collection(db, "revenues");
-const shiftTemplatesCollection = collection(db, "shiftTemplates");
 
 // ===== STAFFING CONFIG =====
 
@@ -770,22 +769,36 @@ export const subscribeToDepartments = (callback) => {
 };
 
 // ===== VAKTMALLER (forhåndsdefinerte vakttider, t.ex. 08:45-16:00) =====
+// Lagres i staffingConfig-dokumentet (shiftTemplates-feltet) fordi den samlingen
+// allerede har åpne Firestore-regler — en egen samling krever regeldeploy først.
 
 export const getShiftTemplates = async () => {
   try {
-    const snap = await getDocs(shiftTemplatesCollection);
-    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
+    const list = snap.exists() ? snap.data().shiftTemplates : null;
+    return Array.isArray(list) ? list : [];
   } catch (error) {
     console.error("Error getting shift templates:", error);
     return [];
   }
 };
 
+export const saveShiftTemplates = async (templates) => {
+  try {
+    await setDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), { shiftTemplates: templates }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error saving shift templates:", error);
+    throw error;
+  }
+};
+
 export const addShiftTemplate = async (template) => {
   try {
-    const id = template.id || doc(shiftTemplatesCollection).id;
-    await setDoc(doc(db, "shiftTemplates", id), { ...template, id });
-    return { id, ...template };
+    const list = await getShiftTemplates();
+    const entry = { ...template, id: template.id || `tpl-${Date.now()}` };
+    await saveShiftTemplates([...list, entry]);
+    return entry;
   } catch (error) {
     console.error("Error adding shift template:", error);
     throw error;
@@ -794,7 +807,8 @@ export const addShiftTemplate = async (template) => {
 
 export const updateShiftTemplate = async (id, updates) => {
   try {
-    await updateDoc(doc(db, "shiftTemplates", id), updates);
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.map(t => (t.id === id ? { ...t, ...updates, id } : t)));
     return true;
   } catch (error) {
     console.error("Error updating shift template:", error);
@@ -804,7 +818,8 @@ export const updateShiftTemplate = async (id, updates) => {
 
 export const deleteShiftTemplate = async (id) => {
   try {
-    await deleteDoc(doc(db, "shiftTemplates", id));
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.filter(t => t.id !== id));
     return true;
   } catch (error) {
     console.error("Error deleting shift template:", error);
@@ -813,9 +828,9 @@ export const deleteShiftTemplate = async (id) => {
 };
 
 export const subscribeToShiftTemplates = (callback) => {
-  return onSnapshot(shiftTemplatesCollection, (snapshot) => {
-    const templates = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-    callback(templates);
+  return onSnapshot(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    callback(Array.isArray(data.shiftTemplates) ? data.shiftTemplates : []);
   });
 };
 
