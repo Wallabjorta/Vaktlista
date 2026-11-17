@@ -5,23 +5,26 @@ function EditShiftModal({ shift, employeeName, departments = [], shiftTemplates 
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [departmentId, setDepartmentId] = useState('');
+  const [date, setDate] = useState('');
 
   useEffect(() => {
     setComment(shift?.comment || '');
     setStartTime(shift?.startTime || '');
     setEndTime(shift?.endTime || '');
     setDepartmentId(shift?.departmentId || '');
+    setDate(shift?.date || '');
   }, [shift]);
 
   if (!shift) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!date) { alert('Velg dato!'); return; }
     if (!startTime) { alert('Velg starttid!'); return; }
     if (!endTime) { alert('Velg sluttid!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
     if (!departmentId) { alert('Velg avdeling/arbeidsplass!'); return; }
-    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment });
+    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment, date });
   };
 
   return (
@@ -35,7 +38,17 @@ function EditShiftModal({ shift, employeeName, departments = [], shiftTemplates 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="text-sm text-gray-600">
             <p><strong>Ansatt:</strong> {employeeName || shift.employeeId}</p>
-            <p><strong>Dato:</strong> {shift.date}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Dato</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            />
           </div>
 
           <div>

@@ -750,6 +750,7 @@ function App() {
   const handleSaveShiftEdit = useCallback(async (shiftId, updates) => {
     try {
       await updateShiftFirebase(shiftId, {
+        date: updates.date,
         startTime: updates.startTime,
         endTime: updates.endTime,
         comment: updates.comment || "",
@@ -757,6 +758,7 @@ function App() {
       });
       await logAdminAction(currentUser, 'shift_update', {
         shiftId,
+        date: updates.date,
         startTime: updates.startTime,
         endTime: updates.endTime,
         comment: updates.comment || "",
