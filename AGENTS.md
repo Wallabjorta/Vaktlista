@@ -43,6 +43,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
+*(Senast uppdaterad av agent: 2026-11-16, session om vaktmallar (ny branch vibe/vaktmaler, PR69 med Heis-vy stängdes/skippas enligt användaren): ny samling `shiftTemplates` + CRUD/subscription i firebase.js, regel i firestore.rules, ny ShiftTemplateModal (admin «🕐 Vaktmaler») och «Vaktmal»-väljare i Add/EditShiftModal. Verifierad med `npm run build`.)*
 *(Senast uppdaterad av agent: 2026-11-12, session om auto-utfylling av vakter + radmarkering + helligdagsstatistik-fix + Superadmin-låsning + extravakt «Heis» + 24.12 + fasta-före-extra + kontraktsminimum + bulker.)*
 *(Tidigare: 2026-02-14, session om Firestore-kostnadsoptimering – hålla reads under 50 000/dag vid ~20 användare. Budgetvarningar 50/90/100 % redan uppsatta i GCP Console.)*
 

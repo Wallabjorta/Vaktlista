@@ -17,6 +17,10 @@ import {
   subscribeToEmployees,
   subscribeToShifts,
   subscribeToDepartments,
+  addShiftTemplate,
+  updateShiftTemplate,
+  deleteShiftTemplate,
+  subscribeToShiftTemplates,
   migrateFromLocalStorage,
   normalizeDepartments
 } from '../firebase';
@@ -50,6 +54,7 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [shiftTemplates, setShiftTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [migrated, setMigrated] = useState(false);
@@ -153,6 +158,10 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
       setDepartments(depts);
       localStorage.setItem('departments', JSON.stringify(depts));
     });
+
+    const unsubscribeShiftTemplates = subscribeToShiftTemplates((tpls) => {
+      setShiftTemplates(tpls);
+    });
     
     // Initial load
     loadData();
@@ -162,6 +171,7 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
       unsubscribeEmployees();
       unsubscribeShifts();
       unsubscribeDepartments();
+      unsubscribeShiftTemplates();
     };
   }, [loadData, windowEnd]);
 
@@ -282,6 +292,37 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
     }
   }, []);
 
+  // Shift template CRUD operations
+  const addShiftTemplateFunc = useCallback(async (template) => {
+    try {
+      const newTemplate = await addShiftTemplate(template);
+      return newTemplate;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const updateShiftTemplateFunc = useCallback(async (id, updates) => {
+    try {
+      await updateShiftTemplate(id, updates);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const deleteShiftTemplateFunc = useCallback(async (id) => {
+    try {
+      await deleteShiftTemplate(id);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
   // Save to localStorage as fallback
   const saveToLocalStorage = useCallback(() => {
     localStorage.setItem('employees', JSON.stringify(employees));
@@ -293,6 +334,7 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
     employees,
     shifts,
     departments,
+    shiftTemplates,
     loading,
     error,
     migrated,
@@ -316,5 +358,10 @@ export default function useFirebaseData({ shiftsUntil = null } = {}) {
     addDepartment: addDepartmentFunc,
     updateDepartment: updateDepartmentFunc,
     deleteDepartment: deleteDepartmentFunc,
+
+    // Shift template operations
+    addShiftTemplate: addShiftTemplateFunc,
+    updateShiftTemplate: updateShiftTemplateFunc,
+    deleteShiftTemplate: deleteShiftTemplateFunc,
   };
 }

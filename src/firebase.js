@@ -49,6 +49,7 @@ const swapRequestsCollection = collection(db, "swapRequests");
 const auditLogsCollection = collection(db, "auditLogs");
 const groupEventsCollection = collection(db, "groupEvents");
 const revenueCollection = collection(db, "revenues");
+const shiftTemplatesCollection = collection(db, "shiftTemplates");
 
 // ===== STAFFING CONFIG =====
 
@@ -765,6 +766,56 @@ export const subscribeToDepartments = (callback) => {
   return onSnapshot(departmentsCollection, (snapshot) => {
     const departments = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(departments);
+  });
+};
+
+// ===== VAKTMALLER (forhåndsdefinerte vakttider, t.ex. 08:45-16:00) =====
+
+export const getShiftTemplates = async () => {
+  try {
+    const snap = await getDocs(shiftTemplatesCollection);
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  } catch (error) {
+    console.error("Error getting shift templates:", error);
+    return [];
+  }
+};
+
+export const addShiftTemplate = async (template) => {
+  try {
+    const id = template.id || doc(shiftTemplatesCollection).id;
+    await setDoc(doc(db, "shiftTemplates", id), { ...template, id });
+    return { id, ...template };
+  } catch (error) {
+    console.error("Error adding shift template:", error);
+    throw error;
+  }
+};
+
+export const updateShiftTemplate = async (id, updates) => {
+  try {
+    await updateDoc(doc(db, "shiftTemplates", id), updates);
+    return true;
+  } catch (error) {
+    console.error("Error updating shift template:", error);
+    throw error;
+  }
+};
+
+export const deleteShiftTemplate = async (id) => {
+  try {
+    await deleteDoc(doc(db, "shiftTemplates", id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting shift template:", error);
+    throw error;
+  }
+};
+
+export const subscribeToShiftTemplates = (callback) => {
+  return onSnapshot(shiftTemplatesCollection, (snapshot) => {
+    const templates = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+    callback(templates);
   });
 };
 

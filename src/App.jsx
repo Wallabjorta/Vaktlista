@@ -15,6 +15,7 @@ import LeaveRequestModal from './components/LeaveRequestModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
+import ShiftTemplateModal from './components/ShiftTemplateModal';
 
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation, { validateShift } from './hooks/useWorkLawValidation';
@@ -124,6 +125,7 @@ function App() {
     employees,
     shifts,
     departments,
+    shiftTemplates,
     loading,
     error,
     addEmployee: addEmployeeFirebase,
@@ -135,6 +137,8 @@ function App() {
     addDepartment: addDepartmentFirebase,
     updateDepartment: updateDepartmentFirebase,
     deleteDepartment: deleteDepartmentFirebase,
+    addShiftTemplate: addShiftTemplateFirebase,
+    deleteShiftTemplate: deleteShiftTemplateFirebase,
     migrateData
   } = useFirebaseData({ shiftsUntil: calendarShiftsUntil(currentDate) });
 
@@ -151,6 +155,7 @@ function App() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [showShiftTemplateModal, setShowShiftTemplateModal] = useState(false);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showGroupEventModal, setShowGroupEventModal] = useState(false);
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
@@ -894,6 +899,30 @@ function App() {
     }
   }, [deleteDepartmentFirebase]);
 
+  const handleAddShiftTemplate = useCallback(async (template) => {
+    try {
+      await addShiftTemplateFirebase(template);
+      await logAdminAction(currentUser, 'shift_template_add', {
+        name: template.name || '',
+        startTime: template.startTime,
+        endTime: template.endTime
+      });
+    } catch (error) {
+      console.error('Error adding shift template:', error);
+      alert('Feil ved lagring av vaktmal: ' + error.message);
+    }
+  }, [addShiftTemplateFirebase, currentUser]);
+
+  const handleDeleteShiftTemplate = useCallback(async (id) => {
+    try {
+      await deleteShiftTemplateFirebase(id);
+      await logAdminAction(currentUser, 'shift_template_delete', { templateId: id });
+    } catch (error) {
+      console.error('Error deleting shift template:', error);
+      alert('Feil ved sletting av vaktmal: ' + error.message);
+    }
+  }, [deleteShiftTemplateFirebase, currentUser]);
+
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
       <div className="mb-4 flex justify-between items-center">
@@ -1028,6 +1057,12 @@ function App() {
                     className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
                   >
                     ⚙️ Avdelinger
+                  </button>
+                  <button
+                    onClick={() => setShowShiftTemplateModal(true)}
+                    className="px-3 py-1 bg-indigo-600 text-white rounded border border-indigo-600 hover:bg-indigo-700"
+                  >
+                    🕐 Vaktmaler
                   </button>
                 </>
               )}
@@ -1193,6 +1228,7 @@ function App() {
         <AddShiftModal
           employees={employees}
           departments={departments}
+          shiftTemplates={shiftTemplates}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
           onSave={selectedDates.length > 0 ? handleBulkAddShift : handleAddShift}
@@ -1313,6 +1349,7 @@ function App() {
           shift={shiftToEdit.shift}
           employeeName={shiftToEdit.employeeName}
           departments={departments}
+          shiftTemplates={shiftTemplates}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
         />
@@ -1335,6 +1372,15 @@ function App() {
           onSave={handleSaveDepartment}
           onDelete={handleDeleteDepartment}
           onClose={() => setShowDepartmentModal(false)}
+        />
+      )}
+
+      {showShiftTemplateModal && (
+        <ShiftTemplateModal
+          templates={shiftTemplates}
+          onAdd={handleAddShiftTemplate}
+          onDelete={handleDeleteShiftTemplate}
+          onClose={() => setShowShiftTemplateModal(false)}
         />
       )}
 
