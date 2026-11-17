@@ -768,6 +768,72 @@ export const subscribeToDepartments = (callback) => {
   });
 };
 
+// ===== VAKTMALLER (forhåndsdefinerte vakttider, t.ex. 08:45-16:00) =====
+// Lagres i staffingConfig-dokumentet (shiftTemplates-feltet) fordi den samlingen
+// allerede har åpne Firestore-regler — en egen samling krever regeldeploy først.
+
+export const getShiftTemplates = async () => {
+  try {
+    const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
+    const list = snap.exists() ? snap.data().shiftTemplates : null;
+    return Array.isArray(list) ? list : [];
+  } catch (error) {
+    console.error("Error getting shift templates:", error);
+    return [];
+  }
+};
+
+export const saveShiftTemplates = async (templates) => {
+  try {
+    await setDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), { shiftTemplates: templates }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error saving shift templates:", error);
+    throw error;
+  }
+};
+
+export const addShiftTemplate = async (template) => {
+  try {
+    const list = await getShiftTemplates();
+    const entry = { ...template, id: template.id || `tpl-${Date.now()}` };
+    await saveShiftTemplates([...list, entry]);
+    return entry;
+  } catch (error) {
+    console.error("Error adding shift template:", error);
+    throw error;
+  }
+};
+
+export const updateShiftTemplate = async (id, updates) => {
+  try {
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.map(t => (t.id === id ? { ...t, ...updates, id } : t)));
+    return true;
+  } catch (error) {
+    console.error("Error updating shift template:", error);
+    throw error;
+  }
+};
+
+export const deleteShiftTemplate = async (id) => {
+  try {
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.filter(t => t.id !== id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting shift template:", error);
+    throw error;
+  }
+};
+
+export const subscribeToShiftTemplates = (callback) => {
+  return onSnapshot(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    callback(Array.isArray(data.shiftTemplates) ? data.shiftTemplates : []);
+  });
+};
+
 // ===== DATA MIGRATION FROM LOCALSTORAGE =====
 
 /**
