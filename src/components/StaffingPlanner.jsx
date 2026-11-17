@@ -39,8 +39,8 @@ const formatKr = (n) => {
 
 const LOCATION_CATEGORIES = {
   total: null,
-  st: ['Skiutleie Vest', 'Butikk Vest'],
-  'øst': ['Skiutleie Øst', 'Butikk Øst']
+  st: ['Skiutleie Vest'],
+  'øst': ['Skiutleie Øst']
 };
 
 const DEFAULT_CONFIG = {
@@ -112,6 +112,8 @@ function StaffingPlanner({ employees, shifts, departments, currentUser }) {
       if (categories && deptNameSp.includes('skiskole')) continue;
       // Skolegrupper-vakter räknas inte i bemanningsplaneringen
       if (categories && deptNameSp.includes('skolegrupper')) continue;
+      // Planeringen gäller bara Skiutleie Øst/Vest — butikk-vakter räknas inte
+      if (categories && deptNameSp.includes('butikk')) continue;
       if (categories) {
         const cat = emp?.category || null;
         if (!cat || !categories.includes(cat)) continue;
