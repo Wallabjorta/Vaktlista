@@ -29,7 +29,7 @@ function EditShiftModal({ shift, employeeName, departments = [], shiftTemplates 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Rediger vakt</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
