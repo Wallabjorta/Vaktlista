@@ -43,6 +43,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
+*(Senast uppdaterad av agent: 2026-11-17, session om uke-start: useWorkLawValidation brukte toISOString() (UTC) på lokale datoer → i norsk tid ble uken søn–lør og «5 dager/uke»-varsler ble falske. Nå lokal datoformatering (toLocalDateStr) — uken er man–søn (ISO). Testet med TZ=Europe/Oslo + `npm run build`. PR76 (vaktmal i oversikt) och PR77 (test-synk) öppna.)*
 *(Senast uppdaterad av agent: 2026-11-17, session om vaktmal i 3-månadersöversikten: OverviewCalendar bulk-modal («Ny vakt») får «Vaktmal»-dropdown (shiftTemplates-prop från App) som fyller start/slutt; Verifierad med `npm run build`. PR75 (main→test synk) öppen.)*
 *(Senast uppdaterad av agent: 2026-11-17, session om modalhöjd: AddShiftModal/EditShiftModal får `max-h-[90vh] overflow-y-auto` så hela modalen (inkl. «Lagre vakt»-knappen) alltid är synlig/klickbar även i bulk-läge. Verifierad med `npm run build`.)*
 *(Senast uppdaterad av agent: 2026-11-17, session om redigerbart dato på vakt: EditShiftModal har nu ett redigerbart Dato-fält (date-input) och handleSaveShiftEdit persisterar `date` + loggar det. PR70 (vaktmallar), PR71+PR72 (skolegrupper/bara-skiutleie-bemanning) och PR73 (redigerbart dato) MERGED till main. Verifierad med `npm run build`.)*

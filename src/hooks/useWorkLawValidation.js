@@ -5,14 +5,29 @@
  * - Minst 1 fridag per uke (24 timer sammenhengende hvile)
  */
 
-// Hjelpefunksjon for å få ukenummer fra dato
+// Lokal dato-streng (unngår toISOString/UTC — i norsk tid ville mandag blitt til søndag)
+const toLocalDateStr = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Hjelpefunksjon: uken starter MANDAG (norsk uke, ISO 8601)
 const getWeekStartDate = (dateStr) => {
   const date = new Date(dateStr + 'T00:00:00');
   const dayOfWeek = date.getDay();
   const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const weekStart = new Date(date);
   weekStart.setDate(date.getDate() - daysToSubtract);
-  return weekStart.toISOString().split('T')[0];
+  return toLocalDateStr(weekStart);
+};
+
+// Hjelpefunksjon: søndag samme uke (lokal, mandagsbasert uke)
+const getWeekEndDate = (weekStartStr) => {
+  const ws = new Date(weekStartStr + 'T00:00:00');
+  ws.setDate(ws.getDate() + 6);
+  return toLocalDateStr(ws);
 };
 
 // Hjelpefunksjon for å sjekke om en dato er søndag eller helligdag
@@ -27,12 +42,13 @@ const isSpecialDay = (dateStr, holidays) => {
 // Regel 1: Sjekk max 5 arbeidsdager per uke
 const checkMax5DaysPerWeek = (employeeId, dateStr, allShifts, holidays) => {
   const weekStart = getWeekStartDate(dateStr);
+  const weekEnd = getWeekEndDate(weekStart);
   
-  // Finn alle skift for denne ansatte i denne uken
+  // Finn alle skift for denne ansatte i denne uken (man–søn)
   const weekShifts = allShifts.filter(shift => 
     shift.employeeId === employeeId && 
     shift.date >= weekStart &&
-    shift.date <= new Date(new Date(weekStart).setDate(new Date(weekStart).getDate() + 6)).toISOString().split('T')[0]
+    shift.date <= weekEnd
   );
   
   // Tell arbeidsdager (ekskluder helger som ikke er skift)
@@ -81,7 +97,7 @@ const checkMax2SpecialDaysInRow = (employeeId, dateStr, allShifts, holidays) => 
 // Regel 3: Sjekk minst 1 fridag per uke
 const checkMin1DayOffPerWeek = (employeeId, dateStr, allShifts) => {
   const weekStart = getWeekStartDate(dateStr);
-  const weekEnd = new Date(new Date(weekStart).setDate(new Date(weekStart).getDate() + 6)).toISOString().split('T')[0];
+  const weekEnd = getWeekEndDate(weekStart);
   
   // Finn alle skift for denne ansatte i denne uken
   const weekShifts = allShifts.filter(shift => 
