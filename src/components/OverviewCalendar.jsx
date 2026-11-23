@@ -551,7 +551,7 @@ function OverviewCalendar({
                                   }}
                                   title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}${isViolation ? ' ⚠️ BRUDD på arbeidslov — se felsøk-panelet' : ''}`}
                                 >
-                                  {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime.replace(':00', '')}
+                                  {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime}
                                 </div>
                               );
                             })}
