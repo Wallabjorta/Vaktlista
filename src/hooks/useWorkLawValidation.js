@@ -165,6 +165,95 @@ export const validateShift = (employeeId, dateStr, allShifts, holidays, departme
   };
 };
 
+// ===== FELSØK: scan alle eksisterende vakter og returner brudd + forslag =====
+// holidays kan være array av dato-strenger eller objekt (map)
+export const auditShifts = (employees = [], shifts = [], departments = [], holidays = {}) => {
+  const dayOffDeptIds = dayOffDeptIdsFrom(departments);
+  const holidayArr = Array.isArray(holidays) ? holidays : Object.keys(holidays || {});
+  const holidaySet = new Set(holidayArr);
+  const empName = new Map((employees || []).map(e => [String(e.id), e.name || e.id]));
+  const isSpecial = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.getDay() === 0 || holidaySet.has(dateStr);
+  };
+
+  // Kun faktiske arbeidsvakter (ikke Fri/Ferie)
+  const workShifts = (shifts || []).filter(s => s.date && !isDayOffShift(s, dayOffDeptIds));
+  const byEmp = new Map();
+  for (const s of workShifts) {
+    const k = String(s.employeeId);
+    if (!byEmp.has(k)) byEmp.set(k, []);
+    byEmp.get(k).push(s);
+  }
+
+  const issues = [];
+  for (const [empId, empShifts] of byEmp) {
+    const name = empName.get(empId) || empId;
+
+    // Regel 1 + 3: per uke (man–søn)
+    const byWeek = new Map();
+    for (const s of empShifts) {
+      const wk = getWeekStartDate(s.date);
+      if (!byWeek.has(wk)) byWeek.set(wk, []);
+      byWeek.get(wk).push(s);
+    }
+    for (const [wk, weekShifts] of byWeek) {
+      const sorted = weekShifts.slice().sort((a, b) => a.date.localeCompare(b.date));
+      if (sorted.length > 5) {
+        issues.push({
+          type: 'max5days',
+          employeeId: empId,
+          employeeName: name,
+          shiftIds: sorted.map(s => s.id).filter(Boolean),
+          dates: sorted.map(s => s.date),
+          message: `${name}: ${sorted.length} arbeidsdager i uken fra ${wk} (maks 5 tillatt)`,
+          suggestion: `Fjern eller flytt ${sorted.length - 5} vakt(er) — f.eks. ${sorted.slice(5).map(s => s.date).join(', ')}`
+        });
+      }
+      if (sorted.length >= 7) {
+        issues.push({
+          type: 'noDayOff',
+          employeeId: empId,
+          employeeName: name,
+          shiftIds: sorted.map(s => s.id).filter(Boolean),
+          dates: sorted.map(s => s.date),
+          message: `${name}: ingen fridag i uken fra ${wk} (7 arbeidsdager)`,
+          suggestion: `Fjern eller flytt minst én vakt — f.eks. ${sorted[sorted.length - 1].date}`
+        });
+      }
+    }
+
+    // Regel 2: 3+ søndager/helligdager på rad (sammenhengende kalenderdager med vakt)
+    const specialShifts = empShifts.filter(s => isSpecial(s.date)).sort((a, b) => a.date.localeCompare(b.date));
+    let run = [];
+    const flushRun = () => {
+      if (run.length >= 3) {
+        issues.push({
+          type: 'specialStreak',
+          employeeId: empId,
+          employeeName: name,
+          shiftIds: run.map(s => s.id).filter(Boolean),
+          dates: run.map(s => s.date),
+          message: `${name}: ${run.length} søndager/helligdager på rad (${run[0].date} – ${run[run.length - 1].date})`,
+          suggestion: `Fjern eller flytt vakt ${run[run.length - 1].date} for å bryte rekken`
+        });
+      }
+      run = [];
+    };
+    for (let i = 0; i < specialShifts.length; i++) {
+      if (i > 0) {
+        const prev = new Date(specialShifts[i - 1].date + 'T00:00:00');
+        const cur = new Date(specialShifts[i].date + 'T00:00:00');
+        if ((cur - prev) / 86400000 !== 1) flushRun();
+      }
+      run.push(specialShifts[i]);
+    }
+    flushRun();
+  }
+
+  return issues;
+};
+
 // Hook for bruk i komponenter
 export const useWorkLawValidation = (shifts, holidays, departments = []) => {
   const validate = (employeeId, dateStr, newDeptId = null) => {
