@@ -49,6 +49,7 @@ function OverviewCalendar({
   departments = [],
   holidays = [],
   vacations = {},
+  shiftTemplates = [],
   onBulkAddShifts,
   onDeleteShift,
   onClose,
@@ -553,6 +554,24 @@ function OverviewCalendar({
                     ))}
                   </select>
                 </div>
+                {shiftTemplates.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Vaktmal</label>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const t = shiftTemplates.find(t => t.id === e.target.value);
+                        if (t) setBulkForm(prev => ({ ...prev, startTime: t.startTime, endTime: t.endTime }));
+                      }}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Velg vaktmal…</option>
+                      {shiftTemplates.slice().sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map(t => (
+                        <option key={t.id} value={t.id}>{t.name ? `${t.name} (${t.startTime}-${t.endTime})` : `${t.startTime}-${t.endTime}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Starttid</label>
