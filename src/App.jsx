@@ -184,7 +184,7 @@ function App() {
   const holidays = Object.keys(holidaysObj);
   
   // Validering av norske arbeidslover
-  const { validate } = useWorkLawValidation(shifts, holidaysObj);
+  const { validate } = useWorkLawValidation(shifts, holidaysObj, departments);
 
   // Load user from localStorage on initial render
   useEffect(() => {
@@ -352,7 +352,7 @@ function App() {
     }
 
     // Varning for norsk arbeidslov (men till\u00e5t \u00e5nd\u00e5)
-    const validation = validate(newShift.employeeId, newShift.date);
+    const validation = validate(newShift.employeeId, newShift.date, newShift.departmentId);
     if (!validation.isValid) {
       alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
     }
@@ -432,7 +432,7 @@ function App() {
       const validatedSoFar = [...shifts];
       const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
       for (const shift of sortedShifts) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
         }
@@ -510,7 +510,7 @@ function App() {
       const validatedSoFar = [...shifts];
       const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
       for (const shift of sortedShifts) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
         }
@@ -557,7 +557,7 @@ function App() {
         return;
       }
       for (const shift of sorted) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): ${validation.errors.join(', ')}`);
         }

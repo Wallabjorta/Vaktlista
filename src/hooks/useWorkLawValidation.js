@@ -39,19 +39,32 @@ const isSpecialDay = (dateStr, holidays) => {
   return isSunday || isHoliday;
 };
 
-// Regel 1: Sjekk max 5 arbeidsdager per uke
-const checkMax5DaysPerWeek = (employeeId, dateStr, allShifts, holidays) => {
+// Hjelpefunksjon: er et skift en Fri/Ferie-markering (ikke en arbeidsdag)?
+const isDayOffShift = (shift, dayOffDeptIds) => {
+  if (!shift) return false;
+  const raw = String(shift.departmentId || '').toLowerCase();
+  return dayOffDeptIds.has(shift.departmentId) || raw === 'fri' || raw === 'ferie';
+};
+
+const dayOffDeptIdsFrom = (departments) => new Set(
+  (departments || [])
+    .filter(d => d && ['fri', 'ferie'].includes((d.name || '').toLowerCase()))
+    .map(d => d.id)
+);
+
+// Regel 1: Sjekk max 5 arbeidsdager per uke (Fri/Ferie teller ikke som arbeidsdager)
+const checkMax5DaysPerWeek = (employeeId, dateStr, allShifts, holidays, dayOffDeptIds) => {
   const weekStart = getWeekStartDate(dateStr);
   const weekEnd = getWeekEndDate(weekStart);
   
-  // Finn alle skift for denne ansatte i denne uken (man–søn)
+  // Finn alle skift for denne ansatte i denne uken (man–søn), uten Fri/Ferie
   const weekShifts = allShifts.filter(shift => 
     shift.employeeId === employeeId && 
     shift.date >= weekStart &&
-    shift.date <= weekEnd
+    shift.date <= weekEnd &&
+    !isDayOffShift(shift, dayOffDeptIds)
   );
   
-  // Tell arbeidsdager (ekskluder helger som ikke er skift)
   const workDays = weekShifts.length;
   
   return workDays < 5;
@@ -119,11 +132,20 @@ const checkMin1DayOffPerWeek = (employeeId, dateStr, allShifts) => {
 };
 
 // Hovedfunksjon for validering
-export const validateShift = (employeeId, dateStr, allShifts, holidays) => {
+// departments brukes for å kjenne igjen Fri/Ferie-avdelinger; newDeptId er avdelingen til vakten som skal legges til
+// (en Fri/Ferie-vakt gir aldri arbeidslov-varsler, og teller ikke som arbeidsdag)
+export const validateShift = (employeeId, dateStr, allShifts, holidays, departments = [], newDeptId = null) => {
+  const dayOffDeptIds = dayOffDeptIdsFrom(departments);
+
+  // Fri/Ferie-vakter skal ikke gi varsler om «for mange dager»
+  if (newDeptId != null && isDayOffShift({ departmentId: newDeptId }, dayOffDeptIds)) {
+    return { isValid: true, errors: [] };
+  }
+
   const errors = [];
 
   // Regel 1: Max 5 dager per uke
-  if (!checkMax5DaysPerWeek(employeeId, dateStr, allShifts, holidays)) {
+  if (!checkMax5DaysPerWeek(employeeId, dateStr, allShifts, holidays, dayOffDeptIds)) {
     errors.push('Maksimum 5 arbeidsdager per uke (norsk arbeidslov)');
   }
 
@@ -144,9 +166,9 @@ export const validateShift = (employeeId, dateStr, allShifts, holidays) => {
 };
 
 // Hook for bruk i komponenter
-export const useWorkLawValidation = (shifts, holidays) => {
-  const validate = (employeeId, dateStr) => {
-    return validateShift(employeeId, dateStr, shifts, holidays);
+export const useWorkLawValidation = (shifts, holidays, departments = []) => {
+  const validate = (employeeId, dateStr, newDeptId = null) => {
+    return validateShift(employeeId, dateStr, shifts, holidays, departments, newDeptId);
   };
   return { validate };
 };
