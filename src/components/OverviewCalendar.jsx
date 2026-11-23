@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { EMPLOYEE_CATEGORIES, groupByShiftCategory, SHIFTS_BY_CATEGORY } from './ShiftCalendar';
 import GroupBarsRow from './GroupBarsRow';
 import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
+import { auditShifts } from '../hooks/useWorkLawValidation';
 
 const DEFAULT_STAFFING_CONFIG = {
   minimumStaff: 2,
@@ -235,6 +236,15 @@ function OverviewCalendar({
   // Klicka på ett namn → hela raden markeras (lätt att se när den ansatte jobbar)
   const [highlightEmployeeId, setHighlightEmployeeId] = useState(null);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  // Felsøk: brudd på arbeidslover funnet i oversikten (null = ikke kjørt / av)
+  const [debugIssues, setDebugIssues] = useState(null);
+  const violationShiftIds = useMemo(() => {
+    if (!debugIssues) return new Set();
+    return new Set(debugIssues.flatMap(i => i.shiftIds || []));
+  }, [debugIssues]);
+  const runDebug = () => {
+    setDebugIssues(auditShifts(employees, shifts, departments, holidays));
+  };
   const [bulkForm, setBulkForm] = useState({
     departmentId: '',
     startTime: '08:45',
@@ -331,6 +341,15 @@ function OverviewCalendar({
                 Nullstill
               </button>
             )}
+            {currentUser?.isAdmin && (
+              <button
+                onClick={() => (debugIssues ? setDebugIssues(null) : runDebug())}
+                className={`px-2 py-1 rounded text-sm whitespace-nowrap ${debugIssues ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-yellow-500 text-white hover:bg-yellow-600'}`}
+                title="Sjekk alle vakter i oversikten mot arbeidsloven (maks 5 dager/uke, søndager på rad, fridag) og merk brudd"
+              >
+                {debugIssues ? '✕ Skjul felsøk' : '🔍 Felsøk vakter'}
+              </button>
+            )}
             {currentUser?.isSuperadmin && onAutoFill && (
               <button
                 onClick={() => onAutoFill(dates)}
@@ -343,7 +362,31 @@ function OverviewCalendar({
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
           </div>
         </div>
-        
+
+        {debugIssues && (
+          <div className="mb-2 p-3 rounded border bg-white max-h-48 overflow-y-auto" style={{ borderColor: debugIssues.length ? '#dc2626' : '#16a34a' }}>
+            <div className="flex justify-between items-center mb-1">
+              <strong className="text-sm">
+                {debugIssues.length === 0
+                  ? '✅ Ingen brudd på arbeidsloven i denne perioden'
+                  : `⚠️ ${debugIssues.length} brudd funnet — røde vakter i oversikten må fikses`}
+              </strong>
+              <button onClick={() => setDebugIssues(null)} className="text-xs text-gray-500 hover:text-gray-700">Skjul</button>
+            </div>
+            {debugIssues.length > 0 && (
+              <ul className="text-xs space-y-1">
+                {debugIssues.map((iss, i) => (
+                  <li key={i} className="border-l-2 border-red-500 pl-2">
+                    <span className="text-red-700 font-medium">{iss.message}</span>
+                    <span className="text-gray-600"> — datoer: {iss.dates.join(', ')}.</span>
+                    <div className="text-green-700">💡 Forslag: {iss.suggestion}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
           <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '4090px' }}>
             <thead>
@@ -497,12 +540,16 @@ function OverviewCalendar({
                               const deptColor = getDeptColor(shift.departmentId);
                               const deptName = getDeptName(shift.departmentId);
                               
+                              const isViolation = violationShiftIds.has(shift.id);
                               return (
                                 <div
                                   key={shiftIndex}
                                   className="p-0.5 rounded text-xs text-white font-medium truncate"
-                                  style={{ backgroundColor: deptColor }}
-                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
+                                  style={{
+                                    backgroundColor: deptColor,
+                                    ...(isViolation ? { boxShadow: '0 0 0 2px #dc2626', outline: '1px solid #dc2626' } : {})
+                                  }}
+                                  title={`${employee.name}: ${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}${isViolation ? ' ⚠️ BRUDD på arbeidslov — se felsøk-panelet' : ''}`}
                                 >
                                   {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : shift.startTime.replace(':00', '')}
                                 </div>
