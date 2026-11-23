@@ -3,6 +3,7 @@ import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import GroupOverviewCalendar from './components/GroupOverviewCalendar';
 import LoginModal from './components/LoginModal';
+import PublicRescueOverview from './components/PublicRescueOverview';
 import AddShiftModal from './components/AddShiftModal';
 import EditShiftModal from './components/EditShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
@@ -961,6 +962,10 @@ function App() {
           </div>
         </div>
       </header>
+
+      {!currentUser && (
+        <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
