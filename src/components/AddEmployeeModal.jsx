@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { hashPassword } from '../utils/passwords';
+import { EMPLOYEE_SKILLS } from '../utils/skills';
 import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
 function AddEmployeeModal({ departments, onSave, onClose }) {
@@ -14,7 +15,8 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     contractHours: '',
     contractPercent: '',
     contractStart: '',
-    contractEnd: ''
+    contractEnd: '',
+    skills: []
   });
 
   const handleSubmit = async (e) => {
@@ -46,6 +48,13 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
     };
 
     onSave(employeeToSave);
+  };
+
+  const handleSkillToggle = (skill) => {
+    setNewEmployee(prev => {
+      const list = prev.skills || [];
+      return { ...prev, skills: list.includes(skill) ? list.filter(s => s !== skill) : [...list, skill] };
+    });
   };
 
   const handleDeptToggle = (deptId) => {
@@ -150,6 +159,23 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
                     style={newEmployee.deptIds?.includes(dept.id) ? { backgroundColor: dept.color } : {}}
                   >
                     {dept.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Kunnskaper / kompetanse */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Kunnskaper / kompetanse</label>
+              <div className="flex flex-wrap gap-2">
+                {EMPLOYEE_SKILLS.map(sk => (
+                  <button
+                    key={sk}
+                    type="button"
+                    onClick={() => handleSkillToggle(sk)}
+                    className={`px-3 py-1 rounded text-sm border whitespace-nowrap ${(newEmployee.skills || []).includes(sk) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                  >
+                    {sk}
                   </button>
                 ))}
               </div>

@@ -3,6 +3,7 @@ import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import GroupOverviewCalendar from './components/GroupOverviewCalendar';
 import LoginModal from './components/LoginModal';
+import PublicRescueOverview from './components/PublicRescueOverview';
 import AddShiftModal from './components/AddShiftModal';
 import EditShiftModal from './components/EditShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
@@ -156,6 +157,7 @@ function App() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showShiftTemplateModal, setShowShiftTemplateModal] = useState(false);
+  const [showRescueOverview, setShowRescueOverview] = useState(false); // skjult som standard når innlogget
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showGroupEventModal, setShowGroupEventModal] = useState(false);
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
@@ -961,6 +963,21 @@ function App() {
           </div>
         </div>
       </header>
+
+      {currentUser && (
+        <div className="relative z-20 flex justify-end mb-1 bg-gray-50">
+          <button
+            onClick={() => setShowRescueOverview(v => !v)}
+            className="px-2.5 py-1 text-xs font-medium bg-red-50 text-red-700 border border-red-300 rounded-full shadow-sm hover:bg-red-100"
+            title="Vis/skjul oversikt over redningsmenn på jobb"
+          >
+            🚑 {showRescueOverview ? 'Skjul redningsmenn ▲' : 'Vis redningsmenn ▼'}
+          </button>
+        </div>
+      )}
+      {(!currentUser || showRescueOverview) && (
+        <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
