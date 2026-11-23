@@ -388,7 +388,7 @@ function OverviewCalendar({
         )}
 
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
-          <table className="w-full border-separate" style={{ tableLayout: 'fixed', minWidth: '2590px', borderSpacing: 0 }}>
+          <table className="w-full border-separate" style={{ tableLayout: 'fixed', minWidth: '4090px', borderSpacing: 0 }}>
             <thead>
               <tr className="border-b">
                 <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', width: '70px' }}>
@@ -412,7 +412,7 @@ function OverviewCalendar({
                     <th
                       key={index}
                       className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
-                      style={{ width: '30px' }}
+                      style={{ width: '48px' }}
                    >
                       <div className="font-medium text-gray-700 truncate">
                         {date.getDate()}
