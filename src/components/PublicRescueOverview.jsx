@@ -104,15 +104,25 @@ function PublicRescueOverview({ employees = [], shifts = [], departments = [] })
               {day.rows.length === 0 ? (
                 <div className="text-[11px] text-gray-400 italic">Ingen</div>
               ) : (
-                <ul className="space-y-0.5">
-                  {day.rows.map(r => (
-                    <li key={r.id} className="text-[11px] leading-tight">
-                      <span className="font-medium text-gray-800">{r.name}</span>{' '}
-                      <span className={`px-1 rounded text-white ${r.side === 'Vest' ? 'bg-blue-500' : 'bg-green-600'}`}>{r.side === 'Vest' ? 'V' : 'Ø'}</span>{' '}
-                      <span className="text-gray-500">{r.startTime}–{r.endTime}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-1">
+                  {['Vest', 'Øst'].map(side => {
+                    const sideRows = day.rows.filter(r => r.side === side);
+                    if (sideRows.length === 0) return null;
+                    return (
+                      <div key={side}>
+                        <div className={`text-[10px] font-bold uppercase ${side === 'Vest' ? 'text-blue-600' : 'text-green-700'}`}>{side}</div>
+                        <ul className="space-y-0.5">
+                          {sideRows.map(r => (
+                            <li key={r.id} className="text-[11px] leading-tight">
+                              <span className="font-medium text-gray-800">{r.name}</span>{' '}
+                              <span className="text-gray-500">{r.startTime}–{r.endTime}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           ))}
