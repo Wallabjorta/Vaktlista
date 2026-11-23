@@ -304,7 +304,7 @@ function OverviewCalendar({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border rounded-lg shadow-sm max-w-[95vw] w-full max-h-[90vh]">
+      <div className="bg-white border rounded-lg shadow-sm max-w-[95vw] w-full max-h-[90vh] overflow-y-auto flex flex-col">
         <div className="flex justify-between items-center p-2 border-b sticky top-0 bg-white z-20">
           <h2 className="text-lg font-semibold">
             {selectedDepartment 
@@ -387,7 +387,7 @@ function OverviewCalendar({
           </div>
         )}
 
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto" style={{ overflowX: 'scroll', overflowY: 'scroll' }}>
           <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '4090px' }}>
             <thead>
               <tr className="border-b">
