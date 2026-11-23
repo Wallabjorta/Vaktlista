@@ -963,9 +963,7 @@ function App() {
         </div>
       </header>
 
-      {!currentUser && (
-        <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
-      )}
+      <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
