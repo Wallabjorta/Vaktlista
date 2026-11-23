@@ -1285,6 +1285,7 @@ function App() {
           employees={employees}
           shifts={shifts}
           departments={departments}
+          shiftTemplates={shiftTemplates}
           holidays={Object.keys(holidaysObj || {})}
           vacations={VACATIONS}
           selectedDepartment={selectedDepartment}
