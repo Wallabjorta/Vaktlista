@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { hashPassword } from '../utils/passwords';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
-function EditEmployeeModal({ employee, departments, onSave, onClose }) {
+function EditEmployeeModal({ employee, departments, employees = [], currentUser, onSave, onClose }) {
   const [editedEmployee, setEditedEmployee] = useState({
     id: employee?.id || '',
     name: employee?.name || '',
     deptIds: employee?.deptIds || [],
+    category: employee?.category || 'Skiutleie',
     email: employee?.email || '',
     phone: employee?.phone || '',
     isAdmin: employee?.isAdmin || false,
-    password: employee?.password || ''
+    password: employee?.password || '',
+    contractHours: employee?.contractHours != null ? String(employee.contractHours) : '',
+    contractPercent: employee?.contractPercent != null ? String(employee.contractPercent) : '',
+    contractStart: employee?.contractStart || '',
+    contractEnd: employee?.contractEnd || ''
   });
 
   // Update state when employee changes
@@ -18,17 +25,36 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
         id: employee.id,
         name: employee.name,
         deptIds: employee.deptIds || [],
+        category: employee.category || 'Skiutleie',
         email: employee.email || '',
         phone: employee.phone || '',
         isAdmin: employee.isAdmin || false,
-        password: employee.password || ''
+        password: employee.password || '',
+        contractHours: employee.contractHours != null ? String(employee.contractHours) : '',
+        contractPercent: employee.contractPercent != null ? String(employee.contractPercent) : '',
+        contractStart: employee.contractStart || '',
+        contractEnd: employee.contractEnd || ''
       });
     }
   }, [employee]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(editedEmployee);
+    let employeeToSave = editedEmployee;
+    if (editedEmployee.password && editedEmployee.password.length > 0) {
+      if (editedEmployee.password.length < 4) {
+        alert('Passord må være minst 4 tegn!');
+        return;
+      }
+      const { salt, hash } = await hashPassword(editedEmployee.password);
+      employeeToSave = {
+        ...editedEmployee,
+        passwordSalt: salt,
+        passwordHash: hash,
+        password: ''
+      };
+    }
+    onSave(employeeToSave);
   };
 
   const handleDeptToggle = (deptId) => {
@@ -90,6 +116,19 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
               />
             </div>
 
+            {/* Kategori */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Kategori *</label>
+              <select
+                value={editedEmployee.category}
+                onChange={(e) => setEditedEmployee(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full p-2 border rounded"
+              >
+                {EMPLOYEE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
             {/* Avdelinger */}
             <div>
               <label className="block text-sm font-medium mb-1">Avdelinger *</label>
@@ -112,6 +151,55 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
               </div>
             </div>
 
+            {/* Kontrakt */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktsprosent</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="200"
+                  step="5"
+                  value={editedEmployee.contractPercent}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractPercent: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="F.eks. 80"
+                />
+                <p className="text-xs text-gray-500 mt-1">100 % = 1762,5 t/år (Kvitfjell)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstimer</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={editedEmployee.contractHours}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractHours: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="Timer per sesong"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstart</label>
+                <input
+                  type="date"
+                  value={editedEmployee.contractStart}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractStart: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktslutt</label>
+                <input
+                  type="date"
+                  value={editedEmployee.contractEnd}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, contractEnd: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+
             {/* Admin */}
             <div className="flex items-center gap-2">
               <label className="block text-sm font-medium">Admin</label>
@@ -122,6 +210,19 @@ function EditEmployeeModal({ employee, departments, onSave, onClose }) {
                 className="w-4 h-4"
               />
             </div>
+
+            {/* Superadmin — bara synlig för superadmin, eller innan någon superadmin finns (första installationen) */}
+            {(currentUser?.isSuperadmin || !employees.some(e => e?.isSuperadmin)) && (
+              <div className="flex items-center gap-2">
+                <label className="block text-sm font-medium">Superadmin</label>
+                <input
+                  type="checkbox"
+                  checked={editedEmployee.isSuperadmin || false}
+                  onChange={(e) => setEditedEmployee(prev => ({ ...prev, isSuperadmin: e.target.checked }))}
+                  className="w-4 h-4"
+                />
+              </div>
+            )}
 
             {/* Passord */}
             <div>

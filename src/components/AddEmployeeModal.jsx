@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
+import { hashPassword } from '../utils/passwords';
+import { EMPLOYEE_CATEGORIES } from './ShiftCalendar';
 
 function AddEmployeeModal({ departments, onSave, onClose }) {
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     deptIds: [],
+    category: 'Skiutleie',
     email: '',
     phone: '',
-    isAdmin: false
+    isAdmin: false,
+    password: '',
+    contractHours: '',
+    contractPercent: '',
+    contractStart: '',
+    contractEnd: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validation
@@ -23,9 +31,18 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
       return;
     }
 
-    // Generate ID - let Firebase handle it
+        if (!newEmployee.password || newEmployee.password.length < 4) {
+      alert('Passord må være minst 4 tegn!');
+      return;
+    }
+
+    const { salt, hash } = await hashPassword(newEmployee.password);
+
     const employeeToSave = {
-      ...newEmployee
+      ...newEmployee,
+      passwordSalt: salt,
+      passwordHash: hash,
+      password: ''
     };
 
     onSave(employeeToSave);
@@ -91,6 +108,31 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
               />
             </div>
 
+            {/* Passord */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Passord *</label>
+              <input
+                type="password"
+                value={newEmployee.password}
+                onChange={(e) => setNewEmployee(prev => ({ ...prev, password: e.target.value }))}
+                className="w-full p-2 border rounded"
+                placeholder="Minst 4 tegn"
+                required
+              />
+            </div>
+            {/* Kategori */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Kategori *</label>
+              <select
+                value={newEmployee.category}
+                onChange={(e) => setNewEmployee(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full p-2 border rounded"
+              >
+                {EMPLOYEE_CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
             {/* Avdelinger */}
             <div>
               <label className="block text-sm font-medium mb-1">Avdelinger *</label>
@@ -110,6 +152,55 @@ function AddEmployeeModal({ departments, onSave, onClose }) {
                     {dept.name}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Kontrakt */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktsprosent</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="200"
+                  step="5"
+                  value={newEmployee.contractPercent}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractPercent: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="F.eks. 80"
+                />
+                <p className="text-xs text-gray-500 mt-1">100 % = 1762,5 t/år (Kvitfjell)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstimer</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={newEmployee.contractHours}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractHours: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                  placeholder="Timer per sesong"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktstart</label>
+                <input
+                  type="date"
+                  value={newEmployee.contractStart}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractStart: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Kontraktslutt</label>
+                <input
+                  type="date"
+                  value={newEmployee.contractEnd}
+                  onChange={(e) => setNewEmployee(prev => ({ ...prev, contractEnd: e.target.value }))}
+                  className="w-full p-2 border rounded"
+                />
               </div>
             </div>
 

@@ -9,33 +9,60 @@ function AddShiftModal({
   onClose,
   isBulkMode = false,
   bulkCount = 0,
-  selectedEmployeeForBulk = null
+  selectedEmployeeForBulk = null,
+  bulkCells = [],
+  shiftTemplates = []
 }) {
+  const bulkByEmployee = {};
+  (bulkCells || []).forEach(cell => {
+    bulkByEmployee[cell.employeeId] = (bulkByEmployee[cell.employeeId] || 0) + 1;
+  });
+  const bulkEmployeeIds = Object.keys(bulkByEmployee);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">
-            {isBulkMode ? `Legg til vakt (${bulkCount} dager)` : 'Legg til vakt'}
+            {isBulkMode ? `Legg til vakt (${bulkCount} valgte)` : 'Legg til vakt'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">\u2715</button>
         </div>
         
-        {isBulkMode && selectedEmployeeForBulk && (
+        {isBulkMode && (
           <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
-              <strong>Bulk-modus:</strong> Vakten vil bli opprettet p\u00e5 {bulkCount} dag{bulkCount !== 1 ? 'er' : ''} for:
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              {employees.find(e => e.id === selectedEmployeeForBulk)?.name || selectedEmployeeForBulk}
+              <strong>Bulk-modus:</strong> {bulkCount} vakt{bulkCount !== 1 ? 'er' : ''} vil bli opprettet for de valgte ansatte og dagene.
             </p>
             <p className="text-xs text-gray-600 mt-1">
-              Dager som allerede har vakter vil bli hoppet over.
+              Kombinasjoner som allerede har vakt vil bli hoppet over.
             </p>
           </div>
         )}
         
         <div className="space-y-4">
+          {isBulkMode ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Valgte ansatte ({bulkEmployeeIds.length})
+              </label>
+              <div className="p-2 border rounded bg-gray-50 space-y-1 max-h-32 overflow-y-auto">
+                {bulkEmployeeIds.length === 0 ? (
+                  <p className="text-sm text-gray-500">Ingen valgt</p>
+                ) : bulkEmployeeIds.map(id => {
+                  const emp = employees.find(e => e.id === id);
+                  return (
+                    <div key={id} className="flex justify-between text-sm">
+                      <span>{emp?.name || id}</span>
+                      <span className="text-gray-500">{bulkByEmployee[id]} dag{bulkByEmployee[id] !== 1 ? 'er' : ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Valgte ansatte og dager settes i kalenderen. Klikk celler der for å endre.
+              </p>
+            </div>
+          ) : (
           <div>
             <label className="block text-sm font-medium mb-1">Ansatt</label>
             <select
@@ -51,6 +78,7 @@ function AddShiftModal({
               ))}
             </select>
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Avdeling</label>
@@ -83,6 +111,25 @@ function AddShiftModal({
               </p>
             )}
           </div>
+
+          {shiftTemplates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Vaktmal</label>
+              <select
+                value=""
+                onChange={(e) => {
+                  const t = shiftTemplates.find(t => t.id === e.target.value);
+                  if (t) { onChange('startTime', t.startTime); onChange('endTime', t.endTime); }
+                }}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Velg vaktmal…</option>
+                {shiftTemplates.slice().sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map(t => (
+                  <option key={t.id} value={t.id}>{t.name ? `${t.name} (${t.startTime}-${t.endTime})` : `${t.startTime}-${t.endTime}`}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

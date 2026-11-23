@@ -1,10 +1,9 @@
 // Custom hook for managing Firebase data in React components
 // Usage: const { employees, shifts, departments, loading, error, addEmployee, addShift, addDepartment, ... } = useFirebaseData();
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getEmployees,
-  getShifts,
   getDepartments,
   addEmployee,
   updateEmployee,
@@ -18,7 +17,12 @@ import {
   subscribeToEmployees,
   subscribeToShifts,
   subscribeToDepartments,
-  migrateFromLocalStorage
+  addShiftTemplate,
+  updateShiftTemplate,
+  deleteShiftTemplate,
+  subscribeToShiftTemplates,
+  migrateFromLocalStorage,
+  normalizeDepartments
 } from '../firebase';
 
 // Default departments for initial setup
@@ -28,13 +32,29 @@ const DEFAULT_DEPARTMENTS = [
   { id: "dept-3", name: "Skiskole", color: "#F59E0B" },
   { id: "dept-4", name: "Butikk", color: "#EF4444" },
   { id: "dept-5", name: "Skolegrupper", color: "#8B5CF6" },
-  { id: "dept-6", name: "Fri", color: "#6B7280" }
+  { id: "dept-6", name: "Fri", color: "#6B7280" },
+  { id: "dept-7", name: "Ferie", color: "#0EA5E9" }
 ];
 
-export default function useFirebaseData() {
+// Shifts lasning: rullerande fönster från kontraktsårets start (senaste ~24 mån bakåt)
+// till 92 dagar framåt. Täcker kalender, historik och AdminStats alla periodlägen,
+// utan att läsa hela shifts-samlingen vid varje klientstart.
+const shiftsWindowStart = () => {
+  const now = new Date();
+  const startYear = now.getMonth() >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${startYear}-10-01`;
+};
+const shiftsWindowEnd = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 92);
+  return d.toISOString().split('T')[0];
+};
+
+export default function useFirebaseData({ shiftsUntil = null } = {}) {
   const [employees, setEmployees] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [shiftTemplates, setShiftTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [migrated, setMigrated] = useState(false);
@@ -49,16 +69,30 @@ export default function useFirebaseData() {
       const hasLocalData = localStorage.getItem('employees') || localStorage.getItem('shifts');
       
       // Always try to load from Firebase first
-      const [emps, shfts, depts] = await Promise.all([
+      let [emps, depts] = await Promise.all([
         getEmployees(),
-        getShifts(),
         getDepartments()
       ]);
       
       setEmployees(emps);
-      setShifts(shfts);
       setDepartments(depts);
       
+      // Migrera avdelingar med auto-genererat dokument-ID till stabilt ID
+      const changed = await normalizeDepartments();
+      if (changed) {
+        depts = await getDepartments();
+        setDepartments(depts);
+      }
+      // Ensure the Ferie department exists (added after initial setup)
+      if (depts && depts.length > 0 && !depts.some(d => d && d.name === 'Ferie')) {
+        try {
+          await addDepartment({ id: "dept-7", name: "Ferie", color: "#0EA5E9" });
+          depts = await getDepartments();
+          setDepartments(depts);
+        } catch (e) {
+          console.log('Could not add Ferie department:', e.message);
+        }
+      }
       // If no departments in Firebase, add defaults
       if (!depts || depts.length === 0) {
         for (const dept of DEFAULT_DEPARTMENTS) {
@@ -98,6 +132,15 @@ export default function useFirebaseData() {
     }
   }, [migrated]);
 
+  // Dynamiskt lasningsfönster: minst 92 dagar framåt, men alltid så långt
+  // fram som kalendern visar (32 veckor från aktuellt navigeringsdatum),
+  // så vaktposter och fri langt fram i tid alltid laddas in.
+  const windowEnd = useMemo(() => {
+    const fallback = shiftsWindowEnd();
+    if (!shiftsUntil) return fallback;
+    return shiftsUntil > fallback ? shiftsUntil : fallback;
+  }, [shiftsUntil]);
+
   // Set up realtime subscriptions
   useEffect(() => {
     // Subscribe to realtime updates
@@ -109,11 +152,15 @@ export default function useFirebaseData() {
     const unsubscribeShifts = subscribeToShifts((shfts) => {
       setShifts(shfts);
       localStorage.setItem('shifts', JSON.stringify(shfts));
-    });
+    }, { start: shiftsWindowStart(), end: windowEnd });
     
     const unsubscribeDepartments = subscribeToDepartments((depts) => {
       setDepartments(depts);
       localStorage.setItem('departments', JSON.stringify(depts));
+    });
+
+    const unsubscribeShiftTemplates = subscribeToShiftTemplates((tpls) => {
+      setShiftTemplates(tpls);
     });
     
     // Initial load
@@ -124,8 +171,9 @@ export default function useFirebaseData() {
       unsubscribeEmployees();
       unsubscribeShifts();
       unsubscribeDepartments();
+      unsubscribeShiftTemplates();
     };
-  }, [loadData]);
+  }, [loadData, windowEnd]);
 
   // Migrate data from localStorage to Firebase
   const migrateData = useCallback(async () => {
@@ -244,6 +292,37 @@ export default function useFirebaseData() {
     }
   }, []);
 
+  // Shift template CRUD operations
+  const addShiftTemplateFunc = useCallback(async (template) => {
+    try {
+      const newTemplate = await addShiftTemplate(template);
+      return newTemplate;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const updateShiftTemplateFunc = useCallback(async (id, updates) => {
+    try {
+      await updateShiftTemplate(id, updates);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  const deleteShiftTemplateFunc = useCallback(async (id) => {
+    try {
+      await deleteShiftTemplate(id);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
   // Save to localStorage as fallback
   const saveToLocalStorage = useCallback(() => {
     localStorage.setItem('employees', JSON.stringify(employees));
@@ -255,6 +334,7 @@ export default function useFirebaseData() {
     employees,
     shifts,
     departments,
+    shiftTemplates,
     loading,
     error,
     migrated,
@@ -278,5 +358,10 @@ export default function useFirebaseData() {
     addDepartment: addDepartmentFunc,
     updateDepartment: updateDepartmentFunc,
     deleteDepartment: deleteDepartmentFunc,
+
+    // Shift template operations
+    addShiftTemplate: addShiftTemplateFunc,
+    updateShiftTemplate: updateShiftTemplateFunc,
+    deleteShiftTemplate: deleteShiftTemplateFunc,
   };
 }
