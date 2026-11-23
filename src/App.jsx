@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
+import GroupOverviewCalendar from './components/GroupOverviewCalendar';
 import LoginModal from './components/LoginModal';
 import AddShiftModal from './components/AddShiftModal';
 import EditShiftModal from './components/EditShiftModal';
@@ -9,9 +10,12 @@ import EmployeeDetailsModal from './components/EmployeeDetailsModal';
 import AddEmployeeModal from './components/AddEmployeeModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
 import AdminStats from './components/AdminStats';
+import StaffingPlanner from './components/StaffingPlanner';
 import LeaveRequestModal from './components/LeaveRequestModal';
+import ChangePasswordModal from './components/ChangePasswordModal';
 import LeaveRequestList from './components/LeaveRequestList';
 import DepartmentModal from './components/DepartmentModal';
+import ShiftTemplateModal from './components/ShiftTemplateModal';
 
 import useNorwegianHolidays from './hooks/useNorwegianHolidays';
 import useWorkLawValidation, { validateShift } from './hooks/useWorkLawValidation';
@@ -29,8 +33,18 @@ import {
   addSwapRequest,
   getSwapRequests,
   getSwapRequestsByEmployee,
+  logAdminAction,
+  getAuditLogs,
   functionsUrl
 } from './firebase';
+import AuditLogView from './components/AuditLogView';
+import GroupEventModal from './components/GroupEventModal';
+import AutoFillModal from './components/AutoFillModal';
+import { addGroupEvent, updateGroupEvent, deleteGroupEvent } from './firebase';
+import { hashPassword, verifyPassword } from './utils/passwords';
+
+// Kun denne administratoren kan se endringsloggen
+const AUDIT_LOG_VIEWER = "Bjørn Waldenstrøm";
 
 // Standard start- og sluttid for nye vakter (endre her)
 export const DEFAULT_SHIFT_TIMES = { start: "08:45", end: "16:00" };
@@ -94,12 +108,24 @@ const VACATIONS = {
   "2027-08-15": "Sommerferie"
 };
 
+const calendarShiftsUntil = (currentDate) => {
+  const end = new Date(currentDate || new Date());
+  end.setHours(0, 0, 0, 0);
+  // Kalendern visar 32 veckor från aktuellt datum; lägg till en veckas marginal
+  end.setDate(end.getDate() + 33 * 7);
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+};
+
 function App() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
   // Firebase data hook - now includes departments
+  // Dynamiskt lasningsfönster så vakt/fri långt fram i tid syns i kalendern
   const {
     employees,
     shifts,
     departments,
+    shiftTemplates,
     loading,
     error,
     addEmployee: addEmployeeFirebase,
@@ -111,15 +137,17 @@ function App() {
     addDepartment: addDepartmentFirebase,
     updateDepartment: updateDepartmentFirebase,
     deleteDepartment: deleteDepartmentFirebase,
+    addShiftTemplate: addShiftTemplateFirebase,
+    deleteShiftTemplate: deleteShiftTemplateFirebase,
     migrateData
-  } = useFirebaseData();
+  } = useFirebaseData({ shiftsUntil: calendarShiftsUntil(currentDate) });
 
   const [selectedDepartment, setSelectedDepartment] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [employeeSort, setEmployeeSort] = useState('name');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showAddShiftModal, setShowAddShiftModal] = useState(false);
   const [shiftToEdit, setShiftToEdit] = useState(null);
   const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
@@ -127,8 +155,14 @@ function App() {
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [showShiftTemplateModal, setShowShiftTemplateModal] = useState(false);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
+  const [showGroupEventModal, setShowGroupEventModal] = useState(false);
+  const [groupEventToEdit, setGroupEventToEdit] = useState(null);
   const [showOverviewCalendar, setShowOverviewCalendar] = useState(false);
+  const [showGroupOverview, setShowGroupOverview] = useState(false);
+  const [autoFillDates, setAutoFillDates] = useState(null);
+  const [savingAutoFill, setSavingAutoFill] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
 
@@ -192,7 +226,7 @@ function App() {
     }
   }, [loading, employees.length, addEmployeeFirebase]);
 
-  const handleLogin = useCallback((email, password) => {
+  const handleLogin = useCallback(async (email, password) => {
     // Find user in employees list
     const user = employees.find(emp => emp.id === email || emp.email === email);
     if (!user) {
@@ -206,16 +240,93 @@ function App() {
       return false;
     }
     
-    if (user.password !== password) {
-      alert('Feil passord!');
+    if (user.passwordHash && user.passwordSalt) {
+      const valid = await verifyPassword(password, user.passwordSalt, user.passwordHash);
+      if (!valid) {
+        alert('Feil passord!');
+        return false;
+      }
+    } else if (user.password) {
+      if (user.password !== password) {
+        alert('Feil passord!');
+        return false;
+      }
+      try {
+        const { salt, hash } = await hashPassword(password);
+        await updateEmployeeFirebase(user.id, { passwordSalt: salt, passwordHash: hash, password: '' });
+      } catch (e) {
+        console.log('Klarte ikke å hashe eksisterende passord:', e.message);
+      }
+    } else {
+      alert('Ingen passord satt for denne ansatte. Be admin sette passord.');
       return false;
     }
-    
+
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
     setShowLoginModal(false);
     return true;
-  }, [employees]);
+  }, [employees, updateEmployeeFirebase]);
+
+  const handleSaveGroupEvent = useCallback(async (data) => {
+    try {
+      if (groupEventToEdit) {
+        await updateGroupEvent(groupEventToEdit.id, data);
+        await logAdminAction(currentUser, 'group_event_update', {
+          groupEventId: groupEventToEdit.id,
+          name: data.groupName,
+          pickupDate: data.pickupDate,
+          dropoffDate: data.dropoffDate
+        });
+      } else {
+        await addGroupEvent(data);
+        await logAdminAction(currentUser, 'group_event_add', {
+          name: data.groupName,
+          pickupDate: data.pickupDate,
+          dropoffDate: data.dropoffDate
+        });
+      }
+      setShowGroupEventModal(false);
+      setGroupEventToEdit(null);
+    } catch (error) {
+      console.error('Error saving group event:', error);
+      alert('Feil ved lagring av grupperevent: ' + error.message);
+    }
+  }, [groupEventToEdit, currentUser]);
+
+  const handleDeleteGroupEvent = useCallback(async (id) => {
+    try {
+      await deleteGroupEvent(id);
+      await logAdminAction(currentUser, 'group_event_delete', { groupEventId: id });
+    } catch (error) {
+      console.error('Error deleting group event:', error);
+      alert('Feil ved sletting av grupperevent: ' + error.message);
+    }
+  }, [currentUser]);
+
+  const handleChangePassword = useCallback(async (currentPassword, newPassword) => {
+    const user = employees.find(emp => emp.id === currentUser.id);
+    if (!user) {
+      alert('Fant ikke brukeren!');
+      return false;
+    }
+    const valid = await verifyPassword(currentPassword, user.passwordSalt, user.passwordHash);
+    if (!valid) {
+      alert('Feil nåværende passord!');
+      return false;
+    }
+    try {
+      const { salt, hash } = await hashPassword(newPassword);
+      await updateEmployeeFirebase(user.id, { passwordSalt: salt, passwordHash: hash, password: '' });
+      const updated = { ...currentUser, passwordSalt: salt, passwordHash: hash, password: '' };
+      setCurrentUser(updated);
+      localStorage.setItem('currentUser', JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      alert('Klarte ikke å lagre det nye passordet: ' + e.message);
+      return false;
+    }
+  }, [employees, currentUser, updateEmployeeFirebase]);
 
   const handleLogout = useCallback(() => {
     setCurrentUser(null);
@@ -253,6 +364,13 @@ function App() {
 
     try {
       await addShiftFirebase(shiftToSave);
+      await logAdminAction(currentUser, 'shift_add', {
+        employeeId: shiftToSave.employeeId,
+        date: shiftToSave.date,
+        startTime: shiftToSave.startTime,
+        endTime: shiftToSave.endTime,
+        departmentId: shiftToSave.departmentId
+      });
       setShowAddShiftModal(false);
       setNewShift({
         employeeId: "",
@@ -268,13 +386,9 @@ function App() {
       console.error('Error saving shift:', error);
       alert('Feil ved lagring av vakt: ' + error.message);
     }
-  }, [newShift, selectedDepartment, addShiftFirebase, validate]);
+  }, [newShift, selectedDepartment, addShiftFirebase, validate, currentUser]);
 
   const handleBulkAddShift = useCallback(async () => {
-    if (!selectedEmployeeForBulk) {
-      alert('Velg en ansatt!');
-      return;
-    }
     if (!newShift.departmentId) {
       alert('Velg en avdeling!');
       return;
@@ -292,28 +406,20 @@ function App() {
       return;
     }
 
-    // Hoppe over dager som allerede har vakter for denne ansatte
-    // selectedDates is now array of { date: string, employeeId: string }
-    const datesToCreate = selectedDates.filter(dateObj => {
-      const hasExistingShift = shifts.some(shift => 
-        shift.date === dateObj.date && 
-        shift.employeeId === selectedEmployeeForBulk
-      );
-      return !hasExistingShift;
-    }).map(dateObj => dateObj.date);
-
-    if (datesToCreate.length === 0) {
-      alert('Alle valgte dager har allerede vakter for denne ansatte. Ingen vakter opprettet.');
+    // Hoppe over celler som allerede har vakt (vald kombinasjon ansatt x dag)
+    const cellsToCreate = selectedDates.filter(cell =>
+      !shifts.some(shift => shift.date === cell.date && shift.employeeId === cell.employeeId)
+    );
+    if (cellsToCreate.length === 0) {
+      alert('Alle valgte kombinasjoner har allerede vakter. Ingen vakter opprettet.');
       return;
     }
 
-    
-
-    // Opprett vakter for alle valgte dager
-    const shiftsToSave = datesToCreate.map(dateStr => ({
-      employeeId: selectedEmployeeForBulk,
+    // Opprett vakter for alle valgte kombinasjoner
+    const shiftsToSave = cellsToCreate.map(cell => ({
+      employeeId: cell.employeeId,
       departmentId: newShift.departmentId,
-      date: dateStr,
+      date: cell.date,
       startTime: newShift.startTime,
       endTime: newShift.endTime,
       comment: newShift.comment || "",
@@ -336,6 +442,12 @@ function App() {
       for (const shift of shiftsToSave) {
         await addShiftFirebase(shift);
       }
+      await logAdminAction(currentUser, 'shift_add', {
+        bulk: true,
+        count: shiftsToSave.length,
+        employeeIds: [...new Set(shiftsToSave.map(s => s.employeeId))],
+        dates: [...new Set(shiftsToSave.map(s => s.date))]
+      });
       setShowAddShiftModal(false);
       setSelectedDates([]);
       setSelectedEmployeeForBulk(null);
@@ -350,28 +462,136 @@ function App() {
       if (warnings.length > 0) {
         alert(`\u26a0\ufe0f ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
       } else {
-        alert(`\u2705 ${shiftsToSave.length} vakter opprettet p\u00e5 ${shiftsToSave.length} dager!`);
+        alert(`✅ ${shiftsToSave.length} vakter opprettet!`);
       }
     } catch (error) {
       console.error('Error saving bulk shifts:', error);
       alert('Feil ved lagring av vakter: ' + error.message);
     }
-  }, [selectedDates, selectedEmployeeForBulk, newShift, shifts, holidaysObj, addShiftFirebase, validate]);
+  }, [selectedDates, newShift, shifts, holidaysObj, addShiftFirebase, validate, currentUser]);
+
+  // Bulkvakter fra oversiktskalenderen: flera ansatte × valda datum
+  const handleBulkAddShiftsFromOverview = useCallback(async (selectedCells, bulkForm) => {
+    if (!bulkForm.departmentId) {
+      alert('Velg en avdeling!');
+      return;
+    }
+    if (!bulkForm.startTime || !bulkForm.endTime) {
+      alert('Fyll ut start- og sluttid!');
+      return;
+    }
+    if (bulkForm.startTime >= bulkForm.endTime) {
+      alert('Sluttid må være etter starttid!');
+      return;
+    }
+    if (selectedCells.length === 0) {
+      alert('Velg minst en dato!');
+      return;
+    }
+    // Hopp over celler der ansatte allerede har vakt
+    const cellsToCreate = selectedCells.filter(cell =>
+      !shifts.some(s => s.date === cell.date && s.employeeId === cell.employeeId)
+    );
+    if (cellsToCreate.length === 0) {
+      alert('Alle valgte kombinasjoner har allerede vakter. Ingen vakter opprettet.');
+      return;
+    }
+    const shiftsToSave = cellsToCreate.map(cell => ({
+      employeeId: cell.employeeId,
+      departmentId: bulkForm.departmentId,
+      date: cell.date,
+      startTime: bulkForm.startTime,
+      endTime: bulkForm.endTime,
+      comment: bulkForm.comment || '',
+      breaks: []
+    }));
+    try {
+      const warnings = [];
+      const validatedSoFar = [...shifts];
+      const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
+      for (const shift of sortedShifts) {
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        if (!validation.isValid) {
+          warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
+        }
+        validatedSoFar.push(shift);
+      }
+      for (const shift of shiftsToSave) {
+        await addShiftFirebase(shift);
+      }
+      const uniqueDates = [...new Set(shiftsToSave.map(s => s.date))];
+      await logAdminAction(currentUser, 'shift_add', {
+        bulk: true,
+        count: shiftsToSave.length,
+        employeeIds: [...new Set(shiftsToSave.map(s => s.employeeId))],
+        dates: uniqueDates
+      });
+      if (warnings.length > 0) {
+        alert(`⚠️ ${shiftsToSave.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+      } else {
+        alert(`✅ ${shiftsToSave.length} vakter opprettet på ${uniqueDates.length} dag${uniqueDates.length !== 1 ? 'er' : ''}!`);
+      }
+    } catch (error) {
+      console.error('Error saving bulk shifts from overview:', error);
+      alert('Feil ved lagring av vakter: ' + error.message);
+    }
+  }, [shifts, holidaysObj, departments, addShiftFirebase, currentUser]);
+
+  // Auto-utfylling: lagre godkjent forslag (validerar mot arbetsmarknadslagen som bulk)
+  const handleAutoFillSave = useCallback(async (assignments) => {
+    if (!assignments || assignments.length === 0) return;
+    setSavingAutoFill(true);
+    try {
+      const warnings = [];
+      const validatedSoFar = [...shifts];
+      const validDeptIds = new Set((departments || []).filter(Boolean).map(d => d.id));
+      const sorted = [...assignments]
+        .filter(shift => {
+          if (shift.departmentId && validDeptIds.has(shift.departmentId)) return true;
+          warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): vakt utan giltig avdeling — HOPPAT ÖVER (syns annars ikke i kalendern).`);
+          return false;
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+      if (sorted.length === 0) {
+        alert(`⚠️ Inga vakter sparade — alla saknar giltig avdeling:\n\n${warnings.join('\n')}`);
+        return;
+      }
+      for (const shift of sorted) {
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        if (!validation.isValid) {
+          warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): ${validation.errors.join(', ')}`);
+        }
+        validatedSoFar.push(shift);
+      }
+      for (const shift of sorted) {
+        await addShiftFirebase(shift);
+      }
+      await logAdminAction(currentUser, 'shift_add', {
+        autoFill: true,
+        count: sorted.length,
+        dates: [...new Set(sorted.map(s => s.date))],
+        employeeIds: [...new Set(sorted.map(s => s.employeeId))]
+      });
+      setAutoFillDates(null);
+      if (warnings.length > 0) {
+        alert(`⚠️ ${sorted.length} vakter opprettet, men merk advarsler:\n\n${warnings.join('\n')}`);
+      } else {
+        alert(`✅ ${sorted.length} vakter opprettet!`);
+      }
+    } catch (error) {
+      console.error('Error saving auto-filled shifts:', error);
+      alert('Feil ved lagring av vakter: ' + error.message);
+    } finally {
+      setSavingAutoFill(false);
+    }
+  }, [shifts, holidaysObj, departments, addShiftFirebase, currentUser]);
 
   const handleDateSelection = useCallback((newDates) => {
     // newDates is now an array of { date: string, employeeId: string } objects
     setSelectedDates(newDates);
     
-    // Extract unique employeeId if there are selected dates
-    if (newDates.length > 0) {
-      // If all dates are for the same employee, set as bulk employee
-      const uniqueEmployees = [...new Set(newDates.map(d => d.employeeId))];
-      if (uniqueEmployees.length === 1) {
-        setSelectedEmployeeForBulk(uniqueEmployees[0]);
-      } else {
-        // Multiple employees selected - clear bulk employee
-        setSelectedEmployeeForBulk(null);
-      }
+    if (newDates.length === 1) {
+      setSelectedEmployeeForBulk(newDates[0].employeeId);
     } else {
       setSelectedEmployeeForBulk(null);
     }
@@ -414,9 +634,20 @@ function App() {
     try {
       if (requestType === 'swap') {
         await approveSwapRequest(requestId, adminId);
+        await logAdminAction(currentUser, 'swap_status', {
+          requestId,
+          status: 'approved'
+        });
       } else {
         const request = leaveRequests.find(req => req.id === requestId);
         await updateLeaveRequestStatus(requestId, "approved", adminId);
+        await logAdminAction(currentUser, 'leave_status', {
+          requestId,
+          status: 'approved',
+          employeeId: request?.employeeId,
+          date: request?.date,
+          endDate: request?.endDate
+        });
 
         if (request && request.date) {
           const start = new Date(request.date + 'T00:00:00');
@@ -444,14 +675,22 @@ function App() {
     } catch (error) {
       alert("Feil: " + error.message);
     }
-  }, [loadRequests, leaveRequests, shifts, addShiftFirebase]);
+  }, [loadRequests, leaveRequests, shifts, addShiftFirebase, currentUser]);
 
   const handleRejectLeaveRequest = useCallback(async (requestId, adminId, requestType) => {
     try {
       if (requestType === 'swap') {
         await rejectSwapRequest(requestId, adminId);
+        await logAdminAction(currentUser, 'swap_status', {
+          requestId,
+          status: 'rejected'
+        });
       } else {
         await updateLeaveRequestStatus(requestId, "rejected", adminId);
+        await logAdminAction(currentUser, 'leave_status', {
+          requestId,
+          status: 'rejected'
+        });
       }
       loadRequests();
     } catch (error) {
@@ -493,50 +732,92 @@ function App() {
   }, [currentUser?.isAdmin, selectedDepartment, validate]);
 
   const handleDeleteShift = useCallback(async (shiftId) => {
-    if (!confirm('Slett vakt?')) return;
+    const shift = shifts.find(s => s.id === shiftId);
     try {
       await deleteShiftFirebase(shiftId);
+      await logAdminAction(currentUser, 'shift_delete', {
+        employeeId: shift?.employeeId,
+        date: shift?.date,
+        startTime: shift?.startTime,
+        endTime: shift?.endTime
+      });
     } catch (error) {
       console.error('Error deleting shift:', error);
       alert('Feil ved sletting av vakt: ' + error.message);
     }
-  }, [deleteShiftFirebase]);
+  }, [deleteShiftFirebase, shifts, currentUser]);
 
   const handleSaveShiftEdit = useCallback(async (shiftId, updates) => {
     try {
       await updateShiftFirebase(shiftId, {
+        date: updates.date,
         startTime: updates.startTime,
         endTime: updates.endTime,
-        comment: updates.comment || ""
+        comment: updates.comment || "",
+        departmentId: updates.departmentId
+      });
+      await logAdminAction(currentUser, 'shift_update', {
+        shiftId,
+        date: updates.date,
+        startTime: updates.startTime,
+        endTime: updates.endTime,
+        comment: updates.comment || "",
+        departmentId: updates.departmentId
       });
       setShiftToEdit(null);
     } catch (error) {
       console.error('Error updating shift:', error);
       alert('Feil ved lagring av vakt: ' + error.message);
     }
-  }, [updateShiftFirebase]);
+  }, [updateShiftFirebase, currentUser]);
 
   const handleSaveEmployee = useCallback(async (updatedEmployee) => {
     try {
-      await updateEmployeeFirebase(updatedEmployee.id, updatedEmployee);
+      const toSave = { ...updatedEmployee };
+      toSave.contractHours = updatedEmployee.contractHours !== '' && updatedEmployee.contractHours != null
+        ? Number(updatedEmployee.contractHours) || 0
+        : null;
+      toSave.contractPercent = updatedEmployee.contractPercent !== '' && updatedEmployee.contractPercent != null
+        ? Number(updatedEmployee.contractPercent) || 0
+        : null;
+      await updateEmployeeFirebase(updatedEmployee.id, toSave);
+      if (currentUser && String(currentUser.id) === String(updatedEmployee.id)) {
+        setCurrentUser(toSave);
+        localStorage.setItem('currentUser', JSON.stringify(toSave));
+      }
+      await logAdminAction(currentUser, 'employee_update', {
+        employeeId: updatedEmployee.id,
+        name: updatedEmployee.name
+      });
       setShowEditEmployeeModal(false);
       alert('Ansatt oppdatert!');
     } catch (error) {
       console.error('Error updating employee:', error);
       alert('Feil ved oppdatering av ansatt: ' + error.message);
     }
-  }, [updateEmployeeFirebase]);
+  }, [updateEmployeeFirebase, currentUser]);
 
   const handleAddEmployee = useCallback(async (newEmployee) => {
     try {
-      await addEmployeeFirebase(newEmployee);
+      const toSave = { ...newEmployee };
+      toSave.contractHours = newEmployee.contractHours !== '' && newEmployee.contractHours != null
+        ? Number(newEmployee.contractHours) || 0
+        : null;
+      toSave.contractPercent = newEmployee.contractPercent !== '' && newEmployee.contractPercent != null
+        ? Number(newEmployee.contractPercent) || 0
+        : null;
+      await addEmployeeFirebase(toSave);
+      await logAdminAction(currentUser, 'employee_add', {
+        employeeId: newEmployee.id,
+        name: newEmployee.name
+      });
       setShowAddEmployeeModal(false);
       alert('Ny ansatt lagt til!');
     } catch (error) {
       console.error('Error adding employee:', error);
       alert('Feil ved oppretting av ansatt: ' + error.message);
     }
-  }, [addEmployeeFirebase]);
+  }, [addEmployeeFirebase, currentUser]);
 
   const handleDeleteEmployee = useCallback(async () => {
     if (!employeeToDelete) return;
@@ -558,6 +839,10 @@ function App() {
 
     try {
       await deleteEmployeeFirebase(employeeToDelete.id);
+      await logAdminAction(currentUser, 'employee_delete', {
+        employeeId: employeeToDelete.id,
+        name: employeeToDelete.name
+      });
       setShowDeleteConfirmModal(false);
       setEmployeeToDelete(null);
       alert('Ansatt slettet!');
@@ -583,10 +868,17 @@ function App() {
       if (department.id) {
         // Update existing department
         await updateDepartmentFirebase(department.id, department);
+        await logAdminAction(currentUser, 'department_update', {
+          departmentId: department.id,
+          name: department.name
+        });
         alert('Avdeling oppdatert!');
       } else {
         // Add new department
         await addDepartmentFirebase(department);
+        await logAdminAction(currentUser, 'department_add', {
+          name: department.name
+        });
         alert('Ny avdeling lagt til!');
       }
       setShowDepartmentModal(false);
@@ -594,17 +886,44 @@ function App() {
       console.error('Error saving department:', error);
       alert('Feil ved lagring av avdeling: ' + error.message);
     }
-  }, [addDepartmentFirebase, updateDepartmentFirebase]);
+  }, [addDepartmentFirebase, updateDepartmentFirebase, currentUser]);
 
   const handleDeleteDepartment = useCallback(async (departmentId) => {
     try {
       await deleteDepartmentFirebase(departmentId);
+      await logAdminAction(currentUser, 'department_delete', {
+        departmentId
+      });
       alert('Avdeling slettet!');
     } catch (error) {
       console.error('Error deleting department:', error);
       alert('Feil ved sletting av avdeling: ' + error.message);
     }
   }, [deleteDepartmentFirebase]);
+
+  const handleAddShiftTemplate = useCallback(async (template) => {
+    try {
+      await addShiftTemplateFirebase(template);
+      await logAdminAction(currentUser, 'shift_template_add', {
+        name: template.name || '',
+        startTime: template.startTime,
+        endTime: template.endTime
+      });
+    } catch (error) {
+      console.error('Error adding shift template:', error);
+      alert('Feil ved lagring av vaktmal: ' + error.message);
+    }
+  }, [addShiftTemplateFirebase, currentUser]);
+
+  const handleDeleteShiftTemplate = useCallback(async (id) => {
+    try {
+      await deleteShiftTemplateFirebase(id);
+      await logAdminAction(currentUser, 'shift_template_delete', { templateId: id });
+    } catch (error) {
+      console.error('Error deleting shift template:', error);
+      alert('Feil ved sletting av vaktmal: ' + error.message);
+    }
+  }, [deleteShiftTemplateFirebase, currentUser]);
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -617,6 +936,9 @@ function App() {
                 Innlogget som: <strong>{currentUser.name}</strong>
                 {currentUser.isAdmin && <span className="ml-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Admin</span>}
               </span>
+              <button onClick={() => setShowChangePasswordModal(true)} className="px-3 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300 hover:bg-gray-200">
+                Endre passord
+              </button>
               <button onClick={handleLogout} className="px-3 py-1 bg-red-100 text-red-700 rounded border border-red-200 hover:bg-red-200">
                 Logg ut
               </button>
@@ -691,7 +1013,7 @@ function App() {
               {currentUser?.isAdmin && (
                 <button
                   onClick={() => {
-                    if (selectedDates.length > 0 && selectedEmployeeForBulk) {
+                    if (selectedDates.length > 0) {
                       setNewShift(prev => ({
                         ...prev,
                         employeeId: selectedEmployeeForBulk,
@@ -712,7 +1034,7 @@ function App() {
                   className="px-3 py-1 bg-green-600 text-white rounded border border-green-600 hover:bg-green-700"
                   disabled={false}
                 >
-                  {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} dager)` : '+ Legg til vakt'}
+                  {selectedDates.length > 0 ? `+ Legg til vakt (${selectedDates.length} valgte)` : '+ Legg til vakt'}
                 </button>
               )}
               {currentUser?.isAdmin && (
@@ -737,6 +1059,12 @@ function App() {
                     className="px-3 py-1 bg-orange-600 text-white rounded border border-orange-600 hover:bg-orange-700"
                   >
                     ⚙️ Avdelinger
+                  </button>
+                  <button
+                    onClick={() => setShowShiftTemplateModal(true)}
+                    className="px-3 py-1 bg-indigo-600 text-white rounded border border-indigo-600 hover:bg-indigo-700"
+                  >
+                    🕐 Vaktmaler
                   </button>
                 </>
               )}
@@ -779,6 +1107,10 @@ function App() {
                   setCurrentDate(newDate);
                 }
               }}
+              onAddGroupEvent={() => setShowGroupEventModal(true)}
+              onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+              onDeleteGroupEvent={handleDeleteGroupEvent}
+              onShowGroupOverview={() => setShowGroupOverview(true)}
             />
             <div className="flex items-center gap-2 my-2 flex-wrap">
               <button
@@ -854,6 +1186,16 @@ function App() {
       )}
       </div>
 
+      {currentUser && (
+        <LeaveRequestList
+          requests={[...leaveRequests, ...swapRequests]}
+          onApprove={handleApproveLeaveRequest}
+          onReject={handleRejectLeaveRequest}
+          onDelete={handleDeleteLeaveRequest}
+          currentUser={currentUser}
+        />
+      )}
+
       {currentUser?.isAdmin && (
         <div className="mt-6">
           <AdminStats
@@ -864,7 +1206,18 @@ function App() {
           />
         </div>
       )}
+      {currentUser?.isSuperadmin && (
+        <StaffingPlanner employees={employees} shifts={shifts} departments={departments} currentUser={currentUser} />
+      )}
 
+
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          currentUser={currentUser}
+          onSubmit={handleChangePassword}
+          onClose={() => setShowChangePasswordModal(false)}
+        />
+      )}
       {showLoginModal && (
         <LoginModal
           employees={employees}
@@ -877,16 +1230,18 @@ function App() {
         <AddShiftModal
           employees={employees}
           departments={departments}
+          shiftTemplates={shiftTemplates}
           newShift={newShift}
           onChange={(field, value) => setNewShift(prev => ({ ...prev, [field]: value }))}
-          onSave={selectedDates.length > 0 && selectedEmployeeForBulk ? handleBulkAddShift : handleAddShift}
+          onSave={selectedDates.length > 0 ? handleBulkAddShift : handleAddShift}
           onClose={() => {
             setShowAddShiftModal(false);
             setSelectedDates([]);
             setSelectedEmployeeForBulk(null);
           }}
-          isBulkMode={selectedDates.length > 0 && selectedEmployeeForBulk}
+          isBulkMode={selectedDates.length > 0}
           bulkCount={selectedDates.length}
+          bulkCells={selectedDates}
           selectedEmployeeForBulk={selectedEmployeeForBulk}
         />
       )}
@@ -909,6 +1264,8 @@ function App() {
         <EditEmployeeModal
           employee={selectedEmployee}
           departments={departments}
+          employees={employees}
+          currentUser={currentUser}
           onSave={handleSaveEmployee}
           onClose={() => setShowEditEmployeeModal(false)}
         />
@@ -932,7 +1289,40 @@ function App() {
           vacations={VACATIONS}
           selectedDepartment={selectedDepartment}
           currentDate={currentDate}
+          onBulkAddShifts={handleBulkAddShiftsFromOverview}
+          onDeleteShift={handleDeleteShift}
           onClose={() => setShowOverviewCalendar(false)}
+          currentUser={currentUser}
+          onAddGroupEvent={() => setShowGroupEventModal(true)}
+          onEditGroupEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
+          onDeleteGroupEvent={handleDeleteGroupEvent}
+          onShowGroupOverview={() => setShowGroupOverview(true)}
+          onAutoFill={(dates) => setAutoFillDates(dates)}
+        />
+      )}
+
+      {autoFillDates && currentUser?.isSuperadmin && (
+        <AutoFillModal
+          dates={autoFillDates}
+          employees={employees}
+          allEmployees={employees}
+          shifts={shifts}
+          departments={departments}
+          holidays={Object.keys(holidaysObj || {})}
+          currentUser={currentUser}
+          saving={savingAutoFill}
+          onSave={handleAutoFillSave}
+          onClose={() => setAutoFillDates(null)}
+        />
+      )}
+
+      {showGroupOverview && (
+        <GroupOverviewCalendar
+          currentDate={currentDate}
+          currentUser={currentUser}
+          onClose={() => setShowGroupOverview(false)}
+          onAddEvent={() => setShowGroupEventModal(true)}
+          onEditEvent={(ev) => { setGroupEventToEdit(ev); setShowGroupEventModal(true); }}
         />
       )}
 
@@ -960,27 +1350,39 @@ function App() {
         <EditShiftModal
           shift={shiftToEdit.shift}
           employeeName={shiftToEdit.employeeName}
+          departments={departments}
+          shiftTemplates={shiftTemplates}
           onSave={handleSaveShiftEdit}
           onClose={() => setShiftToEdit(null)}
         />
       )}
 
-      {currentUser && (
-        <LeaveRequestList
-          requests={[...leaveRequests, ...swapRequests]}
-          onApprove={handleApproveLeaveRequest}
-          onReject={handleRejectLeaveRequest}
-          onDelete={handleDeleteLeaveRequest}
-          currentUser={currentUser}
-        />
+      {currentUser?.isAdmin && currentUser.name === AUDIT_LOG_VIEWER && (
+        <AuditLogView employees={employees} />
       )}
 
+      {showGroupEventModal && (
+        <GroupEventModal
+          event={groupEventToEdit}
+          onSave={handleSaveGroupEvent}
+          onClose={() => { setShowGroupEventModal(false); setGroupEventToEdit(null); }}
+        />
+      )}
       {showDepartmentModal && (
         <DepartmentModal
           departments={departments}
           onSave={handleSaveDepartment}
           onDelete={handleDeleteDepartment}
           onClose={() => setShowDepartmentModal(false)}
+        />
+      )}
+
+      {showShiftTemplateModal && (
+        <ShiftTemplateModal
+          templates={shiftTemplates}
+          onAdd={handleAddShiftTemplate}
+          onDelete={handleDeleteShiftTemplate}
+          onClose={() => setShowShiftTemplateModal(false)}
         />
       )}
 

@@ -16,6 +16,7 @@ function DepartmentModal({
   });
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // If editing, populate the form
   useEffect(() => {
@@ -25,6 +26,7 @@ function DepartmentModal({
         color: editingDepartment.color || '#FF0000'
       });
       setSelectedDepartment(editingDepartment);
+      setEditingId(editingDepartment.id);
     }
   }, [editingDepartment]);
 
@@ -45,7 +47,7 @@ function DepartmentModal({
     // Check if department name already exists (case insensitive)
     const existingDept = departments.find(
       dept => dept.name.toLowerCase() === newDepartment.name.toLowerCase() && 
-             (!editingDepartment || dept.id !== editingDepartment.id)
+             dept.id !== (editingId || (editingDepartment ? editingDepartment.id : null))
     );
     
     if (existingDept) {
@@ -60,8 +62,8 @@ function DepartmentModal({
     };
     
     // If editing, include the ID
-    if (editingDepartment) {
-      departmentData.id = editingDepartment.id;
+    if (editingId || editingDepartment) {
+      departmentData.id = editingId || editingDepartment.id;
     }
     
     onSave(departmentData);
@@ -71,6 +73,7 @@ function DepartmentModal({
   const resetForm = () => {
     setNewDepartment({ name: '', color: '#FF0000' });
     setSelectedDepartment(null);
+    setEditingId(null);
   };
 
   const handleDeleteClick = (dept) => {
@@ -95,7 +98,19 @@ function DepartmentModal({
     { value: '#8B5CF6', label: 'Lilla', name: 'Skolegrupper' },
     { value: '#6B7280', label: 'Grå', name: 'Fri' },
     { value: '#000000', label: 'Sort' },
-    { value: '#FFFFFF', label: 'Hvit', border: '1px solid #ccc' }
+    { value: '#FFFFFF', label: 'Hvit', border: '1px solid #ccc' },
+    { value: '#06B6D4', label: 'Cyan' },
+    { value: '#0EA5E9', label: 'Lyseblå' },
+    { value: '#1D4ED8', label: 'Mørkeblå' },
+    { value: '#84CC16', label: 'Lime' },
+    { value: '#65A30D', label: 'Olivengrønn' },
+    { value: '#14B8A6', label: 'Teal' },
+    { value: '#EC4899', label: 'Rosa' },
+    { value: '#DB2777', label: 'Mørkerosa' },
+    { value: '#F97316', label: 'Dyp oransje' },
+    { value: '#A16207', label: 'Brun' },
+    { value: '#7C3AED', label: 'Indigo' },
+    { value: '#334155', label: 'Skifergrå' }
   ];
 
   return (
@@ -144,6 +159,15 @@ function DepartmentModal({
                   />
                 ))}
               </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs text-gray-600">Egendefinert farge:</label>
+                <input
+                  type="color"
+                  value={newDepartment.color}
+                  onChange={(e) => setNewDepartment(prev => ({ ...prev, color: e.target.value }))}
+                  className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                />
+              </div>
               <div className="mt-2 text-xs text-gray-600">
                 Valgt farge: <strong style={{ color: newDepartment.color }}>{newDepartment.color}</strong>
               </div>
@@ -154,9 +178,9 @@ function DepartmentModal({
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded border border-blue-600 hover:bg-blue-700"
               >
-                {editingDepartment ? 'Lagre endringer' : '+ Legg til avdeling'}
+                {(editingId || editingDepartment) ? 'Lagre endringer' : '+ Legg til avdeling'}
               </button>
-              {editingDepartment && (
+              {(editingId || editingDepartment) && (
                 <button
                   type="button"
                   onClick={resetForm}
@@ -196,6 +220,7 @@ function DepartmentModal({
                       onClick={() => {
                         setNewDepartment({ name: dept.name, color: dept.color });
                         setSelectedDepartment(dept);
+                        setEditingId(dept.id);
                         // Scroll to top
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}

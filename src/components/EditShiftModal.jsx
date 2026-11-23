@@ -1,29 +1,35 @@
 import React, { useEffect, useState } from 'react';
 
-function EditShiftModal({ shift, employeeName, onSave, onClose }) {
+function EditShiftModal({ shift, employeeName, departments = [], shiftTemplates = [], onSave, onClose }) {
   const [comment, setComment] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [date, setDate] = useState('');
 
   useEffect(() => {
     setComment(shift?.comment || '');
     setStartTime(shift?.startTime || '');
     setEndTime(shift?.endTime || '');
+    setDepartmentId(shift?.departmentId || '');
+    setDate(shift?.date || '');
   }, [shift]);
 
   if (!shift) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!date) { alert('Velg dato!'); return; }
     if (!startTime) { alert('Velg starttid!'); return; }
     if (!endTime) { alert('Velg sluttid!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
-    onSave(shift.id, { ...shift, startTime, endTime, comment });
+    if (!departmentId) { alert('Velg avdeling/arbeidsplass!'); return; }
+    onSave(shift.id, { ...shift, departmentId, startTime, endTime, comment, date });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
           <h2 className="text-xl font-semibold">Rediger vakt</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -32,8 +38,52 @@ function EditShiftModal({ shift, employeeName, onSave, onClose }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="text-sm text-gray-600">
             <p><strong>Ansatt:</strong> {employeeName || shift.employeeId}</p>
-            <p><strong>Dato:</strong> {shift.date}</p>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Dato</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Arbeidsplass / Avdeling</label>
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Velg avdeling</option>
+              {(departments || []).map(dept => (
+                <option key={dept.id} value={dept.id}>{dept.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {shiftTemplates.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Vaktmal</label>
+              <select
+                value=""
+                onChange={(e) => {
+                  const t = shiftTemplates.find(t => t.id === e.target.value);
+                  if (t) { setStartTime(t.startTime); setEndTime(t.endTime); }
+                }}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Velg vaktmal…</option>
+                {shiftTemplates.slice().sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')).map(t => (
+                  <option key={t.id} value={t.id}>{t.name ? `${t.name} (${t.startTime}-${t.endTime})` : `${t.startTime}-${t.endTime}`}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

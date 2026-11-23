@@ -1,4 +1,112 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
+import GroupBarsRow from './GroupBarsRow';
+import { subscribeToGroupEvents } from '../firebase';
+
+
+export const EMPLOYEE_CATEGORIES = ['Skiutleie Øst', 'Skiutleie Vest', 'Butikk Øst', 'Butikk Vest', 'Skiskole', 'Ekstra', 'Admin'];
+
+export const inferCategory = (employee) => {
+  if (employee.category && EMPLOYEE_CATEGORIES.includes(employee.category)) {
+    return employee.category;
+  }
+  const deptIds = employee.deptIds || [];
+  if (deptIds.includes('dept-4')) return 'Butikk Vest';
+  if (deptIds.includes('dept-3')) return 'Skiskole';
+  return 'Skiutleie Vest';
+};
+
+export const deptNameToCategory = (deptName) => {
+  const n = (deptName || '').toLowerCase();
+  if (!n || n === 'fri' || n === 'ferie' || n.includes('heis')) return null;
+  // Skiskole före øst/vest: «Skiskole Vest» är Skiskole, inte Skiutleie Vest
+  if (n.includes('skiskole')) return 'Skiskole';
+  if (n.includes('skolegrupper')) return 'Skiutleie Vest';
+  if (n.includes('butikk')) return n.includes('øst') || n.includes('ost') ? 'Butikk Øst' : 'Butikk Vest';
+  if (n.includes('øst') || n.includes('ost')) return 'Skiutleie Øst';
+  if (n.includes('vest')) return 'Skiutleie Vest';
+  return null;
+};
+
+export const SHIFTS_BY_CATEGORY = (allShifts, category, deptNameById) => {
+  return (allShifts || []).filter(shift => {
+    const deptName = (deptNameById.get(shift.departmentId) || '').toLowerCase();
+    if (deptName === 'fri' || deptName === 'ferie' || deptName.includes('heis')) return true;
+    // Skiskole-vakter syns bara under Skiskole — aldrig under Skiutleie/Butikk
+    if (deptName.includes('skiskole')) return category === 'Skiskole';
+    if (category === 'Skiutleie Vest') return deptName.includes('vest') || deptName.includes('skolegrupper');
+    if (category === 'Skiutleie Øst') return deptName.includes('øst') || deptName.includes('ost');
+    if (category === 'Butikk Vest') return deptName.includes('butikk') && deptName.includes('vest');
+    if (category === 'Butikk Øst') return deptName.includes('butikk') && (deptName.includes('øst') || deptName.includes('ost'));
+    if (category === 'Skiskole') return deptName.includes('skiskole');
+    return false;
+  });
+};
+
+const EMPTY_SHIFTS = [];
+
+const buildShiftIndex = (allShifts) => {
+  const map = new Map();
+  for (const shift of allShifts || []) {
+    if (!shift || !shift.date) continue;
+    const key = `${String(shift.employeeId)}|${shift.date}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(shift);
+  }
+  return map;
+};
+
+const sortCategoriesForUser = (groups, currentUser) => {
+  const entries = [...groups];
+  if (!currentUser || currentUser.isAdmin) return entries;
+  const userCategory = inferCategory(currentUser);
+  const index = entries.findIndex(([category]) => category === userCategory);
+  if (index > 0) {
+    const [entry] = entries.splice(index, 1);
+    entries.unshift(entry);
+  }
+  return entries;
+};
+
+export const groupByShiftCategory = (employeeList, allShifts, allDepartments, firstDate, lastDate) => {
+  const deptNameById = new Map((allDepartments || []).filter(Boolean).map(d => [d.id, d.name || d.id]));
+  const employeeById = new Map(employeeList.map(e => [String(e.id), e]));
+  const categoriesByEmployee = new Map();
+  for (const shift of allShifts || []) {
+    if (!shift.date || shift.date < firstDate || shift.date > lastDate) continue;
+    const emp = employeeById.get(String(shift.employeeId));
+    if (!emp) continue;
+    const cat = deptNameToCategory(deptNameById.get(shift.departmentId));
+    if (!cat) continue;
+    if (!categoriesByEmployee.has(String(emp.id))) categoriesByEmployee.set(String(emp.id), new Set());
+    categoriesByEmployee.get(String(emp.id)).add(cat);
+  }
+  const groups = new Map();
+  for (const category of EMPLOYEE_CATEGORIES) groups.set(category, []);
+  for (const employee of employeeList) {
+    const cats = categoriesByEmployee.get(String(employee.id));
+    if (cats && cats.size > 0) {
+      for (const cat of cats) groups.get(cat).push(employee);
+    } else {
+      const base = inferCategory(employee);
+      if (!groups.has(base)) groups.set(base, []);
+      groups.get(base).push(employee);
+    }
+  }
+  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
+};
+
+const groupByCategory = (employeeList) => {
+  const groups = new Map();
+  for (const category of EMPLOYEE_CATEGORIES) {
+    groups.set(category, []);
+  }
+  for (const employee of employeeList) {
+    const category = inferCategory(employee);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(employee);
+  }
+  return [...groups.entries()].filter(([, emps]) => emps.length > 0);
+};
 
 function ShiftCalendar({
   employees = [],
@@ -17,7 +125,11 @@ function ShiftCalendar({
   selectedEmployeeForBulk = null,
   onDateSelection,
   onClearSelection,
-  onNavigateWeek
+  onNavigateWeek,
+  onAddGroupEvent,
+  onEditGroupEvent,
+  onDeleteGroupEvent,
+  onShowGroupOverview
 }) {
   const shortenComment = (comment, maxWords = 2) => {
     if (!comment) return '';
@@ -26,8 +138,8 @@ function ShiftCalendar({
     return words.slice(0, maxWords).join(' ') + '...';
   };
 
-  const getDates = () => {
-    const dates = [];
+  const dates = useMemo(() => {
+    const result = [];
     const startDate = new Date(currentDate);
     startDate.setHours(0, 0, 0, 0);
 
@@ -42,13 +154,24 @@ function ShiftCalendar({
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + week * 7 + day);
         date.setHours(0, 0, 0, 0);
-        dates.push(date);
+        result.push(date);
       }
     }
-    return dates;
-  };
-
-  const dates = getDates();
+    return result;
+  }, [currentDate, showHistory]);
+  const deptNameById = useMemo(() => new Map((departments || []).filter(Boolean).map(d => [d.id, (d.name || '').toLowerCase()])), [departments]);
+  const firstDateStr = dates.length ? `${dates[0].getFullYear()}-${String(dates[0].getMonth() + 1).padStart(2, '0')}-${String(dates[0].getDate()).padStart(2, '0')}` : '';
+  const lastDateStr = dates.length ? `${dates[dates.length - 1].getFullYear()}-${String(dates[dates.length - 1].getMonth() + 1).padStart(2, '0')}-${String(dates[dates.length - 1].getDate()).padStart(2, '0')}` : '';
+  const shiftIndex = useMemo(() => buildShiftIndex(shifts), [shifts]);
+  const categoryGroups = useMemo(() => {
+    const groups = groupByShiftCategory(employees || [], shifts, departments, firstDateStr, lastDateStr);
+    return sortCategoriesForUser(groups, currentUser);
+  }, [employees, shifts, departments, firstDateStr, lastDateStr, currentUser]);
+  const shiftsForCell = useCallback((category, employeeId, dateStr) => {
+    const forCell = shiftIndex.get(`${String(employeeId)}|${dateStr}`) || EMPTY_SHIFTS;
+    if (forCell.length === 0) return forCell;
+    return SHIFTS_BY_CATEGORY(forCell, category, deptNameById);
+  }, [shiftIndex, deptNameById]);
 
   const getWeekNumber = (date) => {
     const d = new Date(date);
@@ -102,13 +225,6 @@ function ShiftCalendar({
       if (alreadySelected) {
         onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
-        // Check if this date is already selected for ANY employee (prevent duplicate dates)
-        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
-        if (dateAlreadySelectedForAny) {
-          // Can't select same date for multiple employees in bulk mode
-          alert('Du kan ikke velge samme dag for flere ansatte samtidig i bulk-modus.');
-          return;
-        }
         onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     } else {
@@ -117,33 +233,32 @@ function ShiftCalendar({
         // Clicking an already selected date - remove it
         onDateSelection(selectedDates.filter(d => !(d.date === dateStr && d.employeeId === employeeId)));
       } else {
-        // Check if this date is already selected for ANY employee
-        const dateAlreadySelectedForAny = selectedDates.some(d => d.date === dateStr);
-        if (dateAlreadySelectedForAny) {
-          // Replace all selections for this date with the new employee
-          const newSelection = selectedDates.filter(d => d.date !== dateStr);
-          newSelection.push({ date: dateStr, employeeId });
-          onDateSelection(newSelection);
-        } else {
-          // Add to selection
-          onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
-        }
+        onDateSelection([...selectedDates, { date: dateStr, employeeId }]);
       }
     }
 
     lastClickedRef.current = dateStr;
   }, [selectedDates, onDateSelection, currentUser]);
 
+  const [shiftDetail, setShiftDetail] = useState(null);
+
+  const formatDetailDate = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('no-NO', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+  };
+
   const sundayColor = '#FCA5A5';
   const holidayColor = '#F87171';
   const vacationColor = '#FEF3C7';
 
   return (
-    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto">
+    <div className="bg-white border rounded-lg shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-160px)]">
       <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
           <thead>
             <tr className="border-b">
-              <th className="p-1 border-r bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
+              <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">
                 {onNavigateWeek && (
                   <div className="flex gap-1 justify-center">
                     <button onClick={() => onNavigateWeek(-7)} className="px-1 py-0.5 bg-gray-200 rounded text-xs hover:bg-gray-300">Forrige</button>
@@ -157,7 +272,7 @@ function ShiftCalendar({
                 return (
                   <th
                     key={index}
-                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                    className={`p-1 md:p-2 text-center border-r last:border-r-0 text-xs md:text-sm sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                   >
                     <div className="font-medium text-gray-700 truncate">
                       {date.toLocaleDateString('no-NO', { timeZone: 'Europe/Oslo', weekday: 'short', day: 'numeric', month: 'short' })}
@@ -171,8 +286,26 @@ function ShiftCalendar({
             </tr>
           </thead>
           <tbody>
-            {(employees || []).map((employee) => (
-              <tr key={employee.id} className="border-b last:border-b-0">
+          <GroupBarsRow
+            dates={dates}
+            currentUser={currentUser}
+            onAddEvent={onAddGroupEvent}
+            onEditEvent={onEditGroupEvent}
+            onDeleteEvent={onDeleteGroupEvent}
+            onShowOverview={onShowGroupOverview}
+          />
+            {categoryGroups.flatMap(([category, categoryEmployees]) => [
+              <tr key={`cat-${category}`} className="border-b-2 border-gray-700 bg-gray-700 text-white">
+                <td
+                  className="p-1 px-3 border-r font-semibold text-sm uppercase tracking-wide sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]"
+                  style={{ backgroundColor: '#374151' }}
+                >
+                  {category}
+                </td>
+                <td colSpan={dates.length} style={{ backgroundColor: '#374151' }} />
+              </tr>,
+              ...categoryEmployees.map((employee) => (
+              <tr key={`${category}-${employee.id}`} className="border-b last:border-b-0">
                 <td className="p-1 md:p-2 border-r font-medium bg-gray-50 sticky left-0 z-10 min-w-[100px] md:min-w-[140px] lg:min-w-[180px] max-w-[140px] md:max-w-[180px] lg:max-w-[250px]">
                   <div className="flex items-center gap-1 text-sm truncate">
                     <span className="truncate">{employee.name}</span>
@@ -184,7 +317,7 @@ function ShiftCalendar({
                   const month = String(date.getMonth() + 1).padStart(2, '0');
                   const day = String(date.getDate()).padStart(2, '0');
                   const dateStr = `${year}-${month}-${day}`;
-                  const shiftsForDay = getShiftsForDateAndEmployee(dateStr, employee.id);
+                  const shiftsForDay = shiftsForCell(category, employee.id, dateStr);
                   const holiday = isHoliday(dateStr);
                   const vacation = isVacation(dateStr);
                   const sunday = isSunday(date);
@@ -228,19 +361,21 @@ function ShiftCalendar({
                                   key={shiftIndex}
                                   className="p-1 rounded text-xs text-white font-medium group relative"
                                   style={{ backgroundColor: deptColor }}
-                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}`}
+                                  title={`${shift.startTime}-${shift.endTime} (${deptName})${shift.comment ? `: ${shift.comment}` : ''}${currentUser?.isSuperadmin && shift.autoFilled ? ' (auto-utfylt)' : ''}`}
                                 >
                                   <div 
                                     className="truncate text-center cursor-pointer"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       e.preventDefault();
-                                      if (currentUser?.isAdmin) {
-                                        onDeleteShift(shift.id);
-                                      }
+                                      setShiftDetail({
+                                        shift,
+                                        employeeName: employee.name,
+                                        dateStr
+                                      });
                                     }}
                                   >
-                                    {deptName === 'Fri' ? 'Fri' : `${shift.startTime}-${shift.endTime}`}
+                                    {deptName === 'Fri' ? 'Fri' : deptName === 'Ferie' ? 'Ferie' : `${shift.startTime}-${shift.endTime}`}
                                   </div>
                                   {currentUser?.isAdmin && (
                                     <button
@@ -284,14 +419,7 @@ function ShiftCalendar({
                             <div
                               className="w-full h-full relative"
                               onClick={(e) => {
-                                if (isBulkMode && !isForSelectedEmployee) {
-                                  if (confirm(`Vil du bytte til ${employee.name}?`)) {
-                                    onClearSelection();
-                                    onDateSelection([{ date: dateStr, employeeId }]);
-                                  }
-                                } else {
-                                  handleDateClick(dateStr, employee.id, e);
-                                }
+                                handleDateClick(dateStr, employee.id, e);
                               }}
                               title={isSelected ? "Dato valgt - klikk igjen for \u00e5 avvelge" : "Klikk for \u00e5 velge dato"}
                             >
@@ -317,9 +445,76 @@ function ShiftCalendar({
                   );
                 })}
               </tr>
-            ))}
+              ))
+            ])}
           </tbody>
         </table>
+
+      {shiftDetail && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4"
+          onClick={() => setShiftDetail(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-sm w-full p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-bold text-gray-800">Vaktdetaljer</h3>
+              <button
+                onClick={() => setShiftDetail(null)}
+                className="text-gray-500 hover:text-gray-700 text-lg leading-none"
+                title="Lukk"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-1 text-sm text-gray-700">
+              <p><span className="font-medium">Ansatt:</span> {shiftDetail.employeeName}</p>
+              <p><span className="font-medium">Dato:</span> {formatDetailDate(shiftDetail.dateStr)}</p>
+              <p><span className="font-medium">Tid:</span> {shiftDetail.shift.startTime}–{shiftDetail.shift.endTime}</p>
+              <p>
+                <span className="font-medium">Avdeling:</span>{' '}
+                <span
+                  className="inline-block px-2 py-0.5 rounded text-white text-xs"
+                  style={{ backgroundColor: (departments || []).find(d => d && d.id === shiftDetail.shift.departmentId)?.color || '#3B82F6' }}
+                >
+                  {(departments || []).find(d => d && d.id === shiftDetail.shift.departmentId)?.name || shiftDetail.shift.departmentId}
+                </span>
+              </p>
+              {shiftDetail.shift.comment ? (
+                <p className="whitespace-pre-wrap"><span className="font-medium">Kommentar:</span> {shiftDetail.shift.comment}</p>
+              ) : (
+                <p className="text-gray-400 italic">Ingen kommentar</p>
+              )}
+            </div>
+
+            {currentUser?.isAdmin && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => {
+                    onEditShift(shiftDetail.shift, shiftDetail.employeeName);
+                    setShiftDetail(null);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  Rediger
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteShift(shiftDetail.shift.id);
+                    setShiftDetail(null);
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded text-sm hover:bg-red-200"
+                >
+                  Slett
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

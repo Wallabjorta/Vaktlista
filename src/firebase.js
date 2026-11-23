@@ -2,7 +2,7 @@
 // Install: npm install firebase
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ============ FIREBASE CONFIGURATION ============
@@ -24,7 +24,12 @@ const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG
 
 // ============ INITIALIZE FIREBASE ============
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Offline-persistence: läsningar betjänas från lokal cache när data inte
+// ändrats, vilket kraftigt minskar antalet Firestore-reads för återkommande
+// användare (viktigt för att hålla sig under gratisplanens dagliga kvot).
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 const auth = getAuth(app);
 
 // Cloud Functions URL for iCal endpoints. Derived from the active project ID so
@@ -41,8 +46,284 @@ const usersCollection = collection(db, "users");
 const notificationsCollection = collection(db, "notifications");
 const leaveRequestsCollection = collection(db, "leaveRequests");
 const swapRequestsCollection = collection(db, "swapRequests");
+const auditLogsCollection = collection(db, "auditLogs");
+const groupEventsCollection = collection(db, "groupEvents");
+const revenueCollection = collection(db, "revenues");
+
+// ===== STAFFING CONFIG =====
+
+const STAFFING_CONFIG_DOC = "staffingConfig";
+
+/**
+ * Hämta bemanningskonfiguration (trösklar)
+ * @returns {Promise<Object>} { minimumStaff, thresholds: [{ minRevenue, staff, label }] }
+ */
+export const getStaffingConfig = async () => {
+  try {
+    const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
+    if (!snap.exists()) {
+      return {
+        minimumStaff: 2,
+        thresholds: [
+          { minRevenue: 0, staff: 2, label: 'Lav' },
+          { minRevenue: 25000, staff: 4, label: 'Middels' },
+          { minRevenue: 40000, staff: 6, label: 'Høy' }
+        ]
+      };
+    }
+    return snap.data();
+  } catch (error) {
+    console.error("Error getting staffing config:", error);
+    return null;
+  }
+};
+
+/**
+ * Spara bemanningskonfiguration
+ * @param {Object} config
+ */
+export const saveStaffingConfig = async (config) => {
+  try {
+    await setDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), config);
+    return true;
+  } catch (error) {
+    console.error("Error saving staffing config:", error);
+    throw error;
+  }
+};
+
+/**
+ * Prenumerera på bemanningskonfiguration i realtid
+ */
+export const subscribeToStaffingConfig = (callback) => {
+  return onSnapshot(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+};
+
+// ===== REVENUE (omsättning per dag) =====
+
+/**
+ * Importera daglig omsättning (ersätter befintliga poster för samma datum)
+ * @param {Array} entries - [{ date: 'YYYY-MM-DD', amount: number }]
+ */
+export const importRevenues = async (entries, location = null) => {
+  const batch = writeBatch(db);
+  for (const entry of entries) {
+    const docId = location ? `${location}_${entry.date}` : entry.date;
+    const ref = doc(db, "revenues", docId);
+    const data = { date: entry.date, amount: entry.amount };
+    if (location) data.location = location;
+    batch.set(ref, data, { merge: true });
+  }
+  await batch.commit();
+  return entries.length;
+};
+
+/**
+ * Spara/uppdatera en enskild dags omsättning
+ */
+export const saveRevenue = async (date, amount, location = null) => {
+  try {
+    const docId = location ? `${location}_${date}` : date;
+    const data = { date, amount: Number(amount) };
+    if (location) data.location = location;
+    await setDoc(doc(db, "revenues", docId), data, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error saving revenue:", error);
+    throw error;
+  }
+};
+
+/**
+ * Ta bort en dags omsättning
+ */
+export const deleteRevenue = async (date, location = null) => {
+  try {
+    const docId = location ? `${location}_${date}` : date;
+    await deleteDoc(doc(db, "revenues", docId));
+  } catch (error) {
+    console.error("Error deleting revenue:", error);
+    throw error;
+  }
+};
+
+/**
+ * Prenumerera på all omsättningsdata i realtid
+ */
+/**
+ * Rensa omsättningsdata. Utan location raderas ALL data;
+ * med location raderas endast den platsens poster.
+ * @param {string|null} location - 'st' | 'øst' | null (allt)
+ * @returns {Promise<number>} Antal raderade poster
+ */
+export const clearRevenues = async (location = null) => {
+  const snapshot = await getDocs(revenueCollection);
+  const toDelete = snapshot.docs.filter(d => {
+    const data = d.data();
+    if (location) return data.location === location;
+    return true;
+  });
+  const batch = writeBatch(db);
+  for (const d of toDelete) {
+    batch.delete(d.ref);
+  }
+  await batch.commit();
+  return toDelete.length;
+};
+
+export const subscribeToRevenues = (callback) => {
+  return onSnapshot(revenueCollection, (snapshot) => {
+    const revenues = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(revenues);
+  });
+};
+
+/**
+ * Räkna fram rekommenderad bemanning utifrån konfiguration
+ * @param {number} amount
+ * @param {Object} config
+ * @returns {Object} { staff, label, source }
+ */
+export const recommendStaffing = (amount, config) => {
+  if (amount == null || isNaN(amount)) return { staff: null, label: '', source: null };
+  if (!config) return { staff: null, label: '', source: null };
+
+  let staff = config.minimumStaff || 0;
+  let label = '';
+  if (Array.isArray(config.thresholds) && config.thresholds.length > 0) {
+    const sorted = [...config.thresholds].sort((a, b) => (a.minRevenue || 0) - (b.minRevenue || 0));
+    for (const t of sorted) {
+      if (amount >= (t.minRevenue || 0) && (t.staff || 0) >= staff) {
+        staff = t.staff;
+        label = t.label || '';
+      }
+    }
+  }
+
+  return { staff, label, source: 'threshold' };
+};
+
+// ===== GROUP EVENTS =====
+
+/**
+ * Subscribe to realtime updates for group events (hente/levere-datoer per gruppe)
+ * @param {Function} callback - Callback function with array of group events
+ * @returns {Function} Unsubscribe function
+ */
+export const subscribeToGroupEvents = (callback) => {
+  return onSnapshot(groupEventsCollection, (snapshot) => {
+    const events = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    callback(events);
+  });
+};
+
+/**
+ * Legg til et nytt grupperevent
+ * @param {Object} event - { groupName, pickupDate, dropoffDate, contact, participants, notes, color }
+ * @returns {Promise<Object>} Det lagrede eventet med id
+ */
+export const addGroupEvent = async (event) => {
+  try {
+    const docRef = await addDoc(groupEventsCollection, event);
+    return { ...event, id: docRef.id };
+  } catch (error) {
+    console.error("Error adding group event:", error);
+    throw error;
+  }
+};
+
+/**
+ * Oppdater et grupperevent
+ * @param {string} id - Dokument-ID
+ * @param {Object} updates - Felt som skal oppdateres
+ * @returns {Promise<boolean>} Success status
+ */
+export const updateGroupEvent = async (id, updates) => {
+  try {
+    const docRef = doc(db, "groupEvents", id);
+    await setDoc(docRef, updates, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error updating group event:", error);
+    throw error;
+  }
+};
+
+/**
+ * Slett et grupperevent
+ * @param {string} id - Dokument-ID
+ */
+export const deleteGroupEvent = async (id) => {
+  try {
+    await deleteDoc(doc(db, "groupEvents", id));
+  } catch (error) {
+    console.error("Error deleting group event:", error);
+    throw error;
+  }
+};
 
 // ============ FIREBASE SERVICE FUNCTIONS ============
+
+// ===== AUDIT LOG =====
+/**
+ * Logg en adminhandling i auditLogs-samlingen. Best-effort: feil logges kun til konsollen.
+ * @param {Object} admin - Innlogget admin (krever id og name)
+ * @param {string} action - Handling: 'shift_add' | 'shift_update' | 'shift_delete' | 'employee_add' | 'employee_update' | 'employee_delete' | 'department_add' | 'department_update' | 'department_delete' | 'leave_status' | 'swap_status'
+ * @param {Object} details - Fritekstdetaljer om handlingen
+ */
+const removeUndefined = (obj) => {
+  const out = {};
+  for (const [key, value] of Object.entries(obj || {})) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+};
+
+export const logAdminAction = async (admin, action, details = {}) => {
+  if (!admin || !(admin.isAdmin || admin.isSuperadmin)) return;
+  try {
+    await addDoc(auditLogsCollection, removeUndefined({
+      adminId: admin.id,
+      adminName: admin.name,
+      action,
+      details: removeUndefined(details),
+      timestamp: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error("Error writing audit log:", error);
+  }
+};
+
+/**
+ * Hent alle adminhendelser (nyeste først)
+ * @returns {Promise<Array>} Array av loggobjekter
+ */
+export const getAuditLogs = async () => {
+  try {
+    const snapshot = await getDocs(auditLogsCollection);
+    return snapshot.docs
+      .map(d => {
+        const data = d.data();
+        let ts = data.timestamp;
+        if (ts && typeof ts.toDate === "function") {
+          ts = ts.toDate().toISOString();
+        }
+        if (ts instanceof Date) {
+          ts = ts.toISOString();
+        }
+        if (ts && !String(ts).includes("T")) {
+          ts = new Date(ts).toISOString();
+        }
+        return { id: d.id, ...data, timestamp: ts };
+      })
+      .sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || "")));
+  } catch (error) {
+    console.error("Error getting audit logs:", error);
+    return [];
+  }
+};
 
 // ===== EMPLOYEES =====
 
@@ -224,9 +505,9 @@ export const getDepartmentById = async (id) => {
  */
 export const addDepartment = async (department) => {
   try {
-    const docRef = doc(departmentsCollection);
-    await setDoc(docRef, department);
-    return { id: docRef.id, ...department };
+    const id = department.id || doc(departmentsCollection).id;
+    await setDoc(doc(db, "departments", id), { ...department, id });
+    return { id, ...department };
   } catch (error) {
     console.error("Error adding department:", error);
     throw error;
@@ -242,11 +523,72 @@ export const addDepartment = async (department) => {
 export const updateDepartment = async (id, updates) => {
   try {
     const docRef = doc(db, "departments", id);
-    await updateDoc(docRef, updates);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      await updateDoc(docRef, updates);
+    } else {
+      await setDoc(docRef, { ...updates, id }, { merge: true });
+    }
     return true;
   } catch (error) {
     console.error("Error updating department:", error);
     throw error;
+  }
+};
+
+/**
+ * Delete a department
+ * @param {string} id - Department ID
+ * @returns {Promise<boolean>} Success status
+ */
+export const normalizeDepartments = async () => {
+  try {
+    const snapshot = await getDocs(departmentsCollection);
+    const all = snapshot.docs.map(d => ({ docId: d.id, data: d.data() }));
+    const docIds = new Set(all.map(x => x.docId));
+    const keep = new Set();
+    let changed = false;
+    for (const { docId, data } of all) {
+      const stableId = data.id || docId;
+      const name = (data.name || '').trim();
+      // Ta bort dokument utan namn (skräp från misslyckade försök)
+      if (!name) {
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+        continue;
+      }
+      // Flytta auto-ID-dokument till stabilt ID
+      if (docId !== stableId) {
+        if (!docIds.has(stableId) && !keep.has(stableId)) {
+          await setDoc(doc(db, "departments", stableId), data, { merge: true });
+          docIds.add(stableId);
+          keep.add(stableId);
+        }
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+        continue;
+      }
+      keep.add(stableId);
+    }
+    // Ta bort dubbletter: samma stabila ID behålls bara en gång (först träffad behålls)
+    const seenIds = new Set();
+    for (const { docId, data } of all) {
+      const stableId = data.id || docId;
+      if (!keep.has(stableId)) continue;
+      if (seenIds.has(stableId)) {
+        await deleteDoc(doc(db, "departments", docId));
+        docIds.delete(docId);
+        changed = true;
+      } else {
+        seenIds.add(stableId);
+      }
+    }
+    return changed;
+  } catch (error) {
+    console.error("Error normalizing departments:", error);
+    return false;
   }
 };
 
@@ -400,10 +742,15 @@ export const subscribeToEmployees = (callback) => {
 /**
  * Subscribe to realtime updates for shifts
  * @param {Function} callback - Callback function with array of shifts
+ * @param {Object} options - Optional { start, end } ISO dates (YYYY-MM-DD) to limit reads to a window
  * @returns {Function} Unsubscribe function
  */
-export const subscribeToShifts = (callback) => {
-  return onSnapshot(shiftsCollection, (snapshot) => {
+export const subscribeToShifts = (callback, options = {}) => {
+  const constraints = [];
+  if (options.start) constraints.push(where("date", ">=", options.start));
+  if (options.end) constraints.push(where("date", "<=", options.end));
+  const q = constraints.length > 0 ? query(shiftsCollection, ...constraints) : shiftsCollection;
+  return onSnapshot(q, (snapshot) => {
     const shifts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(shifts);
   });
@@ -418,6 +765,72 @@ export const subscribeToDepartments = (callback) => {
   return onSnapshot(departmentsCollection, (snapshot) => {
     const departments = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     callback(departments);
+  });
+};
+
+// ===== VAKTMALLER (forhåndsdefinerte vakttider, t.ex. 08:45-16:00) =====
+// Lagres i staffingConfig-dokumentet (shiftTemplates-feltet) fordi den samlingen
+// allerede har åpne Firestore-regler — en egen samling krever regeldeploy først.
+
+export const getShiftTemplates = async () => {
+  try {
+    const snap = await getDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC));
+    const list = snap.exists() ? snap.data().shiftTemplates : null;
+    return Array.isArray(list) ? list : [];
+  } catch (error) {
+    console.error("Error getting shift templates:", error);
+    return [];
+  }
+};
+
+export const saveShiftTemplates = async (templates) => {
+  try {
+    await setDoc(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), { shiftTemplates: templates }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error saving shift templates:", error);
+    throw error;
+  }
+};
+
+export const addShiftTemplate = async (template) => {
+  try {
+    const list = await getShiftTemplates();
+    const entry = { ...template, id: template.id || `tpl-${Date.now()}` };
+    await saveShiftTemplates([...list, entry]);
+    return entry;
+  } catch (error) {
+    console.error("Error adding shift template:", error);
+    throw error;
+  }
+};
+
+export const updateShiftTemplate = async (id, updates) => {
+  try {
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.map(t => (t.id === id ? { ...t, ...updates, id } : t)));
+    return true;
+  } catch (error) {
+    console.error("Error updating shift template:", error);
+    throw error;
+  }
+};
+
+export const deleteShiftTemplate = async (id) => {
+  try {
+    const list = await getShiftTemplates();
+    await saveShiftTemplates(list.filter(t => t.id !== id));
+    return true;
+  } catch (error) {
+    console.error("Error deleting shift template:", error);
+    throw error;
+  }
+};
+
+export const subscribeToShiftTemplates = (callback) => {
+  return onSnapshot(doc(db, "staffingConfig", STAFFING_CONFIG_DOC), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    callback(Array.isArray(data.shiftTemplates) ? data.shiftTemplates : []);
   });
 };
 

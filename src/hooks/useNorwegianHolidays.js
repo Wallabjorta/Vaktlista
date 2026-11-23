@@ -6,7 +6,8 @@ const FIXED_HOLIDAYS = {
   '01-01': 'Nyttårsdag',
   '05-01': '1. mai',
   '05-17': 'Grunnlovsdag',
-  '12-24': 'Juleaften',
+  // OBS: 24. desember (juleaften) räknas INTE som helligdag — det är en
+  // vanlig öppen dag med tidig stängning (kl 13:00 i auto-fyllen).
   '12-25': '1. juledag',
   '12-26': '2. juledag'
 };
