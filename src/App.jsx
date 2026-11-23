@@ -157,6 +157,7 @@ function App() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showShiftTemplateModal, setShowShiftTemplateModal] = useState(false);
+  const [showRescueOverview, setShowRescueOverview] = useState(true);
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showGroupEventModal, setShowGroupEventModal] = useState(false);
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
@@ -963,7 +964,19 @@ function App() {
         </div>
       </header>
 
-      <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
+      {currentUser && (
+        <div className="flex justify-end -mb-1">
+          <button
+            onClick={() => setShowRescueOverview(v => !v)}
+            className="text-xs text-gray-500 hover:text-gray-800 underline"
+          >
+            {showRescueOverview ? 'Skjul redningsmann-oversikt ▲' : 'Vis redningsmann-oversikt ▼'}
+          </button>
+        </div>
+      )}
+      {showRescueOverview && (
+        <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
+      )}
 
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
