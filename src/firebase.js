@@ -659,6 +659,27 @@ export const updateShift = async (id, updates) => {
  * @param {string} id - Shift ID
  * @returns {Promise<boolean>} Success status
  */
+/**
+ * Rader alle vakter i et datointervall (YYYY-MM-DD), eller tell dem ved dryRun.
+ * Brukes av superadmin-knappen «Slett periode» i 3-månedersoversikten.
+ */
+export const deleteShiftsByDateRange = async (startDate, endDate, { dryRun = false } = {}) => {
+  const q = query(shiftsCollection, where('date', '>=', startDate), where('date', '<=', endDate));
+  const snap = await getDocs(q);
+  const total = snap.docs.length;
+  let deleted = 0;
+  if (!dryRun && total > 0) {
+    for (let i = 0; i < snap.docs.length; i += 450) {
+      const chunk = snap.docs.slice(i, i + 450);
+      const batch = writeBatch(db);
+      chunk.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      deleted += chunk.length;
+    }
+  }
+  return { total, deleted };
+};
+
 export const deleteShift = async (id) => {
   try {
     console.log("Deleting shift with ID:", id);

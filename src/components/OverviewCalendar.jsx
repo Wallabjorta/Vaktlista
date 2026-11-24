@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { EMPLOYEE_CATEGORIES, groupByShiftCategory, SHIFTS_BY_CATEGORY } from './ShiftCalendar';
 import GroupBarsRow from './GroupBarsRow';
-import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
+import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing, deleteShiftsByDateRange } from '../firebase';
 import { auditShifts } from '../hooks/useWorkLawValidation';
 
 const DEFAULT_STAFFING_CONFIG = {
@@ -238,6 +238,37 @@ function OverviewCalendar({
   const [showBulkModal, setShowBulkModal] = useState(false);
   // Felsøk: brudd på arbeidslover funnet i oversikten (null = ikke kjørt / av)
   const [debugIssues, setDebugIssues] = useState(null);
+  // Slett alle vakter i periode (superadmin)
+  const [showDeleteRange, setShowDeleteRange] = useState(false);
+  const [delStart, setDelStart] = useState('');
+  const [delEnd, setDelEnd] = useState('');
+  const [rangeCount, setRangeCount] = useState(null);
+  const [deletingRange, setDeletingRange] = useState(false);
+
+  useEffect(() => {
+    if (!showDeleteRange || !delStart || !delEnd || delStart > delEnd) { setRangeCount(null); return; }
+    let cancelled = false;
+    deleteShiftsByDateRange(delStart, delEnd, { dryRun: true })
+      .then(r => { if (!cancelled) setRangeCount(r.total); })
+      .catch(() => { if (!cancelled) setRangeCount(null); });
+    return () => { cancelled = true; };
+  }, [showDeleteRange, delStart, delEnd]);
+
+  const handleDeleteRange = async () => {
+    if (!delStart || !delEnd) return;
+    const n = rangeCount ?? 0;
+    if (!window.confirm(`Sikker på at du vil slette ALLE ${n} vakter fra ${delStart} til ${delEnd}?\nDette kan ikke angres!`)) return;
+    setDeletingRange(true);
+    try {
+      const r = await deleteShiftsByDateRange(delStart, delEnd);
+      alert(`Slettet ${r.deleted} vakter (${delStart} – ${delEnd})`);
+      setShowDeleteRange(false);
+    } catch (e) {
+      alert('Feil ved sletting: ' + e.message);
+    } finally {
+      setDeletingRange(false);
+    }
+  };
   const violationShiftIds = useMemo(() => {
     if (!debugIssues) return new Set();
     return new Set(debugIssues.flatMap(i => i.shiftIds || []));
@@ -357,6 +388,19 @@ function OverviewCalendar({
                 title="Generer vakter automatisk basert på omsetning, søndager, helligdager og ansettelsesprosent"
               >
                 Auto-fyll vakter
+              </button>
+            )}
+            {currentUser?.isSuperadmin && (
+              <button
+                onClick={() => {
+                  setDelStart(dates.length ? toDateStr(dates[0]) : '');
+                  setDelEnd(dates.length ? toDateStr(dates[dates.length - 1]) : '');
+                  setShowDeleteRange(true);
+                }}
+                className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 whitespace-nowrap"
+                title="Slett ALLE vakter i valgt periode (f.eks. det auto-utfylling har lagt inn)"
+              >
+                🗑 Slett periode
               </button>
             )}
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
@@ -668,6 +712,47 @@ function OverviewCalendar({
           </div>
         )}
       </div>
+
+      {showDeleteRange && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full border">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-red-700">🗑 Slett alle vakter i periode</h2>
+              <button onClick={() => setShowDeleteRange(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Dette sletter <strong>alle vakter for alle ansatte</strong> i valgt periode — f.eks. alt auto-utfylling har lagt inn. Kan ikke angres.
+            </p>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Fra dato</label>
+                <input type="date" value={delStart} onChange={(e) => setDelStart(e.target.value)} className="w-full p-2 border rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Til dato</label>
+                <input type="date" value={delEnd} onChange={(e) => setDelEnd(e.target.value)} className="w-full p-2 border rounded" />
+              </div>
+            </div>
+            <p className="text-sm mb-4">
+              {delStart && delEnd && delStart <= delEnd
+                ? (rangeCount === null ? 'Teller vakter…' : <span><strong>{rangeCount} vakter</strong> i denne perioden vil bli slettet.</span>)
+                : 'Velg gyldig periode.'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteRange}
+                disabled={deletingRange || !rangeCount}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 flex-1"
+              >
+                {deletingRange ? 'Sletter…' : `Slett ${rangeCount ?? 0} vakter`}
+              </button>
+              <button onClick={() => setShowDeleteRange(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 flex-1">
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
