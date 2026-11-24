@@ -108,7 +108,7 @@ function GroupOverviewCalendar({ currentDate, currentUser, onClose, onAddEvent, 
         </div>
 
         <div className="overflow-x-auto overflow-y-auto max-h-[calc(90vh-60px)]">
-          <table className="w-full border-collapse" style={{ tableLayout: 'fixed', minWidth: '2660px' }}>
+          <table className="w-full border-separate" style={{ tableLayout: 'fixed', minWidth: '2660px', borderSpacing: 0 }}>
             <thead>
               <tr className="border-b">
                 <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30" style={{ backgroundColor: '#f9fafb', width: '140px' }}>

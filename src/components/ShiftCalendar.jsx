@@ -255,7 +255,7 @@ function ShiftCalendar({
 
   return (
     <div className="bg-white border rounded-lg shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-160px)]">
-      <table className="w-full border-collapse min-w-[600px] md:min-w-[800px]">
+      <table className="w-full border-separate min-w-[600px] md:min-w-[800px]" style={{ borderSpacing: 0 }}>
           <thead>
             <tr className="border-b">
               <th className="p-1 border-r bg-gray-50 sticky left-0 top-0 z-30 min-w-[100px] md:min-w-[140px] lg:min-w-[180px]">

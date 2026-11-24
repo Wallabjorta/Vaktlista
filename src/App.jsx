@@ -3,6 +3,7 @@ import ShiftCalendar from './components/ShiftCalendar';
 import OverviewCalendar from './components/OverviewCalendar';
 import GroupOverviewCalendar from './components/GroupOverviewCalendar';
 import LoginModal from './components/LoginModal';
+import PublicRescueOverview from './components/PublicRescueOverview';
 import AddShiftModal from './components/AddShiftModal';
 import EditShiftModal from './components/EditShiftModal';
 import EditEmployeeModal from './components/EditEmployeeModal';
@@ -156,6 +157,7 @@ function App() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showShiftTemplateModal, setShowShiftTemplateModal] = useState(false);
+  const [showRescueOverview, setShowRescueOverview] = useState(false); // skjult som standard når innlogget
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false);
   const [showGroupEventModal, setShowGroupEventModal] = useState(false);
   const [groupEventToEdit, setGroupEventToEdit] = useState(null);
@@ -184,7 +186,7 @@ function App() {
   const holidays = Object.keys(holidaysObj);
   
   // Validering av norske arbeidslover
-  const { validate } = useWorkLawValidation(shifts, holidaysObj);
+  const { validate } = useWorkLawValidation(shifts, holidaysObj, departments);
 
   // Load user from localStorage on initial render
   useEffect(() => {
@@ -352,7 +354,7 @@ function App() {
     }
 
     // Varning for norsk arbeidslov (men till\u00e5t \u00e5nd\u00e5)
-    const validation = validate(newShift.employeeId, newShift.date);
+    const validation = validate(newShift.employeeId, newShift.date, newShift.departmentId);
     if (!validation.isValid) {
       alert(`\u26a0\ufe0f Advarsel: ${validation.errors.join(', ')}. Vakt lagt til likevel.`);
     }
@@ -432,7 +434,7 @@ function App() {
       const validatedSoFar = [...shifts];
       const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
       for (const shift of sortedShifts) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
         }
@@ -510,7 +512,7 @@ function App() {
       const validatedSoFar = [...shifts];
       const sortedShifts = [...shiftsToSave].sort((a, b) => a.date.localeCompare(b.date));
       for (const shift of sortedShifts) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date}: ${validation.errors.join(', ')}`);
         }
@@ -557,7 +559,7 @@ function App() {
         return;
       }
       for (const shift of sorted) {
-        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj);
+        const validation = validateShift(shift.employeeId, shift.date, validatedSoFar, holidaysObj, departments, shift.departmentId);
         if (!validation.isValid) {
           warnings.push(`${shift.date} (${shift.employeeName || shift.employeeId}): ${validation.errors.join(', ')}`);
         }
@@ -962,6 +964,21 @@ function App() {
         </div>
       </header>
 
+      {currentUser && (
+        <div className="relative z-20 flex justify-end mb-1 bg-gray-50">
+          <button
+            onClick={() => setShowRescueOverview(v => !v)}
+            className="px-2.5 py-1 text-xs font-medium bg-red-50 text-red-700 border border-red-300 rounded-full shadow-sm hover:bg-red-100"
+            title="Vis/skjul oversikt over redningsmenn på jobb"
+          >
+            🚑 {showRescueOverview ? 'Skjul redningsmenn ▲' : 'Vis redningsmenn ▼'}
+          </button>
+        </div>
+      )}
+      {(!currentUser || showRescueOverview) && (
+        <PublicRescueOverview employees={employees} shifts={shifts} departments={departments} />
+      )}
+
       <div className="flex gap-2 mb-4 flex-wrap items-center">
         <button
           onClick={() => setSelectedDepartment(null)}
@@ -1285,6 +1302,7 @@ function App() {
           employees={employees}
           shifts={shifts}
           departments={departments}
+          shiftTemplates={shiftTemplates}
           holidays={Object.keys(holidaysObj || {})}
           vacations={VACATIONS}
           selectedDepartment={selectedDepartment}
