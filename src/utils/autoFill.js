@@ -468,18 +468,49 @@ export const generateAutoFill = ({
   const pickPairFor = (info) => {
     if (pairEmps.length === 0 || pairCovered(info)) return null;
     const wk = weekKeyFor(info.date);
-    return pairEmps
+    // Föregående kalenderdag (för bulkordning — samma som i pickFor)
+    const [py, pm, pd] = info.dateStr.split('-').map(Number);
+    const prevDateStr = toDateStr(new Date(py, pm - 1, pd - 1));
+    const eligible = pairEmps
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       .filter(emp => weekendOk(emp.id, info))
-      .filter(emp => consecutiveWorkBefore(emp.id, info.dateStr) < MAX_CONSECUTIVE_WORKDAYS)
+      .filter(emp => consecutiveWorkBefore(emp.id, info.dateStr) < MAX_CONSECUTIVE_WORKDAYS);
+    // Minst arbetade dagar denna vecka i paret — för bulker-ledningsvakten
+    const minWorked = eligible.length > 0
+      ? Math.min(...eligible.map(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0)))
+      : null;
+    // LAVSESONG: samma som i pickFor — blocket får fortsätta upp till veckotaket,
+    // annars bryts det efter max 2 dagar över den minst arbetade (rättvisa).
+    const lowSeason = lowSeasonWeek(wk);
+    const lead = (emp) => {
+      if (minWorked == null) return 1;
+      const cap = lowSeason ? MAX_DAYS_PER_WEEK : 2;
+      return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorked < cap ? 0 : 1;
+    };
+    return eligible
       .sort((a, b) => {
         if (info.isWeekend || info.isHoliday) {
           const ah = (holidayCountByEmp.get(String(a.id)) || 0);
           const bh = (holidayCountByEmp.get(String(b.id)) || 0);
           if (ah !== bh) return ah - bh;
         }
-        return (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) - (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) ||
-          String(a.id).localeCompare(String(b.id));
+        // BULKORdning: den i paret som jobbade FÖREGÅENDE dag fortsätter —
+        // paret får då flera dagar i rad i stället för varannan dag.
+        const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
+        const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
+        if (pa !== pb) return pa - pb;
+        // Rättvis fördelning mot kontrakt: lägst fyllnadsgrad först
+        const ar = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) / targetDaysFor(a);
+        const br = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) / targetDaysFor(b);
+        if (ar !== br) return ar - br;
+        const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
+        const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
+        if (ad !== bd) return ad - bd;
+        // Växla mellan parets medlemmar över körningar/veckor
+        const ap = (plannedCount.get(a.id) || 0);
+        const bp = (plannedCount.get(b.id) || 0);
+        if (ap !== bp) return ap - bp;
+        return String(a.id).localeCompare(String(b.id));
       })[0] || null;
   };
 
