@@ -43,6 +43,7 @@ Webbapp för vaktlistor/schema för ett skidanläggningens personal (norwegiska 
 - I varje session: föreslå för användaren vilket flow som passar den aktuella ändringen.
 
 ## Aktuellt läge
+*(Senast uppdaterad av agent: 2026-11-24, session om 2 dagar fri före bulk: rank() i autoFill.js har nu keepsTwoConsecutiveFree FÖRE bulk-kluster — fridagar klustras (test: två anställda fick varsin 2-dagars-fri-rekke). `npm run build` OK.)*
 *(Senast uppdaterad av agent: 2026-11-24, session om max 7 vakter i rad: autoFill.js har nå hårt tak MAX_CONSECUTIVE_WORKDAYS=7 (consecutiveWorkBefore teller bakåt over befintliga+planlagte vakter, også over helg/juleferie) — filter i pickFor, pickPairFor och helg-par. Test: etter 7 sammenhengende dager ble dag 8 blokkert. `npm run build` OK.)*
 *(Senast uppdaterad av agent: 2026-11-24, session om rättvis fördelning i autoFill: rank() prioriterar nu lägst fyllnadsgrad (jobbade/måldagar) först, därefter högst kontraktsprocent vid lika grad (80 % får aldrig mindre än 70 %); bulk-kluster kommer efter. Test: 100/80/50 → 4/3/3, 80-vs-70 → 3/2. `npm run build` OK.)*
 *(Senast uppdaterad av agent: 2026-11-24, session om hela helger för extra i autoFill: addAssignmentWithWeekendPair i autoFill.js — när en helgansatt (weekendOnly) får en helgedag ges samma person även partnern (lör+sön) om den dagen behöver bemanning och reglerna tillåter. Testat med node-simulering (TZ=Europe/Oslo): ekstra fick hela helgen. `npm run build` OK.)*

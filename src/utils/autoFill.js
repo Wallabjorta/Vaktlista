@@ -540,6 +540,10 @@ export const generateAutoFill = ({
         return p > 0 ? p : 100;
       };
       if (pctOf(a) !== pctOf(b)) return pctOf(b) - pctOf(a);
+      // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
+      const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
+      const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
+      if (af !== bf) return af - bf;
       // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
       // väljs först — vakter klustras till sammanhängande bulker (block) i
       // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
@@ -554,10 +558,6 @@ export const generateAutoFill = ({
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
       if (pa !== pb) return pa - pb;
-      // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
-      const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
-      const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
-      if (af !== bf) return af - bf;
       const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
       const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
       if (ad !== bd) return ad - bd;
