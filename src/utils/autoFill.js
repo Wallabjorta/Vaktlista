@@ -484,9 +484,11 @@ export const generateAutoFill = ({
     // Blocket får fortsätta max 2 dagar över den minst arbetade i paret —
     // då blir det block på 2-3 dagar i rad för alla (även i lavsæsong), inte
     // hela veckan för samma person (varannan vecka) eller varannan dag.
+    const workedOf = (emp) => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0);
+    // Blocket bryts när någon ligger före minst arbetade ELLER vid kontraktsmål (minimum).
     const lead = (emp) => {
       if (minWorked == null) return 1;
-      return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorked < 2 ? 0 : 1;
+      return (workedOf(emp) - minWorked < 1 && workedOf(emp) < targetDaysFor(emp)) ? 0 : 1;
     };
     return eligible.sort((a, b) => {
       if (info.isWeekend || info.isHoliday) {
@@ -498,13 +500,13 @@ export const generateAutoFill = ({
       // paret får då flera dagar i rad i stället för varannan dag.
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
+      // KONTRAKT = MINIMUM (före block), överskott liks — samma som i pickFor
+      const belowA = workedOf(a) < targetDaysFor(a);
+      const belowB = workedOf(b) < targetDaysFor(b);
+      if (belowA !== belowB) return belowA ? -1 : 1;
       if (pa !== pb) return pa - pb;
-      // Rättvis fördelning mot kontrakt: lägst fyllnadsgrad först
-      const ar = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) / targetDaysFor(a);
-      const br = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) / targetDaysFor(b);
-      if (ar !== br) return ar - br;
-      const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
-      const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
+      const ad = workedOf(a);
+      const bd = workedOf(b);
       if (ad !== bd) return ad - bd;
       // Växla mellan parets medlemmar över körningar/veckor
       const ap = (plannedCount.get(a.id) || 0);
@@ -572,28 +574,31 @@ export const generateAutoFill = ({
       // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
       // väljs först — vakter klustras till sammanhängande bulker (block) i
       // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
-      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 2
-      //    arbetsdagar före den som arbetat minst i poolen denna vecka — annars
-      //    slår kontraktsjämnheten till och blocket bryts (kluster på 2-3 dagar
+      //    Vakten: blocket får bara fortsätta om den anställda INTE ligger före
+      //    den som arbetat minst i poolen denna vecka — annars
+      //    slår jämnheten till och blocket bryts (kluster på ~2 dagar
       //    före nästa tar över). Så blir det flera dagar i rad i stället för
       //    varannan dag, MEN inte hela veckan för samma person — i lavsæsong ska
       //    alla få några arbetsdagar (och några dagar fri, t.ex. 3) varje vecka,
       //    inte varannan vecka.
+      const workedOf = (emp) => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0);
+      // KONTRAKT = MINIMUM (går FÖRE block): den som ligger UNDER sitt kontraktsmål
+      // denna vecka väljs före den som nått det — alla ska minst fylla kontraktet.
+      const belowA = workedOf(a) < targetDaysFor(a);
+      const belowB = workedOf(b) < targetDaysFor(b);
+      if (belowA !== belowB) return belowA ? -1 : 1;
+      // Blocket bryts när någon ligger före den minst arbetade ELLER har nått
+      // sitt kontraktsmål (targetDaysFor) denna vecka.
       const lead = (emp) => {
         if (minWorkedThisWeek == null) return 1;
-        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < 2 ? 0 : 1;
+        return (workedOf(emp) - minWorkedThisWeek < 1 && workedOf(emp) < targetDaysFor(emp)) ? 0 : 1;
       };
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
       if (pa !== pb) return pa - pb;
-      // RÄTTVIS FÖRDELNING MOT KONTRAKT: lägst fyllnadsgrad (jobbade/måldagar
-      // denna vecka) väljs först — jämn fördelning vecka för vecka, så det inte
-      // blir 1 vakt för en anställd och 5 för en annan.
-      const fillRatio = (emp) =>
-        (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) / targetDaysFor(emp);
-      const ar = fillRatio(a);
-      const br = fillRatio(b);
-      if (ar !== br) return ar - br;
+      // Fördela dagar LIKS: råa arbetsdagar denna vecka först — både när båda ligger
+      // under kontraktsmålet och när båda nått det (överskott liks, inte efter %).
+      if (workedOf(a) !== workedOf(b)) return workedOf(a) - workedOf(b);
       // Vid lika fyllnadsgrad: högst kontraktsprocent först — en 80 %-anställd
       // ska aldrig få mindre jobb än en 70 %-anställd (får gärna gå över %).
       const pctOf = (emp) => {
