@@ -485,7 +485,7 @@ export const generateAutoFill = ({
     // då blir det block på 2-3 dagar i rad för alla (även i lavsæsong), inte
     // hela veckan för samma person (varannan vecka) eller varannan dag.
     const workedOf = (emp) => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0);
-    // Blocket bryts vid >2 över minst arbetade ELLER vid kontraktsmål (minimum).
+    // Blocket bryts när någon ligger före minst arbetade ELLER vid kontraktsmål (minimum).
     const lead = (emp) => {
       if (minWorked == null) return 1;
       return (workedOf(emp) - minWorked < 1 && workedOf(emp) < targetDaysFor(emp)) ? 0 : 1;
@@ -574,9 +574,9 @@ export const generateAutoFill = ({
       // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
       // väljs först — vakter klustras till sammanhängande bulker (block) i
       // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
-      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 2
-      //    arbetsdagar före den som arbetat minst i poolen denna vecka — annars
-      //    slår kontraktsjämnheten till och blocket bryts (kluster på 2-3 dagar
+      //    Vakten: blocket får bara fortsätta om den anställda INTE ligger före
+      //    den som arbetat minst i poolen denna vecka — annars
+      //    slår jämnheten till och blocket bryts (kluster på ~2 dagar
       //    före nästa tar över). Så blir det flera dagar i rad i stället för
       //    varannan dag, MEN inte hela veckan för samma person — i lavsæsong ska
       //    alla få några arbetsdagar (och några dagar fri, t.ex. 3) varje vecka,
@@ -587,7 +587,7 @@ export const generateAutoFill = ({
       const belowA = workedOf(a) < targetDaysFor(a);
       const belowB = workedOf(b) < targetDaysFor(b);
       if (belowA !== belowB) return belowA ? -1 : 1;
-      // Blocket bryts när någon ligger >2 före den minst arbetade ELLER har nått
+      // Blocket bryts när någon ligger före den minst arbetade ELLER har nått
       // sitt kontraktsmål (targetDaysFor) denna vecka.
       const lead = (emp) => {
         if (minWorkedThisWeek == null) return 1;
