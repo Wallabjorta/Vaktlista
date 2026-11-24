@@ -505,19 +505,24 @@ export const generateAutoFill = ({
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
         if (ah !== bh) return ah - bh;
       }
-      // Kontraktsprocenten avgör: den som är MINST fylld mot sitt kontrakt
-      // (arbetsdagar/måldagar för veckan) väljs först — så en 100 %-anställd
-      // hinner inte hamna 3 vakter efter en 50 %-anställd.
+      // RÄTTVIS FÖRDELNING MOT KONTRAKT: lägst fyllnadsgrad (jobbade/måldagar
+      // denna vecka) väljs först — jämn fördelning vecka för vecka, så det inte
+      // blir 1 vakt för en anställd och 5 för en annan.
       const fillRatio = (emp) =>
         (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) / targetDaysFor(emp);
-      // 1) Kontraktsminimummet först: den som ännu är UNDER sitt kontrakts-
-      //    minimum (måldagar/vecka enligt procenten) väljs före de som nått det.
-      const am = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) < targetDaysFor(a) ? 0 : 1;
-      const bm = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) < targetDaysFor(b) ? 0 : 1;
-      if (am !== bm) return am - bm;
-      // 2) BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
-      //    väljs först — vakter klustras till sammanhängande bulker (block) i
-      //    stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
+      const ar = fillRatio(a);
+      const br = fillRatio(b);
+      if (ar !== br) return ar - br;
+      // Vid lika fyllnadsgrad: högst kontraktsprocent först — en 80 %-anställd
+      // ska aldrig få mindre jobb än en 70 %-anställd (får gärna gå över %).
+      const pctOf = (emp) => {
+        const p = Number(emp && emp.contractPercent);
+        return p > 0 ? p : 100;
+      };
+      if (pctOf(a) !== pctOf(b)) return pctOf(b) - pctOf(a);
+      // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
+      // väljs först — vakter klustras till sammanhängande bulker (block) i
+      // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
       //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 1
       //    arbetsdag före den som arbetat minst i poolen denna vecka — annars
       //    slår kontraktsjämnheten till och blocket bryts (kluster max ~2-3
@@ -529,10 +534,6 @@ export const generateAutoFill = ({
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
       if (pa !== pb) return pa - pb;
-      // 3) Därefter den som är minst fylld mot kontraktet
-      const ar = fillRatio(a);
-      const br = fillRatio(b);
-      if (ar !== br) return ar - br;
       // Mjuk prioritering: den som kan behålla 2 dagar fri på rad väljs först
       const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
       const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
