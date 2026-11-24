@@ -393,7 +393,7 @@ export const generateAutoFill = ({
     if (busyByEmpDate.has(`${emp.id}_${partnerStr}`)) return;
     if ((workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) >= MAX_DAYS_PER_WEEK) return;
     if (!weekendOk(emp.id, pInfo)) return; // max 2 helgedagar på rad
-    if (consecutiveWorkBefore(emp.id, partnerStr) >= MAX_CONSECUTIVE_WORKDAYS) return; // max 7 i rad
+    if (consecutiveWorkBefore(emp.id, partnerStr) >= MAX_CONSECUTIVE_WORKDAYS) return; // max 8 i rad
     addAssignment(pInfo, emp);
   };
 
@@ -414,8 +414,8 @@ export const generateAutoFill = ({
     if (!busyDatesByEmp.has(String(empId))) busyDatesByEmp.set(String(empId), new Set());
     busyDatesByEmp.get(String(empId)).add(dateStr);
   };
-  // HÅRT TAK: max 7 arbetsdagar i rad (norsk arbeidsmiljö) — även över veckogräns.
-  const MAX_CONSECUTIVE_WORKDAYS = 7;
+  // HÅRT TAK: max 8 arbeidsdagar i rad (ändrat från 7 per Bjørn 2026-11-24) — även över veckogräns.
+  const MAX_CONSECUTIVE_WORKDAYS = 8;
   // Pågående följd av arbetsdagar BAKÅT från dagen före dateStr (befintliga + planerade)
   const consecutiveWorkBefore = (empId, dateStr) => {
     const busy = busyDatesByEmp.get(String(empId));
@@ -558,7 +558,7 @@ export const generateAutoFill = ({
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       // Max 2 helgedagar på rad per ansatt
       .filter(emp => weekendOk(emp.id, info))
-      // Hårt tak: max 7 arbeidsdagar i rad
+      // Hårt tak: max 8 arbeidsdagar i rad
       .filter(emp => consecutiveWorkBefore(emp.id, info.dateStr) < MAX_CONSECUTIVE_WORKDAYS);
     const rank = (a, b) => {
       const isRedDay = info.isWeekend || info.isHoliday;
