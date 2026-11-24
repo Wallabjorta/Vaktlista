@@ -507,7 +507,9 @@ export const generateAutoFill = ({
       // Helgansatte jobbar normalt bare helger (lør/sön) + helligdager — men
       // i juleferien (19/12–03/01) får de jobga ALLA dagar (efter fasta, som
       // reserv), och i nödfall (relaxed) när annars 2+ vakter blir ofyllda
-      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || relaxed || !weekendOnly.has(String(emp.id)))
+      // Helgansatte (extra) får BARE lørdag/søndag (+ helligdager og juleferie) —
+      // aldri fredager/ukedager, ikke engang i nødfall (relaxed). Hele helger tildeles parvis.
+      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || !weekendOnly.has(String(emp.id)))
       // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
       // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
       // högt bemanningsbehov får även en 50 %-anställd fler dagar (upp till 5).
