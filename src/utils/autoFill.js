@@ -530,13 +530,17 @@ export const generateAutoFill = ({
       // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
       // väljs först — vakter klustras till sammanhängande bulker (block) i
       // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
-      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 1
-      //    arbetsdag före den som arbetat minst i poolen denna vecka — annars
-      //    slår kontraktsjämnheten till och blocket bryts (kluster max ~2-3
-      //    dagar före nästa tar över).
+      //    Vakten: i HÖGSESONG får blocket bara fortsätta om den anställda ligger
+      //    max 2 arbetsdagar före den som arbetat minst i poolen denna vecka —
+      //    annars slår kontraktsjämnheten till och blocket bryts. I LAVSESONG
+      //    (lågt ukedagsbehov per fast anställd denna vecka) får blocket fortsätta
+      //    ända upp till veckotaket (MAX_DAYS_PER_WEEK) — då blir det flera dagar
+      //    i rad för samma person i stället för varannan dag.
+      const lowSeason = lowSeasonWeek(wk);
       const lead = (emp) => {
         if (minWorkedThisWeek == null) return 1;
-        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < 2 ? 0 : 1;
+        const cap = lowSeason ? MAX_DAYS_PER_WEEK : 2;
+        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < cap ? 0 : 1;
       };
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
@@ -584,6 +588,22 @@ export const generateAutoFill = ({
     const extras = eligible.filter(emp => weekendOnly.has(String(emp.id)));
     return pickFrom(faste) || pickFrom(extras);
   };
+
+  // LAVSESONG: om ukedagsbehovet denna vecka är lågt jämfört med antalet
+  // fasta i poolen (≤ ~3 arbetsdagar per person) får den som redan jobbar
+  // fortsätta flera dagar i rad — block (t.ex. hela veckan för samma person)
+  // i stället för varannan-dag-mönster. I högsäsong bryts blocket fortfarande
+  // efter max 2 dagar över den minst arbetade (rättvis fördelning vecka för vecka).
+  const fastePoolSize = Math.max(1, candidates.filter(e => !weekendOnly.has(String(e.id))).length);
+  const weekdayNeedByWk = new Map();
+  for (const info of dayInfos) {
+    const dow = info.date.getDay();
+    if (dow === 0 || dow === 6) continue; // bara vardagar — helger kan alla täcka
+    const wk = weekKeyFor(info.date);
+    const remaining = Math.max(0, info.fullNeed - (info.existing0 || 0));
+    weekdayNeedByWk.set(wk, (weekdayNeedByWk.get(wk) || 0) + remaining);
+  }
+  const lowSeasonWeek = (wk) => (weekdayNeedByWk.get(wk) || 0) / fastePoolSize <= 3;
 
   // Pass 0: «Alltid en på jobb»-paret är HÅRT — en ur paret jobbar VARJE dag
   // i perioden, även om bemanningsbehovet redan är nått. Väljs innan allt
