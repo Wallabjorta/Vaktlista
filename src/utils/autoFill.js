@@ -525,6 +525,20 @@ export const generateAutoFill = ({
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
         if (ah !== bh) return ah - bh;
       }
+      // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
+      // väljs först — vakter klustras till sammanhängande bulker (block) i
+      // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
+      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 1
+      //    arbetsdag före den som arbetat minst i poolen denna vecka — annars
+      //    slår kontraktsjämnheten till och blocket bryts (kluster max ~2-3
+      //    dagar före nästa tar över).
+      const lead = (emp) => {
+        if (minWorkedThisWeek == null) return 1;
+        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < 2 ? 0 : 1;
+      };
+      const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
+      const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
+      if (pa !== pb) return pa - pb;
       // RÄTTVIS FÖRDELNING MOT KONTRAKT: lägst fyllnadsgrad (jobbade/måldagar
       // denna vecka) väljs först — jämn fördelning vecka för vecka, så det inte
       // blir 1 vakt för en anställd och 5 för en annan.
@@ -544,20 +558,6 @@ export const generateAutoFill = ({
       const af = keepsTwoConsecutiveFree(a.id, wk, info.dateStr) ? 0 : 1;
       const bf = keepsTwoConsecutiveFree(b.id, wk, info.dateStr) ? 0 : 1;
       if (af !== bf) return af - bf;
-      // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
-      // väljs först — vakter klustras till sammanhängande bulker (block) i
-      // stället för utspridda enkeldagar, och fri-dagarna samlas ihop.
-      //    Vakten: blocket får bara fortsätta om den anställda ligger MAX 1
-      //    arbetsdag före den som arbetat minst i poolen denna vecka — annars
-      //    slår kontraktsjämnheten till och blocket bryts (kluster max ~2-3
-      //    dagar före nästa tar över).
-      const lead = (emp) => {
-        if (minWorkedThisWeek == null) return 1;
-        return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorkedThisWeek < 2 ? 0 : 1;
-      };
-      const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
-      const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
-      if (pa !== pb) return pa - pb;
       const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
       const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
       if (ad !== bd) return ad - bd;
