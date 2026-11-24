@@ -370,6 +370,31 @@ export const generateAutoFill = ({
     namesByDate.get(info.dateStr).push(emp.name);
   };
 
+  // HELA HELGER FÖR EXTRA/helgansatte: när en helgansatt (weekendOnly) får en
+  // helgedag, försök ge samma person även den andra dagen i samma helg
+  // (lördag+söndag tillsammans) — inte en lördag här och en söndag där.
+  const dayInfoByDate = new Map(dayInfos.map(d => [d.dateStr, d]));
+  const weekendPartnerOf = (dateStr) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dow = new Date(y, m - 1, d).getDay(); // 0=sön, 6=lör
+    if (dow !== 0 && dow !== 6) return null;
+    return toDateStr(new Date(y, m - 1, d + (dow === 6 ? 1 : -1)));
+  };
+  const addAssignmentWithWeekendPair = (info, emp) => {
+    addAssignment(info, emp);
+    if (!emp || !info.isWeekend || !weekendOnly.has(String(emp.id))) return;
+    const partnerStr = weekendPartnerOf(info.dateStr);
+    if (!partnerStr) return;
+    const pInfo = dayInfoByDate.get(partnerStr);
+    if (!pInfo || !pInfo.isWeekend) return;
+    if ((catStaffingByDate.get(partnerStr) || 0) >= pInfo.fullNeed) return; // redan täckt
+    const wk = weekKeyFor(pInfo.date);
+    if (busyByEmpDate.has(`${emp.id}_${partnerStr}`)) return;
+    if ((workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) >= MAX_DAYS_PER_WEEK) return;
+    if (!weekendOk(emp.id, pInfo)) return; // max 2 helgedagar på rad
+    addAssignment(pInfo, emp);
+  };
+
   // Datum per vecka (för «2 dagar fri på rad»-kontrollen)
   const weekDatesMap = new Map();
   for (const d of dates) {
@@ -584,7 +609,7 @@ export const generateAutoFill = ({
         );
         break;
       }
-      addAssignment(info, pick);
+      addAssignmentWithWeekendPair(info, pick);
     }
   }
 
@@ -613,7 +638,7 @@ export const generateAutoFill = ({
         );
         break;
       }
-      addAssignment(info, pick);
+      addAssignmentWithWeekendPair(info, pick);
     }
   }
 
