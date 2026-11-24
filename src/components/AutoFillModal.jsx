@@ -255,8 +255,9 @@ function AutoFillModal({
           <div className="border-t pt-3 space-y-2">
             <p className="text-sm font-medium">Alltid én på jobb (valgfritt)</p>
             <p className="text-xs text-gray-500">
-              Välj två ansatte — minst en av dem är alltid på jobb. När bemanningen
-              kräver 2+ vakter samma dag kan båda jobba samtidigt.
+              Välj två ansatte — minst en av dem är alltid på jobb. Övriga vakter
+              fördelas rättvist (alla ska minst fylla sitt kontrakt); extra kan fylla
+              flera vakter samma dag.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>

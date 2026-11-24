@@ -26,9 +26,9 @@
 // - Jämna RØDE DAGAR: fasta och extra anställda delar helger + helligdager
 //   lika — på røda dager väljs den med färst røda dagar först.
 // - Valfritt «alltid en på jobb»-par (HÅRT): minst en ur paret jobbar VARJE dag
-//   i perioden — även om behovet redan är nått; båda medlemmarna kan jobba
-//   samtidigt samma dag när bemanningsbehovet är ≥ 2. Kan ingen ur paret jobba
-//   blir det ett hårt fel (⚠️-varning, manuell åtgärd).
+//   i perioden — även om behovet redan är nått. Övriga vakter fördelas rättvist
+//   (alla ska minst fylla sitt kontrakt; extra kan fylla flera vakter samma dag).
+//   Kan ingen ur paret jobba blir det ett hårt fel (⚠️-varning, manuell åtgärd).
 
 const MAX_DAYS_PER_WEEK = 5;
 
@@ -521,13 +521,9 @@ export const generateAutoFill = ({
       .find(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`)) || null;
   };
 
-  // Pass 1/2: paret KAN jobba samtidigt — när behovet är ≥ 2 samma dag får även
-  // den andra medlemmen av paret vakten (även om dagen redan täcks av partnern).
-  const pickPairAnyFor = (info) => {
-    if (pairEmps.length === 0) return null;
-    return sortedPairCandidates(info)
-      .find(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`)) || null;
-  };
+  // (Pass 1/2 förlitar sig på vanlig pickFor — rättvis fördelning efter
+  // kontrakt/fyllnadsgrad — så att alla minst fyller sitt kontrakt och extra
+  // kan fylla flera vakter samma dag. Paret garanteras av pass 0.)
 
   // Måldagar/vecka per kontraktsprocent: ansettelsesprocenten är ett MINIMUM —
   // en 50 %-anställd ska få ~2,5 dagar/vecka INNAN 100 %-anställda får mer
@@ -636,10 +632,10 @@ export const generateAutoFill = ({
 
   // Pass 0: «Alltid en på jobb»-paret är HÅRT — MINST en ur paret jobbar VARJE
   // dag i perioden, även om bemanningsbehovet redan är nått. Väljs innan allt
-  // annat så att veckodagarstaket inte förbrukas först. I pass 1/2 kan båda
-  // parets medlemmar jobba SAMTIDIGT samma dag när behovet är ≥ 2. Om ingen ur
-  // paret kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad) är
-  // det ett hårt fel som måste lösas manuellt.
+  // annat så att veckodagarstaket inte förbrukas först. Övriga vakter (pass 1/2)
+  // fördelas rättvist via pickFor så alla minst fyller sitt kontrakt. Om ingen
+  // ur paret kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad)
+  // är det ett hårt fel som måste lösas manuellt.
   for (const info of dayInfos) {
     if (pairEmps.length === 0 || pairCovered(info)) continue;
     const pick = pickPairFor(info);
@@ -660,13 +656,10 @@ export const generateAutoFill = ({
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     if (existing >= minPerDay) continue;
     let missing = minPerDay - existing;
-    // Paret KAN jobba samtidigt: även när dagen redan täcks av ena medlemmen
-    // får den andra en vakt om bemanningsbehovet kräver det (behov ≥ 2).
-    const pickPair = pickPairAnyFor(info);
-    if (pickPair) {
-      addAssignment(info, pickPair);
-      missing -= 1;
-    } else if (pairEmps.length > 0 && !pairCovered(info)) {
+    // Pass 0 har redan gett dagen till paret när det gick. Övriga vakter
+    // fördelas RÄTTVIST via pickFor (fillRatio/kontrakt först) — så att alla
+    // minst fyller sitt kontrakt och extra/andra kan fylla flera vakter samma dag.
+    if (pairEmps.length > 0 && !pairCovered(info)) {
       warnings.push(
         `${info.dateStr}: ingen av det valda paret kan jobba (max ${MAX_DAYS_PER_WEEK} arbetsdagar/vecka nådd).`
       );
@@ -695,13 +688,9 @@ export const generateAutoFill = ({
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     let missing = Math.max(0, info.fullNeed - existing);
     if (missing <= 0) continue;
-    // Paret KAN jobba samtidigt: även när dagen redan täcks av ena medlemmen
-    // får den andra en vakt om bemanningsbehovet kräver det (behov ≥ 2).
-    const pickPair = pickPairAnyFor(info);
-    if (pickPair) {
-      addAssignment(info, pickPair);
-      missing -= 1;
-    }
+    // Ingen par-prioritet här: resterande behov fördelas rättvist via pickFor
+    // (fillRatio/kontrakt), så alla minst fyller kontraktet och extra kan fylla
+    // flera vakter samma dag (hela helger via addAssignmentWithWeekendPair).
     for (let i = 0; i < missing; i++) {
       let pick = pickFor(info);
       // Det får aldrig bli 2 vakter som ikke kan fylles — 1 er ok.
