@@ -494,7 +494,9 @@ export const generateAutoFill = ({
       if (info.isWeekend || info.isHoliday) {
         const ah = (holidayCountByEmp.get(String(a.id)) || 0);
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
-        if (ah !== bh) return ah - bh;
+        // Röd-dag-balans bara vid skillnad >1 (annars låser sig mönstret, t.ex. alla söndagar)
+        if (ah - bh > 1) return -1;
+        if (bh - ah > 1) return 1;
       }
       // BULKORDNING: den i paret som jobbade FÖREGÅENDE dag fortsätter —
       // paret får då flera dagar i rad i stället för varannan dag.
@@ -570,6 +572,11 @@ export const generateAutoFill = ({
         const ah = (holidayCountByEmp.get(String(a.id)) || 0);
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
         if (ah !== bh) return ah - bh;
+        // Vid lika antal röda dagar: växla (färst planlagda totalt vinner) så att
+        // inte samma person får alla söndagar/helger för evigt.
+        const ap = (plannedCount.get(a.id) || 0);
+        const bp = (plannedCount.get(b.id) || 0);
+        if (ap !== bp) return ap - bp;
       }
       // BULKORDBNING MED LEDNINGSVAKT: den som jobbade FÖREGÅENDE dag
       // väljs först — vakter klustras till sammanhängande bulker (block) i
