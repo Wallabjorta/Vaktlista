@@ -25,8 +25,9 @@
 //   arbetsdagar den veckan väljs först).
 // - Jämna RØDE DAGAR: fasta och extra anställda delar helger + helligdager
 //   lika — på røda dager väljs den med färst røda dagar först.
-// - Valfritt «alltid en på jobb»-par (HÅRT): en ur paret jobbar VARJE dag
-//   i perioden — även om behovet redan är nått. Kan ingen ur paret jobba
+// - Valfritt «alltid en på jobb»-par (HÅRT): minst en ur paret jobbar VARJE dag
+//   i perioden — även om behovet redan är nått; båda medlemmarna kan jobba
+//   samtidigt samma dag när bemanningsbehovet är ≥ 2. Kan ingen ur paret jobba
 //   blir det ett hårt fel (⚠️-varning, manuell åtgärd).
 
 const MAX_DAYS_PER_WEEK = 5;
@@ -465,8 +466,9 @@ export const generateAutoFill = ({
   const pairCovered = (info) =>
     pairEmps.length > 0 && pairEmps.some(emp => runBusyByEmpDate.has(`${emp.id}_${info.dateStr}`));
 
-  const pickPairFor = (info) => {
-    if (pairEmps.length === 0 || pairCovered(info)) return null;
+  // Alla par-medlemmar som KAN jobba info, sorterade enligt parets rankning
+  // (samma bulkordning som i pickFor — den som jobbade föregående dag fortsätter).
+  const sortedPairCandidates = (info) => {
     const wk = weekKeyFor(info.date);
     // Föregående kalenderdag (för bulkordning — samma som i pickFor)
     const [py, pm, pd] = info.dateStr.split('-').map(Number);
@@ -487,31 +489,45 @@ export const generateAutoFill = ({
       const cap = lowSeason ? MAX_DAYS_PER_WEEK : 2;
       return (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) - minWorked < cap ? 0 : 1;
     };
-    return eligible
-      .sort((a, b) => {
-        if (info.isWeekend || info.isHoliday) {
-          const ah = (holidayCountByEmp.get(String(a.id)) || 0);
-          const bh = (holidayCountByEmp.get(String(b.id)) || 0);
-          if (ah !== bh) return ah - bh;
-        }
-        // BULKORdning: den i paret som jobbade FÖREGÅENDE dag fortsätter —
-        // paret får då flera dagar i rad i stället för varannan dag.
-        const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
-        const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
-        if (pa !== pb) return pa - pb;
-        // Rättvis fördelning mot kontrakt: lägst fyllnadsgrad först
-        const ar = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) / targetDaysFor(a);
-        const br = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) / targetDaysFor(b);
-        if (ar !== br) return ar - br;
-        const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
-        const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
-        if (ad !== bd) return ad - bd;
-        // Växla mellan parets medlemmar över körningar/veckor
-        const ap = (plannedCount.get(a.id) || 0);
-        const bp = (plannedCount.get(b.id) || 0);
-        if (ap !== bp) return ap - bp;
-        return String(a.id).localeCompare(String(b.id));
-      })[0] || null;
+    return eligible.sort((a, b) => {
+      if (info.isWeekend || info.isHoliday) {
+        const ah = (holidayCountByEmp.get(String(a.id)) || 0);
+        const bh = (holidayCountByEmp.get(String(b.id)) || 0);
+        if (ah !== bh) return ah - bh;
+      }
+      // BULKORDNING: den i paret som jobbade FÖREGÅENDE dag fortsätter —
+      // paret får då flera dagar i rad i stället för varannan dag.
+      const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
+      const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
+      if (pa !== pb) return pa - pb;
+      // Rättvis fördelning mot kontrakt: lägst fyllnadsgrad först
+      const ar = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0) / targetDaysFor(a);
+      const br = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0) / targetDaysFor(b);
+      if (ar !== br) return ar - br;
+      const ad = (workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0);
+      const bd = (workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0);
+      if (ad !== bd) return ad - bd;
+      // Växla mellan parets medlemmar över körningar/veckor
+      const ap = (plannedCount.get(a.id) || 0);
+      const bp = (plannedCount.get(b.id) || 0);
+      if (ap !== bp) return ap - bp;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  };
+
+  // Pass 0 (hård regel): minst EN ur paret — första lediga som inte redan är bokad
+  const pickPairFor = (info) => {
+    if (pairEmps.length === 0 || pairCovered(info)) return null;
+    return sortedPairCandidates(info)
+      .find(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`)) || null;
+  };
+
+  // Pass 1/2: paret KAN jobba samtidigt — när behovet är ≥ 2 samma dag får även
+  // den andra medlemmen av paret vakten (även om dagen redan täcks av partnern).
+  const pickPairAnyFor = (info) => {
+    if (pairEmps.length === 0) return null;
+    return sortedPairCandidates(info)
+      .find(emp => !busyByEmpDate.has(`${emp.id}_${info.dateStr}`)) || null;
   };
 
   // Måldagar/vecka per kontraktsprocent: ansettelsesprocenten är ett MINIMUM —
@@ -636,10 +652,11 @@ export const generateAutoFill = ({
   }
   const lowSeasonWeek = (wk) => (weekdayNeedByWk.get(wk) || 0) / fastePoolSize <= 3;
 
-  // Pass 0: «Alltid en på jobb»-paret är HÅRT — en ur paret jobbar VARJE dag
-  // i perioden, även om bemanningsbehovet redan är nått. Väljs innan allt
-  // annat så att veckodagarstaket inte förbrukas först. Om ingen ur paret
-  // kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad) är
+  // Pass 0: «Alltid en på jobb»-paret är HÅRT — MINST en ur paret jobbar VARJE
+  // dag i perioden, även om bemanningsbehovet redan är nått. Väljs innan allt
+  // annat så att veckodagarstaket inte förbrukas först. I pass 1/2 kan båda
+  // parets medlemmar jobba SAMTIDIGT samma dag när behovet är ≥ 2. Om ingen ur
+  // paret kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad) är
   // det ett hårt fel som måste lösas manuellt.
   for (const info of dayInfos) {
     if (pairEmps.length === 0 || pairCovered(info)) continue;
@@ -661,7 +678,9 @@ export const generateAutoFill = ({
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     if (existing >= minPerDay) continue;
     let missing = minPerDay - existing;
-    const pickPair = pickPairFor(info);
+    // Paret KAN jobba samtidigt: även när dagen redan täcks av ena medlemmen
+    // får den andra en vakt om bemanningsbehovet kräver det (behov ≥ 2).
+    const pickPair = pickPairAnyFor(info);
     if (pickPair) {
       addAssignment(info, pickPair);
       missing -= 1;
@@ -694,7 +713,9 @@ export const generateAutoFill = ({
     const existing = catStaffingByDate.get(info.dateStr) || 0;
     let missing = Math.max(0, info.fullNeed - existing);
     if (missing <= 0) continue;
-    const pickPair = pickPairFor(info);
+    // Paret KAN jobba samtidigt: även när dagen redan täcks av ena medlemmen
+    // får den andra en vakt om bemanningsbehovet kräver det (behov ≥ 2).
+    const pickPair = pickPairAnyFor(info);
     if (pickPair) {
       addAssignment(info, pickPair);
       missing -= 1;
