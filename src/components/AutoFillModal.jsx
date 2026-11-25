@@ -320,6 +320,38 @@ function AutoFillModal({
     .map(d => ({ ...d, missing: Math.max(0, (d.need || 0) - (d.existing || 0) - (d.generated || 0)) }));
   const totalNew = result?.assignments?.length || 0;
 
+  // Per-ansatt oversikt over forslaget: nye vakter + arbeidsdager per uke (man–søn)
+  const perEmployeeSummary = useMemo(() => {
+    if (!result?.assignments) return [];
+    const byEmp = new Map();
+    for (const a of result.assignments) {
+      if (!byEmp.has(String(a.employeeId))) byEmp.set(String(a.employeeId), { emp: null, dates: [] });
+      byEmp.get(String(a.employeeId)).dates.push(a.date);
+    }
+    for (const e of engineCandidates) byEmp.get(String(e.id))?.emp || byEmp.set(String(e.id), { emp: e, dates: byEmp.get(String(e.id))?.dates || [] });
+    const rows = [];
+    for (const [id, v] of byEmp) {
+      const emp = v.emp || engineCandidates.find(e => String(e.id) === id) || allEmployees?.find(e => String(e.id) === id);
+      if (!emp) continue;
+      const weeks = new Map();
+      for (const ds of v.dates) {
+        const d = new Date(ds + 'T00:00:00');
+        const dow = d.getDay();
+        d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+        const wk = toDateStr(d);
+        weeks.set(wk, (weeks.get(wk) || 0) + 1);
+      }
+      rows.push({
+        id,
+        navn: emp.name,
+        pct: Number(emp.contractPercent) || 100,
+        nye: v.dates.length,
+        perUke: [...weeks.values()].sort((a, b) => b - a)
+      });
+    }
+    return rows.sort((a, b) => b.nye - a.nye || a.navn.localeCompare(b.navn));
+  }, [result, engineCandidates, allEmployees]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white border rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -511,6 +543,16 @@ function AutoFillModal({
                 <strong>{totalNew} nye vakter</strong> foreslått i perioden {formatYMD(periodStart)} – {formatYMD(periodEnd)}
                 ({candidates.length} ansatte, {relevantDates.length} dager berørt).
                 {totalNew === 0 && ' Ingen dager mangler bemanning innenfor disse reglene.'}
+                {perEmployeeSummary.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                    {perEmployeeSummary.map(r => (
+                      <span key={r.id} className="px-2 py-0.5 rounded bg-white border border-blue-200 text-gray-700" title={`Dager per uke: ${r.perUke.join(', ') || '—'}`}>
+                        {r.navn} ({r.pct} %): <strong>{r.nye}</strong> nye
+                        {r.perUke.length > 0 && <span className="text-gray-500"> — maks {r.perUke[0]}/uke</span>}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {result.warnings.length > 0 && (
