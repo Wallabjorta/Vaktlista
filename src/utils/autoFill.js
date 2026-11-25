@@ -331,6 +331,20 @@ export const generateAutoFill = ({
   const orderedDays = [...dayInfos].sort((a, b) =>
     dayPrio(a) - dayPrio(b) || a.dateStr.localeCompare(b.dateStr));
 
+  // HØYSESONG per uke: ukedagsbehovet (etter eksisterende vakter) per fast ansatt
+  // > 3 → ekstra/helgansatte FÅR jobbe ukedager denne uken (for å fylle behovet).
+  // I lavsesong gjelder fortsatt: ekstra kun lør+søn+helligdager+juleferie.
+  const fastePoolSize = Math.max(1, candidates.filter(e => !weekendOnly.has(String(e.id))).length);
+  const weekdayNeedByWk = new Map();
+  for (const info of dayInfos) {
+    const dow = info.date.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const wk = weekKeyFor(info.date);
+    const remaining = Math.max(0, info.fullNeed - (info.existing0 || 0));
+    weekdayNeedByWk.set(wk, (weekdayNeedByWk.get(wk) || 0) + remaining);
+  }
+  const highSeasonWeek = (wk) => (weekdayNeedByWk.get(wk) || 0) / fastePoolSize > 3;
+
   const namesByDate = new Map(dayInfos.map(d => [d.dateStr, []]));
   const pairEmps = (pairIds || [])
     .map(id => candidates.find(c => String(c.id) === String(id)))
@@ -553,9 +567,9 @@ export const generateAutoFill = ({
       // Helgansatte jobbar normalt bare helger (lør/sön) + helligdager — men
       // i juleferien (19/12–03/01) får de jobga ALLA dagar (efter fasta, som
       // reserv), och i nödfall (relaxed) när annars 2+ vakter blir ofyllda
-      // Helgansatte (extra) får BARE lørdag/søndag (+ helligdager og juleferie) —
-      // aldri fredager/ukedager, ikke engang i nødfall (relaxed). Hele helger tildeles parvis.
-      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || !weekendOnly.has(String(emp.id)))
+// får ekstra også jobbe UKEDAGER (etter fasta, faste velges først lenger ned). Hele helger tildeles parvis.
+// aldri ukedager i LAVSESONG. I HØYSESONG (ukedagsbehov per fast ansatt > 3 denne uken)
+      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || highSeasonWeek(weekKeyFor(info.date)) || !weekendOnly.has(String(emp.id)))
       // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
       // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
       // högt bemanningsbehov får även en 50 %-anställd fler dagar (upp till 5).
