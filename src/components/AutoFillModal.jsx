@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing } from '../firebase';
-import { generateAutoFill, toDateStr } from '../utils/autoFill';
+import { generateAutoFill, toDateStr, buildRevenueMap } from '../utils/autoFill';
 import { EMPLOYEE_CATEGORIES, inferCategory, deptNameToCategory } from './ShiftCalendar';
 
 // Samma platsmappning som OverviewCalendar:s bemanningsstatistik — så att
@@ -60,6 +60,8 @@ function AutoFillModal({
   const [result, setResult] = useState(null);
   const [revenues, setRevenues] = useState([]);
   const [configs, setConfigs] = useState(null);
+  const [aiText, setAiText] = useState('');
+  const [aiCopied, setAiCopied] = useState(false);
 
   useEffect(() => {
     const unsub1 = subscribeToRevenues(revs => setRevenues(revs));
@@ -125,6 +127,14 @@ function AutoFillModal({
     return map;
   }, [engineCandidates, departments, category, deptForCategory]);
 
+  const datesInRange = useMemo(() => {
+    if (!periodStart || !periodEnd) return [];
+    return dates.filter(d => {
+      const s = toDateStr(d);
+      return s >= periodStart && s <= periodEnd;
+    });
+  }, [dates, periodStart, periodEnd]);
+
   const handleGenerate = () => {
     if (!category) { alert('Velg kategori!'); return; }
     if (candidates.length === 0 && weekendOnlyEmps.length === 0) {
@@ -134,10 +144,6 @@ function AutoFillModal({
     if (!periodStart || !periodEnd) { alert('Velg periode (fra og til dato)!'); return; }
     if (periodStart > periodEnd) { alert('Fra-dato må være før eller lik til-dato!'); return; }
     if (startTime >= endTime) { alert('Sluttid må være etter starttid!'); return; }
-    const datesInRange = dates.filter(d => {
-      const s = toDateStr(d);
-      return s >= periodStart && s <= periodEnd;
-    });
     if (datesInRange.length === 0) { alert('Perioden ligger utenfor oversiktens vindu.'); return; }
     setResult(generateAutoFill({
       dates: datesInRange,
@@ -161,6 +167,150 @@ function AutoFillModal({
         category
       }
     }));
+  };
+
+  // ===== AI-assistent: kopiera kompakt sammandrag, klistra in AI-förslag =====
+  const aiSummary = () => {
+    const loc = LOCATION_BY_CATEGORY[category] || 'total';
+    const revMap = buildRevenueMap(revenues);
+    const cfgFor = (configs && (configs[loc] || configs.total)) || DEFAULT_STAFFING_CONFIG;
+    const candIds = new Set(engineCandidates.map(e => String(e.id)));
+    const busyByEmp = new Map();
+    for (const sh of shifts || []) {
+      if (!sh.date) continue;
+      const id = String(sh.employeeId);
+      if (!busyByEmp.has(id)) busyByEmp.set(id, []);
+      busyByEmp.get(id).push(sh.date);
+    }
+    const behovPerDag = datesInRange.map(d => {
+      const ds = toDateStr(d);
+      const amount = revMap.get(`${loc}_${ds}`);
+      const rec = amount != null ? recommendStaffing(amount, cfgFor) : null;
+      const allerede = (shifts || [])
+        .filter(sh => sh.date === ds && candIds.has(String(sh.employeeId)))
+        .map(sh => {
+          const e = engineCandidates.find(x => String(x.id) === String(sh.employeeId));
+          return e ? e.name : String(sh.employeeId);
+        });
+      return {
+        dato: ds,
+        ukedag: d.toLocaleDateString('no-NO', { weekday: 'short' }),
+        rødDag: d.getDay() === 0 || d.getDay() === 6 || (holidays || []).includes(ds),
+        omsetning: amount ?? null,
+        behov: Math.max(rec ? rec.staff : 0, 2),
+        alleredePåJobb: allerede
+      };
+    });
+    return {
+      instruksjon: 'Foreslå vaktliste for denne kategorien/perioden. Svar KUN med en JSON-array: [{"employeeId":"<id>","date":"YYYY-MM-DD","startTime":"08:45","endTime":"16:00"}] — én oppføring per ny vakt.',
+      kategori: category,
+      sted: loc,
+      periode: { fra: periodStart, til: periodEnd },
+      standardTid: { start: startTime, slutt: endTime },
+      minPerDag: 2,
+      parAlltidÉnPåJobb: [pairId1, pairId2].filter(Boolean).map(id => {
+        const e = engineCandidates.find(x => String(x.id) === String(id));
+        return e ? e.name : id;
+      }),
+      helgansatte: weekendOnlyEmps.map(e => e.name),
+      ansatte: engineCandidates.map(e => ({
+        id: String(e.id),
+        navn: e.name,
+        kontraktProsent: Number(e.contractPercent) || 100,
+        helgKun: weekendOnlyIds.some(id => String(id) === String(e.id)),
+        opptattDager: (busyByEmp.get(String(e.id)) || [])
+          .filter(ds => ds >= periodStart && ds <= periodEnd).sort()
+      })),
+      behovPerDag,
+      regler: 'Maks 5 arbeidsdager/uke og maks 8 sammenhengende dager per ansatt; maks 2 røde dager (søn/helligdag) i rad; helgansatte jobber bare lør+søn+helligdager/juleferie; kontrakts% er MINIMUM — fordel overskudd likt mellan alle; paret (om satt) må ha minst én på jobb hver dag; foretrekk blokker på ~2 dager i lavsesong; helger bemannes til samme behov som ukedager; bare tomme celler får nye vakter.'
+    };
+  };
+
+  const handleCopyAi = async () => {
+    if (!category || !periodStart || !periodEnd) { alert('Velg kategori og periode først!'); return; }
+    const text = JSON.stringify(aiSummary(), null, 1);
+    try {
+      await navigator.clipboard.writeText(text);
+      setAiCopied(true);
+      setTimeout(() => setAiCopied(false), 2500);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        setAiCopied(true);
+        setTimeout(() => setAiCopied(false), 2500);
+      } catch {
+        alert('Kopiering feilet — kopier teksten manuelt.');
+      }
+      document.body.removeChild(ta);
+    }
+  };
+
+  const handleApplyAi = () => {
+    let parsed;
+    try {
+      parsed = JSON.parse(aiText);
+    } catch (e) {
+      alert('Kunne ikke lese JSON: ' + e.message);
+      return;
+    }
+    const list = Array.isArray(parsed) ? parsed : (parsed.assignments || parsed.forslag || parsed.vakter || []);
+    if (!Array.isArray(list) || list.length === 0) {
+      alert('Fant ingen vakter i svaret. Forventet en JSON-array, eller objekt med "assignments"/"forslag"/"vakter".');
+      return;
+    }
+    const nameToEmp = new Map(engineCandidates.map(e => [String(e.name).toLowerCase(), e]));
+    const assignments = [];
+    let ignored = 0;
+    for (const item of list) {
+      if (!item || !item.date) { ignored++; continue; }
+      const emp = engineCandidates.find(e => String(e.id) === String(item.employeeId)) ||
+        nameToEmp.get(String(item.name || item.employeeName || '').toLowerCase());
+      if (!emp) { ignored++; continue; }
+      assignments.push({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        date: item.date,
+        departmentId: item.departmentId || departmentIdByEmp[String(emp.id)] || deptForCategory?.id || null,
+        startTime: item.startTime || startTime,
+        endTime: item.endTime || endTime,
+        comment: item.comment || 'AI-forslag',
+        autoFilled: true,
+        breaks: []
+      });
+    }
+    if (assignments.length === 0) { alert('Ingen gyldige vakter (ukjent ansatt eller dato).'); return; }
+    // Bygg perDate-förhandsvisning över samma period
+    const loc = LOCATION_BY_CATEGORY[category] || 'total';
+    const revMap = buildRevenueMap(revenues);
+    const cfgFor = (configs && (configs[loc] || configs.total)) || DEFAULT_STAFFING_CONFIG;
+    const candIds = new Set(engineCandidates.map(e => String(e.id)));
+    const perDate = datesInRange.map(d => {
+      const ds = toDateStr(d);
+      const amount = revMap.get(`${loc}_${ds}`);
+      const rec = amount != null ? recommendStaffing(amount, cfgFor) : null;
+      const gen = assignments.filter(a => a.date === ds);
+      return {
+        date: ds,
+        recommended: rec ? rec.staff : null,
+        need: Math.max(rec ? rec.staff : 0, 2),
+        isSunday: d.getDay() === 0,
+        isWeekend: d.getDay() === 0 || d.getDay() === 6,
+        isHoliday: (holidays || []).includes(ds),
+        existing: (shifts || []).filter(sh => sh.date === ds && candIds.has(String(sh.employeeId))).length,
+        generated: gen.length,
+        names: gen.map(a => a.employeeName)
+      };
+    });
+    setResult({
+      assignments,
+      warnings: ignored > 0 ? [`${ignored} oppføringer i AI-svaret ble ignorert (ukjent ansatt/dato)`] : [],
+      perDate
+    });
+    setAiText('');
   };
 
   // Visa alla dagar i perioden — även de utan nya vakter — så att
@@ -323,6 +473,37 @@ function AutoFillModal({
           >
             Generer forslag
           </button>
+
+          <div className="border-t pt-3 space-y-2">
+            <p className="text-sm font-medium">🤖 AI-assistent (valgfritt)</p>
+            <p className="text-xs text-gray-500">
+              Kopier et kompakt sammendrag → lim det inn hos AI-assistenten (f.eks. denne chatten)
+              og be om forslag → lim inn AI-svaret (JSON) under og klikk «Bruk AI-forslag».
+              Forslaget vises i forhåndsvisningen og lagres som vanlig.
+            </p>
+            <div className="flex gap-2 flex-wrap items-center">
+              <button
+                onClick={handleCopyAi}
+                disabled={!category || !periodStart || !periodEnd}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm"
+              >
+                {aiCopied ? '✅ Kopiert til utklippstavle!' : '📋 Kopier AI-sammendrag'}
+              </button>
+            </div>
+            <textarea
+              value={aiText}
+              onChange={(e) => setAiText(e.target.value)}
+              placeholder='Lim inn AI-forslag her — JSON, f.eks. [{"employeeId":"abc","date":"2026-11-23","startTime":"08:45","endTime":"16:00"}]'
+              className="w-full p-2 border rounded text-xs h-20 font-mono"
+            />
+            <button
+              onClick={handleApplyAi}
+              disabled={!aiText.trim()}
+              className="px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm"
+            >
+              📥 Bruk AI-forslag
+            </button>
+          </div>
 
           {result && (
             <div className="space-y-3">
