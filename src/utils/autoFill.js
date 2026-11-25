@@ -530,9 +530,13 @@ export const generateAutoFill = ({
       if (info.isWeekend || info.isHoliday) {
         const ah = (holidayCountByEmp.get(String(a.id)) || 0);
         const bh = (holidayCountByEmp.get(String(b.id)) || 0);
-        // Röd-dag-balans bara vid skillnad >1 (annars låser sig mönstret, t.ex. alla söndagar)
-        if (ah - bh > 1) return -1;
-        if (bh - ah > 1) return 1;
+        // Röd-dag-balans (hård, samma som i pickFor) + rotation vid lika — annars
+        // låser sig id-tiebreaken så samma parmedlem får alla lördagar/söndagar.
+        if (ah !== bh) return ah - bh;
+        const ap = (plannedCount.get(String(a.id)) || 0);
+        const bp = (plannedCount.get(String(b.id)) || 0);
+        if (ap !== bp) return ap - bp;
+        return (redFlip++ % 2 === 0) ? -1 : 1;
       }
       // BULKORDNING: den i paret som jobbade FÖREGÅENDE dag fortsätter —
       // paret får då flera dagar i rad i stället för varannan dag.
@@ -709,7 +713,13 @@ export const generateAutoFill = ({
   // fördelas rättvist via pickFor så alla minst fyller sitt kontrakt. Om ingen
   // ur paret kan jobba en dag (5-dagarstak / 2-helgedagar-regeln / redan bokad)
   // är det ett hårt fel som måste lösas manuellt.
-  for (const info of dayInfos) {
+  // RÖDA DAGAR FÖRST (lör+sön+helligdag): paret ska täcka alla røda dagar innan
+  // veckodagarna — annars kan 5-dagarstaket vara förbrukat när helgen kommer
+  // (t.ex. lørdag 28.11 kunde inte täckas). Max 2 røde dagar i rad gäller fortfarande.
+  const pairOrderDays = [...dayInfos].sort((a, b) =>
+    ((b.isWeekend || b.isHoliday) - (a.isWeekend || a.isHoliday)) || a.dateStr.localeCompare(b.dateStr));
+  let redFlip = 0; // växlar parmedlem vid fullständigt lika på røde dager (annars låser id-tiebreaken)
+  for (const info of pairOrderDays) {
     if (pairEmps.length === 0 || pairCovered(info)) continue;
     const pick = pickPairFor(info);
     if (pick) {
