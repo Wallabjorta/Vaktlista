@@ -341,10 +341,12 @@ function AutoFillModal({
         const wk = toDateStr(d);
         weeks.set(wk, (weeks.get(wk) || 0) + 1);
       }
+      const pct = Number(emp.contractPercent) || 100;
       rows.push({
         id,
         navn: emp.name,
-        pct: Number(emp.contractPercent) || 100,
+        pct,
+        mal: Math.min(5, Math.max(1, Math.round(5 * pct / 100))), // kontrakt = mål/uke (MINIMUM) — hårt tak är 5/uke för alla
         nye: v.dates.length,
         perUke: [...weeks.values()].sort((a, b) => b - a)
       });
@@ -548,7 +550,7 @@ function AutoFillModal({
                     {perEmployeeSummary.map(r => (
                       <span key={r.id} className="px-2 py-0.5 rounded bg-white border border-blue-200 text-gray-700" title={`Dager per uke: ${r.perUke.join(', ') || '—'}`}>
                         {r.navn} ({r.pct} %): <strong>{r.nye}</strong> nye
-                        {r.perUke.length > 0 && <span className="text-gray-500"> — maks {r.perUke[0]}/uke</span>}
+                        <span className="text-gray-500"> — mål {r.mal}/uke, mest {r.perUke[0] || 0}/5 på én uke</span>
                       </span>
                     ))}
                   </div>
