@@ -332,7 +332,10 @@ export const generateAutoFill = ({
     dayPrio(a) - dayPrio(b) || a.dateStr.localeCompare(b.dateStr));
 
   // HØYSESONG per uke: ukedagsbehovet (etter eksisterende vakter) per fast ansatt
-  // > 3 → ekstra/helgansatte FÅR jobbe ukedager denne uken (for å fylle behovet).
+  // > 3.5 → ekstra/helgansatte FÅR jobbe ukedager denne uken (for å fylle behovet).
+  // Terskel 3.5 (ikke 3): desember-uker med ~3.5 ukedager per fast ansatt telles
+  // som LAVSESONG — ekstra skal da kun jobbe lør+søn (+helligdager/juleferie),
+  // ikke ukedager (per Bjørn 2026-11-25).
   // I lavsesong gjelder fortsatt: ekstra kun lør+søn+helligdager+juleferie.
   const fastePoolSize = Math.max(1, candidates.filter(e => !weekendOnly.has(String(e.id))).length);
   const weekdayNeedByWk = new Map();
@@ -343,7 +346,7 @@ export const generateAutoFill = ({
     const remaining = Math.max(0, info.fullNeed - (info.existing0 || 0));
     weekdayNeedByWk.set(wk, (weekdayNeedByWk.get(wk) || 0) + remaining);
   }
-  const highSeasonWeek = (wk) => (weekdayNeedByWk.get(wk) || 0) / fastePoolSize > 3;
+  const highSeasonWeek = (wk) => (weekdayNeedByWk.get(wk) || 0) / fastePoolSize > 3.5;
 
   const namesByDate = new Map(dayInfos.map(d => [d.dateStr, []]));
   const pairEmps = (pairIds || [])
@@ -407,7 +410,7 @@ export const generateAutoFill = ({
     if (busyByEmpDate.has(`${emp.id}_${partnerStr}`)) return;
     if ((workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) >= MAX_DAYS_PER_WEEK) return;
     if (!weekendOk(emp.id, pInfo)) return; // max 2 helgedagar på rad
-    if (consecutiveWorkBefore(emp.id, partnerStr) >= MAX_CONSECUTIVE_WORKDAYS) return; // max 8 i rad
+    if (!consecOk(emp.id, partnerStr)) return; // max 8 i rad
     addAssignment(pInfo, emp);
   };
 
@@ -443,6 +446,25 @@ export const generateAutoFill = ({
     }
     return streak;
   };
+
+  // Pågående följd av arbetsdagar FRAMÅT från dagen efter dateStr (befintliga + planerade)
+  const consecutiveWorkAfter = (empId, dateStr) => {
+    const busy = busyDatesByEmp.get(String(empId));
+    if (!busy) return 0;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    let streak = 0;
+    let cur = new Date(y, m - 1, d + 1);
+    while (busy.has(toDateStr(cur))) {
+      streak++;
+      cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1);
+    }
+    return streak;
+  };
+  // HÅRT TAK: max 8 arbeidsdagar i rad — räknas både BAKÅT och FRAMÅT från dagen
+  // (dagar tilldelas i prio-ordning helligdag → söndag → vardag, så enbart bakåt
+  // räcker inte: en söndag kan redan vara tilldelad när vardagen väljs).
+  const consecOk = (empId, dateStr) =>
+    consecutiveWorkBefore(empId, dateStr) + consecutiveWorkAfter(empId, dateStr) < MAX_CONSECUTIVE_WORKDAYS;
 
   // Har emp två sammanhängande lediga dagar kvar i veckan OM även info.dateStr blir arbetad?
   const keepsTwoConsecutiveFree = (empId, wk, dateStr) => {
@@ -490,7 +512,7 @@ export const generateAutoFill = ({
     const eligible = pairEmps
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
       .filter(emp => weekendOk(emp.id, info))
-      .filter(emp => consecutiveWorkBefore(emp.id, info.dateStr) < MAX_CONSECUTIVE_WORKDAYS);
+      .filter(emp => consecOk(emp.id, info.dateStr));
     // Minst arbetade dagar denna vecka i paret — för bulker-ledningsvakten
     const minWorked = eligible.length > 0
       ? Math.min(...eligible.map(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0)))
@@ -520,6 +542,13 @@ export const generateAutoFill = ({
       const belowA = workedOf(a) < targetDaysFor(a);
       const belowB = workedOf(b) < targetDaysFor(b);
       if (belowA !== belowB) return belowA ? -1 : 1;
+      // Begge under kontrakt: størst etterslep (target - arbetade) først, så paret
+      // når kontrakt også i travle uker (per Bjørn 2026-11-25).
+      if (belowA && belowB) {
+        const da = targetDaysFor(a) - workedOf(a);
+        const db = targetDaysFor(b) - workedOf(b);
+        if (da !== db) return db - da;
+      }
       if (pa !== pb) return pa - pb;
       const ad = workedOf(a);
       const bd = workedOf(b);
@@ -571,7 +600,7 @@ export const generateAutoFill = ({
       // i juleferien (19/12–03/01) får de jobga ALLA dagar (efter fasta, som
       // reserv), och i nödfall (relaxed) när annars 2+ vakter blir ofyllda
 // får ekstra også jobbe UKEDAGER (etter fasta, faste velges først lenger ned). Hele helger tildeles parvis.
-// aldri ukedager i LAVSESONG. I HØYSESONG (ukedagsbehov per fast ansatt > 3 denne uken)
+// aldri ukedager i LAVSESONG. I HØYSESONG (ukedagsbehov per fast ansatt > 3.5 denne uken)
       .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || highSeason || !weekendOnly.has(String(emp.id)))
       // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
       // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
@@ -580,7 +609,7 @@ export const generateAutoFill = ({
       // Max 2 helgedagar på rad per ansatt
       .filter(emp => weekendOk(emp.id, info))
       // Hårt tak: max 8 arbeidsdagar i rad
-      .filter(emp => consecutiveWorkBefore(emp.id, info.dateStr) < MAX_CONSECUTIVE_WORKDAYS);
+      .filter(emp => consecOk(emp.id, info.dateStr));
     const rank = (a, b) => {
       const isRedDay = info.isWeekend || info.isHoliday;
       // Jämna røda dagar: den med färst røda dagar först (gäller fasta och
@@ -611,6 +640,17 @@ export const generateAutoFill = ({
       const belowA = workedOf(a) < targetDaysFor(a);
       const belowB = workedOf(b) < targetDaysFor(b);
       if (belowA !== belowB) return belowA ? -1 : 1;
+      // Begge under kontrakt: paret ("alltid én på jobb") får prioritet, og størst
+      // etterslep først — så også par-medlemmar når kontrakt i travle uker, men
+      // de får aldri MER enn kontrakt (boost gjelder bare mens de ligger under mål).
+      if (belowA && belowB) {
+        const isPair = (emp) => pairEmps.some(p => String(p.id) === String(emp.id));
+        const pa2 = isPair(a), pb2 = isPair(b);
+        if (pa2 !== pb2) return pa2 ? -1 : 1;
+        const da = targetDaysFor(a) - workedOf(a);
+        const db = targetDaysFor(b) - workedOf(b);
+        if (da !== db) return db - da;
+      }
       // Blocket bryts när någon ligger före den minst arbetade ELLER har nått
       // sitt kontraktsmål (targetDaysFor) denna vecka.
       const lead = (emp) => {
@@ -657,7 +697,8 @@ export const generateAutoFill = ({
     const faste = eligible.filter(emp => !weekendOnly.has(String(emp.id)));
     const extras = eligible.filter(emp => weekendOnly.has(String(emp.id)));
     // I høysæsong konkurrerer ekstra på like vilkår (opp til 5 dager/uke) —
-    // i lavsesong er de fortsatt RESERV etter fasta.
+    // i lavsesong er de fortsatt RESERV etter fasta. HØYSESONG = ukedagsbehov per
+// fast ansatt > 3.5 denne uken (desember-uker med ~3.5 er lavsesong).
     if (highSeason) return pickFrom(eligible);
     return pickFrom(faste) || pickFrom(extras);
   };
