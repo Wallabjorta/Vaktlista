@@ -222,7 +222,7 @@ function AutoFillModal({
           .filter(ds => ds >= periodStart && ds <= periodEnd).sort()
       })),
       behovPerDag,
-      regler: 'Maks 5 arbeidsdager/uke og maks 8 sammenhengende dager per ansatt; maks 2 røde dager (søn/helligdag) i rad; helgansatte jobber bare lør+søn+helligdager/juleferie; kontrakts% er MINIMUM — fordel overskudd likt mellan alle; paret (om satt) må ha minst én på jobb hver dag; foretrekk blokker på ~2 dager i lavsesong; helger bemannes til samme behov som ukedager; bare tomme celler får nye vakter.'
+      regler: 'Maks 5 arbeidsdager/uke og maks 8 sammenhengende dager per ansatt; maks 2 røde dager (søn/helligdag) i rad; helgansatte jobber bare lør+søn+helligdager/juleferie i lavsesong (i høyssesong — ukedagsbehov per fast ansatt > 3.5/uke — får de også ukedager, maks 5 dager/uke); kontrakts% er MINIMUM — fordel overskudd likt mellan alle; paret (om satt) må ha minst én på jobb hver dag; foretrekk blokker på ~2 dager i lavsesong; helger bemannes til samme behov som ukedager; bare tomme celler får nye vakter.'
     };
   };
 
