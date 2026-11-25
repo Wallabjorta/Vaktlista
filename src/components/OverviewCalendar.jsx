@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { EMPLOYEE_CATEGORIES, groupByShiftCategory, SHIFTS_BY_CATEGORY } from './ShiftCalendar';
 import GroupBarsRow from './GroupBarsRow';
 import { subscribeToRevenues, subscribeToStaffingConfig, recommendStaffing, deleteShiftsByDateRange } from '../firebase';
-import { auditShifts } from '../hooks/useWorkLawValidation';
+import { auditShifts, auditUnderstaffedDays } from '../hooks/useWorkLawValidation';
 
 const DEFAULT_STAFFING_CONFIG = {
   minimumStaff: 2,
@@ -274,8 +274,36 @@ function OverviewCalendar({
     return new Set(debugIssues.flatMap(i => i.shiftIds || []));
   }, [debugIssues]);
   const runDebug = () => {
-    setDebugIssues(auditShifts(employees, shifts, departments, holidays));
+    // 1) Brudd på arbeidslover (som før)
+    const lawIssues = auditShifts(employees, shifts, departments, holidays);
+    // 2) Dager som ikke er fullt bemannede (Skiutleie Vest/Øst) + forslag på løsning
+    const needsByDate = new Map();
+    for (const d of dates) {
+      const dateStr = toDateStr(d);
+      const rec = getRecommended(dateStr);
+      if (!rec) continue;
+      const entry = {};
+      for (const loc of ['st', 'øst']) {
+        if (rec[loc]) entry[loc] = { need: rec[loc].staff, actual: rec[loc].actual || 0 };
+      }
+      if (Object.keys(entry).length > 0) needsByDate.set(dateStr, entry);
+    }
+    const underIssues = auditUnderstaffedDays({
+      dates: dates.map(toDateStr),
+      employees,
+      shifts,
+      departments,
+      needsByDate,
+      categoryOf: inferCategory,
+      locationCategories: LOCATION_CATEGORIES
+    });
+    setDebugIssues([...underIssues, ...lawIssues]);
   };
+  // Dagar som är underbemannade (för markering i dagkolumn när felsök är på)
+  const understaffedDates = useMemo(() => {
+    if (!debugIssues) return new Set();
+    return new Set(debugIssues.filter(i => i.type === 'understaffed').map(i => i.date));
+  }, [debugIssues]);
   const [bulkForm, setBulkForm] = useState({
     departmentId: '',
     startTime: '08:45',
@@ -412,20 +440,23 @@ function OverviewCalendar({
             <div className="flex justify-between items-center mb-1">
               <strong className="text-sm">
                 {debugIssues.length === 0
-                  ? '✅ Ingen brudd på arbeidsloven i denne perioden'
-                  : `⚠️ ${debugIssues.length} brudd funnet — røde vakter i oversikten må fikses`}
+                  ? '✅ Ingen brudd på arbeidsloven og alle dager fullt bemannet i denne perioden'
+                  : `⚠️ ${debugIssues.length} funn — ${debugIssues.filter(i => i.type === 'understaffed').length} underbemannet, ${debugIssues.filter(i => i.type !== 'understaffed').length} arbeidslov-brudd (røde vakter / ⚠️-dager må fikses)`}
               </strong>
               <button onClick={() => setDebugIssues(null)} className="text-xs text-gray-500 hover:text-gray-700">Skjul</button>
             </div>
             {debugIssues.length > 0 && (
               <ul className="text-xs space-y-1">
-                {debugIssues.map((iss, i) => (
-                  <li key={i} className="border-l-2 border-red-500 pl-2">
-                    <span className="text-red-700 font-medium">{iss.message}</span>
-                    <span className="text-gray-600"> — datoer: {iss.dates.join(', ')}.</span>
-                    <div className="text-green-700">💡 Forslag: {iss.suggestion}</div>
-                  </li>
-                ))}
+                {debugIssues.map((iss, i) => {
+                  const isUnder = iss.type === 'understaffed';
+                  return (
+                    <li key={i} className={`border-l-2 pl-2 ${isUnder ? 'border-amber-500' : 'border-red-500'}`}>
+                      <span className={`font-medium ${isUnder ? 'text-amber-700' : 'text-red-700'}`}>{isUnder ? '🟠' : '🔴'} {iss.message}</span>
+                      {!isUnder && <span className="text-gray-600"> — datoer: {iss.dates.join(', ')}.</span>}
+                      <div className="text-green-700">💡 Forslag: {iss.suggestion}</div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -452,14 +483,17 @@ function OverviewCalendar({
                 </th>
                 {dates.map((date, index) => {
                   const isToday = date.toDateString() === new Date().toDateString();
+                  const dateStr = toDateStr(date);
+                  const isUnderstaffed = debugIssues != null && understaffedDates.has(dateStr);
                   return (
                     <th
                       key={index}
-                      className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
+                      title={isUnderstaffed ? 'Ikke fullt bemannet denne dagen (se felsøk)' : undefined}
+                      className={`p-0.5 text-center border-r last:border-r-0 text-xs sticky top-0 z-20 ${isUnderstaffed ? 'bg-amber-200' : isToday ? 'bg-gray-100' : 'bg-gray-50'}`}
                       style={{ width: '48px' }}
                    >
                       <div className="font-medium text-gray-700 truncate">
-                        {date.getDate()}
+                        {date.getDate()}{isUnderstaffed ? ' ⚠️' : ''}
                       </div>
                       <div className="text-[10px] text-gray-400 leading-tight">
                         {date.toLocaleDateString('no-NO', { weekday: 'short' })}
