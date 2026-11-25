@@ -254,6 +254,85 @@ export const auditShifts = (employees = [], shifts = [], departments = [], holid
   return issues;
 };
 
+// ===== FELSØK: dagar som inte är fullt bemannade (Skiutleie Vest/Øst) =====
+// needsByDate: Map(dateStr -> { st?: { need, actual }, 'øst'?: { need, actual } })
+// categoryOf: (employee) => kategori-sträng (t.ex. 'Skiutleie Vest')
+export const auditUnderstaffedDays = ({
+  dates = [],
+  employees = [],
+  shifts = [],
+  departments = [],
+  needsByDate = new Map(),
+  categoryOf = (e) => e.category || null,
+  locationCategories = { st: ['Skiutleie Vest'], 'øst': ['Skiutleie Øst'] }
+}) => {
+  const dayOffDeptIds = dayOffDeptIdsFrom(departments);
+  // Opptatt denna dag (alla avdelningar) + arbetsdagar per vecka (man–søn, ej Fri/Ferie)
+  const busyByEmp = new Map();
+  const workDaysByEmpWeek = new Map();
+  for (const s of shifts || []) {
+    if (!s.date) continue;
+    if (!busyByEmp.has(String(s.employeeId))) busyByEmp.set(String(s.employeeId), new Set());
+    busyByEmp.get(String(s.employeeId)).add(s.date);
+    if (isDayOffShift(s, dayOffDeptIds)) continue;
+    const wk = getWeekStartDate(s.date);
+    workDaysByEmpWeek.set(`${s.employeeId}_${wk}`, (workDaysByEmpWeek.get(`${s.employeeId}_${wk}`) || 0) + 1);
+  }
+
+  const issues = [];
+  for (const dateStr of dates) {
+    const needs = needsByDate.get(dateStr);
+    if (!needs) continue;
+    const wk = getWeekStartDate(dateStr);
+    for (const loc of ['st', 'øst']) {
+      const n = needs[loc];
+      if (!n || n.need == null) continue;
+      const actual = n.actual || 0;
+      const missing = n.need - actual;
+      if (missing <= 0) continue;
+      const locName = loc === 'st' ? 'Vest' : 'Øst';
+      // Kandidater: skiutleie-ansatte för denna plats som är LEDIGA denna dag
+      // och inte redan nått 5 arbetsdagar denna vecka — sortera på minst
+      // arbetade dagar först, sedan högst kontraktsprocent.
+      const cats = locationCategories[loc] || [];
+      const candidates = (employees || [])
+        .filter(e => {
+          if (!e || e.isAdmin || e.category === 'Admin') return false;
+          if (!cats.includes(categoryOf(e))) return false;
+          if ((busyByEmp.get(String(e.id)) || new Set()).has(dateStr)) return false;
+          if ((workDaysByEmpWeek.get(`${e.id}_${wk}`) || 0) >= 5) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          const wa = workDaysByEmpWeek.get(`${a.id}_${wk}`) || 0;
+          const wb = workDaysByEmpWeek.get(`${b.id}_${wk}`) || 0;
+          if (wa !== wb) return wa - wb;
+          return (Number(b.contractPercent) || 100) - (Number(a.contractPercent) || 100);
+        });
+      const suggested = candidates.slice(0, missing)
+        .map(c => `${c.name || c.id} (${workDaysByEmpWeek.get(`${c.id}_${wk}`) || 0} dager denne uken, ${Number(c.contractPercent) || 100} %)`)
+        .join(', ');
+      issues.push({
+        type: 'understaffed',
+        date: dateStr,
+        location: loc,
+        actual,
+        need: n.need,
+        missing,
+        shiftIds: [],
+        dates: [dateStr],
+        message: `${dateStr} Skiutleie ${locName}: ${actual} av ${n.need} på jobb — ${missing} vakt${missing > 1 ? 'er' : ''} mangler`,
+        suggestion: suggested
+          ? `Forslag: legg til vakt 08:45–16:00 for ${suggested}` +
+            (candidates.length < missing ? ` (kun ${candidates.length} ledig${candidates.length === 1 ? '' : 'e'} — resten må flyttes eller dekkes av ekstra)` : '')
+          : 'Ingen ledige skiutleie-ansatte denne dagen — vurder å flytte vakt fra en annen dag eller bruke ekstra'
+      });
+    }
+  }
+  issues.sort((a, b) => a.date.localeCompare(b.date) || a.location.localeCompare(b.location));
+  return issues;
+};
+
 // Hook for bruk i komponenter
 export const useWorkLawValidation = (shifts, holidays, departments = []) => {
   const validate = (employeeId, dateStr, newDeptId = null) => {
