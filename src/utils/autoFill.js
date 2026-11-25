@@ -559,6 +559,9 @@ export const generateAutoFill = ({
   // helgansatte (weekendOnly) också användas på vanliga vardagar.
   const pickFor = (info, relaxed = false) => {
     const wk = weekKeyFor(info.date);
+    // HØYSESONG denne uken → ekstra får jobbe ukedager OG behandles likt faste
+    // (opp til MAX_DAYS_PER_WEEK = 5 dager/uke, ikke bara som reserv sist).
+    const highSeason = highSeasonWeek(wk);
     // Föregående kalenderdag (för bulkordningning)
     const [py, pm, pd] = info.dateStr.split('-').map(Number);
     const prevDateStr = toDateStr(new Date(py, pm - 1, pd - 1));
@@ -569,7 +572,7 @@ export const generateAutoFill = ({
       // reserv), och i nödfall (relaxed) när annars 2+ vakter blir ofyllda
 // får ekstra også jobbe UKEDAGER (etter fasta, faste velges først lenger ned). Hele helger tildeles parvis.
 // aldri ukedager i LAVSESONG. I HØYSESONG (ukedagsbehov per fast ansatt > 3 denne uken)
-      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || highSeasonWeek(weekKeyFor(info.date)) || !weekendOnly.has(String(emp.id)))
+      .filter(emp => info.isWeekend || info.isHoliday || isJuleferie(info.dateStr) || highSeason || !weekendOnly.has(String(emp.id)))
       // Hårt veckotak för ALLA: MAX_DAYS_PER_WEEK dagar/vecka. Kontraktsprocenten
       // är ett MINIMUM (se targetDaysFor/fillRatio nedan), inte ett tak — vid
       // högt bemanningsbehov får även en 50 %-anställd fler dagar (upp till 5).
@@ -653,6 +656,9 @@ export const generateAutoFill = ({
     // reglene (bokad, 5-dagarstak, 2-helgedagar-regeln).
     const faste = eligible.filter(emp => !weekendOnly.has(String(emp.id)));
     const extras = eligible.filter(emp => weekendOnly.has(String(emp.id)));
+    // I høysæsong konkurrerer ekstra på like vilkår (opp til 5 dager/uke) —
+    // i lavsesong er de fortsatt RESERV etter fasta.
+    if (highSeason) return pickFrom(eligible);
     return pickFrom(faste) || pickFrom(extras);
   };
 
