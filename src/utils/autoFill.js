@@ -506,11 +506,22 @@ export const generateAutoFill = ({
   // (samma bulkordning som i pickFor — den som jobbade föregående dag fortsätter).
   const sortedPairCandidates = (info) => {
     const wk = weekKeyFor(info.date);
+    // Paret ska inte bränna hela 5-dagarstaket i pass 0 i lavsäsong — då blir det
+    // ojämnt mot övriga med samma kontrakts%. Cap = max(täckningsbehov för veckan,
+    // veckobehov per fast anställd), hårt tak MAX_DAYS_PER_WEEK.
+    const wds = weekDatesMap.get(wk) || [];
+    const wkNeed = wds.reduce((sum, ds) => sum + ((dayInfoByDate.get(ds) || {}).fullNeed || 0), 0);
+    const fasteCount = Math.max(1, candidates.filter(e => !weekendOnly.has(String(e.id))).length);
+    const pairCap = Math.min(MAX_DAYS_PER_WEEK, Math.max(
+      Math.ceil(wds.length / Math.max(1, pairEmps.length || 1)),
+      Math.ceil(wkNeed / fasteCount)
+    ));
     // Föregående kalenderdag (för bulkordning — samma som i pickFor)
     const [py, pm, pd] = info.dateStr.split('-').map(Number);
     const prevDateStr = toDateStr(new Date(py, pm - 1, pd - 1));
     const eligible = pairEmps
       .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < MAX_DAYS_PER_WEEK)
+      .filter(emp => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0) < pairCap)
       .filter(emp => weekendOk(emp.id, info))
       .filter(emp => consecOk(emp.id, info.dateStr));
     // Minst arbetade dagar denna vecka i paret — för bulker-ledningsvakten
@@ -788,6 +799,69 @@ export const generateAutoFill = ({
         break;
       }
       addAssignmentWithWeekendPair(info, pick);
+    }
+  }
+
+  // Pass 3: REBALANSERING över hela perioden — samma kontrakts% ska få lika många
+  // arbetsdagar totalt. Flytta från den med flest dagar till den med minst, tills
+  // skillnaden är < 2, så länge hårda regler (5/uke, 8 i rad, 2 røde i rad, helgansatte)
+  // och par-täckning varje dag fortfarande gäller (per Bjørn 2026-11-25).
+  const empById = new Map(candidates.map(e => [String(e.id), e]));
+  {
+    let guard = 0;
+    while (guard++ < 200) {
+      const worked = candidates.map(emp => {
+        const busy = busyDatesByEmp.get(String(emp.id)) || new Set();
+        let c = 0;
+        for (const ds of busy) if (dayInfoByDate.has(ds)) c++;
+        return [String(emp.id), c];
+      }).sort((a, b) => b[1] - a[1]);
+      const [aId, aW] = worked[0];
+      const [bId, bW] = worked[worked.length - 1];
+      const A = empById.get(aId), B = empById.get(bId);
+      if (!A || !B || aW - bW < 2) break;
+      let moved = false;
+      for (const ds of [...(busyDatesByEmp.get(aId) || [])].sort()) {
+        if ((busyDatesByEmp.get(bId) || new Set()).has(ds)) continue;
+        const info = dayInfoByDate.get(ds);
+        if (!info) continue;
+        const wk = weekKeyFor(info.date);
+        if (!(info.isWeekend || info.isHoliday || isJuleferie(ds) || highSeasonWeek(wk) || !weekendOnly.has(bId))) continue;
+        if ((workDaysByEmpWeek.get(`${bId}_${wk}`) || 0) >= MAX_DAYS_PER_WEEK) continue;
+        // A får inte ner under max(2, kontraktsmål-1) denna vecka — paret ska fortfarande
+        // i stort sett nå kontrakt, men totalskillnaden mellan samma % jämnas ut.
+        const floorA = Math.max(2, targetDaysFor(A) - 1);
+        if ((workDaysByEmpWeek.get(`${aId}_${wk}`) || 0) <= floorA) continue;
+        if (!weekendOk(bId, info)) continue;
+        if (!consecOk(bId, ds)) continue;
+        const pairStillCovered =
+          pairEmps.some(pe => String(pe.id) === bId) ||
+          pairEmps.some(pe => String(pe.id) !== aId && runBusyByEmpDate.has(`${pe.id}_${ds}`));
+        if (pairEmps.length > 0 && !pairStillCovered) continue;
+        // --- flytta A -> B ---
+        const ai = assignments.findIndex(x => String(x.employeeId) === aId && x.date === ds);
+        if (ai >= 0) { assignments[ai].employeeId = B.id; assignments[ai].employeeName = B.name; }
+        busyDatesByEmp.get(aId)?.delete(ds);
+        runBusyByEmpDate.delete(`${aId}_${ds}`);
+        busyByEmpDate.delete(`${aId}_${ds}`);
+        noteBusy(bId, ds);
+        busyByEmpDate.add(`${bId}_${ds}`);
+        runBusyByEmpDate.add(`${bId}_${ds}`);
+        workDaysByEmpWeek.set(`${aId}_${wk}`, (workDaysByEmpWeek.get(`${aId}_${wk}`) || 1) - 1);
+        workDaysByEmpWeek.set(`${bId}_${wk}`, (workDaysByEmpWeek.get(`${bId}_${wk}`) || 0) + 1);
+        plannedCount.set(aId, (plannedCount.get(aId) || 1) - 1);
+        plannedCount.set(bId, (plannedCount.get(bId) || 0) + 1);
+        if (weekendIdx.has(ds)) {
+          holidayCountByEmp.set(aId, (holidayCountByEmp.get(aId) || 1) - 1);
+          holidayCountByEmp.set(bId, (holidayCountByEmp.get(bId) || 0) + 1);
+        }
+        const names = namesByDate.get(ds);
+        const ni = names ? names.indexOf(A.name) : -1;
+        if (ni >= 0) names[ni] = B.name; else names?.push(B.name);
+        moved = true;
+        break;
+      }
+      if (!moved) break;
     }
   }
 
