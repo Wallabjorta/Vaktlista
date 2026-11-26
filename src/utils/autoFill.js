@@ -535,7 +535,7 @@ export const generateAutoFill = ({
     // Blocket bryts när någon ligger före minst arbetade ELLER vid kontraktsmål (minimum).
     const lead = (emp) => {
       if (minWorked == null) return 1;
-      return (workedOf(emp) - minWorked < 1 && workedOf(emp) < targetDaysFor(emp)) ? 0 : 1;
+      return (workedOf(emp) - minWorked < 1) ? 0 : 1;
     };
     return eligible.sort((a, b) => {
       if (info.isWeekend || info.isHoliday) {
@@ -553,17 +553,6 @@ export const generateAutoFill = ({
       // paret får då flera dagar i rad i stället för varannan dag.
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
-      // KONTRAKT = MINIMUM (före block), överskott liks — samma som i pickFor
-      const belowA = workedOf(a) < targetDaysFor(a);
-      const belowB = workedOf(b) < targetDaysFor(b);
-      if (belowA !== belowB) return belowA ? -1 : 1;
-      // Begge under kontrakt: størst etterslep (target - arbetade) først, så paret
-      // når kontrakt også i travle uker (per Bjørn 2026-11-25).
-      if (belowA && belowB) {
-        const da = targetDaysFor(a) - workedOf(a);
-        const db = targetDaysFor(b) - workedOf(b);
-        if (da !== db) return db - da;
-      }
       if (pa !== pb) return pa - pb;
       const ad = workedOf(a);
       const bd = workedOf(b);
@@ -650,27 +639,10 @@ export const generateAutoFill = ({
       //    alla få några arbetsdagar (och några dagar fri, t.ex. 3) varje vecka,
       //    inte varannan vecka.
       const workedOf = (emp) => (workDaysByEmpWeek.get(`${emp.id}_${wk}`) || 0);
-      // KONTRAKT = MINIMUM (går FÖRE block): den som ligger UNDER sitt kontraktsmål
-      // denna vecka väljs före den som nått det — alla ska minst fylla kontraktet.
-      const belowA = workedOf(a) < targetDaysFor(a);
-      const belowB = workedOf(b) < targetDaysFor(b);
-      if (belowA !== belowB) return belowA ? -1 : 1;
-      // Begge under kontrakt: paret ("alltid én på jobb") får prioritet, og størst
-      // etterslep først — så også par-medlemmar når kontrakt i travle uker, men
-      // de får aldri MER enn kontrakt (boost gjelder bare mens de ligger under mål).
-      if (belowA && belowB) {
-        const isPair = (emp) => pairEmps.some(p => String(p.id) === String(emp.id));
-        const pa2 = isPair(a), pb2 = isPair(b);
-        if (pa2 !== pb2) return pa2 ? -1 : 1;
-        const da = targetDaysFor(a) - workedOf(a);
-        const db = targetDaysFor(b) - workedOf(b);
-        if (da !== db) return db - da;
-      }
-      // Blocket bryts när någon ligger före den minst arbetade ELLER har nått
-      // sitt kontraktsmål (targetDaysFor) denna vecka.
+      // Inget kontraktsmål längre (per Bjørn 2026-11-25): fyll upp veckorna jämnt upp till 5.
       const lead = (emp) => {
         if (minWorkedThisWeek == null) return 1;
-        return (workedOf(emp) - minWorkedThisWeek < 1 && workedOf(emp) < targetDaysFor(emp)) ? 0 : 1;
+        return (workedOf(emp) - minWorkedThisWeek < 1) ? 0 : 1;
       };
       const pa = ((busyDatesByEmp.get(String(a.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(a);
       const pb = ((busyDatesByEmp.get(String(b.id)) || new Set()).has(prevDateStr) ? 0 : 1) + lead(b);
@@ -714,8 +686,7 @@ export const generateAutoFill = ({
     // I høysæsong konkurrerer ekstra på like vilkår (opp til 5 dager/uke) —
     // i lavsesong er de fortsatt RESERV etter fasta. HØYSESONG = ukedagsbehov per
 // fast ansatt > 3.5 denne uken (desember-uker med ~3.5 er lavsesong).
-    if (highSeason) return pickFrom(eligible);
-    return pickFrom(faste) || pickFrom(extras);
+    return pickFrom(faste) || pickFrom(extras); // FASTA FÖRST alltid; ekstra bara utöver det
   };
 
   // Pass 0: «Alltid en på jobb»-paret är HÅRT — MINST en ur paret jobbar VARJE
@@ -830,7 +801,7 @@ export const generateAutoFill = ({
         if ((workDaysByEmpWeek.get(`${bId}_${wk}`) || 0) >= MAX_DAYS_PER_WEEK) continue;
         // A får inte ner under max(2, kontraktsmål-1) denna vecka — paret ska fortfarande
         // i stort sett nå kontrakt, men totalskillnaden mellan samma % jämnas ut.
-        const floorA = Math.max(2, targetDaysFor(A) - 1);
+        const floorA = 2; // töm inte ur någons vecka helt
         if ((workDaysByEmpWeek.get(`${aId}_${wk}`) || 0) <= floorA) continue;
         if (!weekendOk(bId, info)) continue;
         if (!consecOk(bId, ds)) continue;
